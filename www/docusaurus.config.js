@@ -1,7 +1,7 @@
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Rugpi",
-  tagline: "Rugpi enables you to build enterprise-grade, customized variants of Raspberry Pi OS for your product.",
+  tagline: "An open-source platform empowering you to build innovative products based on Raspberry Pi.",
   url: "https://oss.silitics.com/",
   baseUrl: "/rugpi/",
 
