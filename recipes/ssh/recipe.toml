@@ -1,0 +1,5 @@
+description = "enabling SSH"
+priority = 80_000
+
+[parameters]
+root_authorized_keys = { default = "" }

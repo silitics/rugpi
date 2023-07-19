@@ -1,0 +1,2 @@
+description = "install state file for `/root`"
+priority = 600_000  # Execute rather early.

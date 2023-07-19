@@ -1,0 +1,13 @@
+[package]
+name = "xtask"
+version = "0.0.0"
+publish = false
+edition = "2021"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow = "1.0.71"
+clap = { version = "4.3.10", features = ["derive"] }
+xscript = "0.1.1"

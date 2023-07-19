@@ -1,0 +1,22 @@
+[package]
+name = "rugpi-bakery"
+edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+anyhow = "1.0.71"
+camino = { version = "1.1.4", features = ["serde"] }
+clap = { version = "4.3.8", features = ["derive"] }
+hex = "0.4.3"
+rugpi-common = { version = "0.1.0", path = "../rugpi-common" }
+serde = { version = "1.0.171", features = ["derive", "rc"] }
+sha1 = "0.10.5"
+tempdir = "0.3.7"
+thiserror = "1.0.43"
+toml = "0.7.6"
+url = "2.4.0"
+xscript = "0.1.2"

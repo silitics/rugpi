@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "Rugpi",
+      "path": "."
+    },
+    {
+      "name": "Docs",
+      "path": "./www",
+    }
+  ],
+  "settings": {
+    "rust-analyzer.rustfmt.extraArgs": ["+nightly"]
+  }
+}

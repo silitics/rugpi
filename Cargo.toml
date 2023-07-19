@@ -1,0 +1,10 @@
+[workspace]
+members = ["crates/*", "xtask"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Silitics GmbH <info@silitics.com>"]
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/silitics/rugpi/"
+homepage = "https://oss.silitics.com/rugpi/"

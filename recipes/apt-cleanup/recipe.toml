@@ -1,0 +1,6 @@
+description = "apt: cleanup cache and delete package lists"
+priority = -900_000  # Execute after everything else.
+default = true
+
+[parameters]
+autoremove = { default = false }

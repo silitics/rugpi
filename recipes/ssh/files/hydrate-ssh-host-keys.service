@@ -1,0 +1,12 @@
+[Unit]
+Description=Hydrate SSH Host Keys
+Before=ssh.service
+ConditionPathIsReadWrite=/run/rugpi/state/ssh
+ConditionFileIsExecutable=/usr/bin/ssh-keygen
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/rugpi/scripts/hydrate-ssh-host-keys.sh
+
+[Install]
+WantedBy=multi-user.target

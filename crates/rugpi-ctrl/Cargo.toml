@@ -1,0 +1,20 @@
+[package]
+name = "rugpi-ctrl"
+description = "Manage a Rugpi system."
+edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+camino = { version = "1.1", features = ["serde"] }
+clap = { version = "4.3", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+nix = "0.26.2"
+anyhow = "1.0.71"
+xscript = "0.1.2"
+indoc = "2.0.2"
+toml = "0.7.6"
+rugpi-common = { version = "0.1.0", path = "../rugpi-common" }

@@ -1,0 +1,5 @@
+description = "sets the hostname"
+priority = 90_000
+
+[parameters]
+hostname = {}
