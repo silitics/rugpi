@@ -1,6 +1,6 @@
 Prism.languages.shell = {
   function: {
-    pattern: /(docker|rugpi-ctrl|\.\/run-bakery|\bgit\b)/
+    pattern: /(docker|rugpi-ctrl|\.\/run-bakery|\bgit\b|\bdocker\b)/
   },
   constant: {
     pattern: /(true|false)/,

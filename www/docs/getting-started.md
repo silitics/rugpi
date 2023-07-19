@@ -40,6 +40,13 @@ To print the usage instructions of Rugpi Bakery, in the root directory of the te
 ./run-bakery help
 ```
 
+On a non ARM64 system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate ARM64.
+The easiest way to do so, and as we are already using Docker, is by running the following command:
+
+```shell
+docker run --privileged --rm tonistiigi/binfmt --install arm64
+```
+
 Building an image is generally a three-step process:
 
 1. First, you must extract all system files from a base image of Raspberry Pi OS.
