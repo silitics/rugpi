@@ -2,9 +2,10 @@ name: Build Docker Images
 
 on:
   push:
-    branches:
-      - main
-      - ci
+    # branches:
+    #   - main
+    #   - ci
+    workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
