@@ -12,7 +12,7 @@
 </p>
 
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of [Raspberry Pi OS](https://en.wikipedia.org/wiki/Raspberry_Pi_OS)** for your product.
-It boasts two core features: (1) Transactional **over-the-air updates with rollback support** of the entire system, including firmware files, and (2) **managed state* which is preserved across reboots and updates.
+It boasts two core features: (1) Transactional **over-the-air updates with rollback support** of the entire system, including firmware files, and (2) **managed state** which is preserved across reboots and updates.
 
 Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
 
