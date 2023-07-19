@@ -1,0 +1,44 @@
+name: Build Website
+
+on:
+  push:
+    branches:
+      - main
+      - ci
+    paths:
+      - ".github/**"
+      - "www/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-website:
+    name: Build Website
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: cd www && npm ci
+
+      - name: Build Website
+        run: cd www && npm run build
+
+      - name: Deploy
+        if: github.ref == 'refs/heads/main'
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add <(echo "$SSH_DEPLOY_KEY")
+          mkdir -p ~/.ssh/
+          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+          ssh deploy@srv0.silitics.com "rsync --version"
+          rsync -avz --delete www/build/ deploy@srv0.silitics.com:/var/www/oss.silitics.com/rugpi/
