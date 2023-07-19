@@ -1,0 +1,71 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - ci
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: "ghcr.io/silitics/rugpi-bakery:latest"
+  PI_BASE_IMAGE: "https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-05-03/2023-05-03-raspios-bullseye-arm64-lite.img.xz"
+
+jobs:
+  build-docker-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and Push Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.rugpi-bakery
+          # platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+  
+  build-template-image:
+    name: Build Image
+    runs-on: ubuntu-latest
+    needs: [build-docker-images]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: List Files
+        working-directory: ./template
+        run: ls -l
+      
+      - name: Install QEMU
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - name: Extract Image
+        working-directory: ./template
+        run: ./run-bakery extract ${{ env.PI_BASE_IMAGE }} build/base.tar
+      
+      - name: Customize System
+        working-directory: ./template
+        run: ./run-bakery customize build/base.tar build/customized.tar
+      
+      - name: Bake Image
+        working-directory: ./template
+        run: ./run-bakery bake build/customized.tar build/customized.img
