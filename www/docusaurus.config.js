@@ -99,7 +99,7 @@ const config = {
             items: [
               {
                 label: "GitHub",
-                href: "https://github.com/siltics/rugpi",
+                href: "https://github.com/silitics/rugpi",
               },
               {
                 label: "Discussions",
