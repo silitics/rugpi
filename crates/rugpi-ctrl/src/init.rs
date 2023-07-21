@@ -222,12 +222,17 @@ fn init() -> anyhow::Result<()> {
     ])?;
 
     let state_dir = Utf8Path::new(DEFAULT_STATE_DIR);
+    if state_dir.join(".rugpi/reset-state").exists() {
+        fs::remove_dir_all(state_dir).ok();
+    }
     fs::create_dir_all(state_dir).ok();
     fs::create_dir_all("/run/rugpi/state").ok();
     run!([MOUNT, "--bind", &state_dir, "/run/rugpi/state"])?;
 
     let overlay_state = state_dir.join("overlay").join(hot_partition_set.as_str());
-    fs::remove_dir_all(state_dir.join("overlay")).ok();
+    if !Path::new("/run/rugpi/state/.rugpi/persist-overlay").exists() {
+        fs::remove_dir_all(state_dir.join("overlay")).ok();
+    }
     fs::create_dir_all(&overlay_state).ok();
 
     // 4️⃣ Cleanup temporary data (ignoring any errors).

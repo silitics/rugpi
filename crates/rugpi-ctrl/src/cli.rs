@@ -1,6 +1,9 @@
 //! Definition of the command line interface (CLI).
 
-use std::fs::{self, File};
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
 use anyhow::{anyhow, bail};
 use camino::Utf8Path;
@@ -23,7 +26,27 @@ use crate::{
 pub fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     match &args.command {
-        Command::State(_) => todo!(),
+        Command::State(state_cmd) => match state_cmd {
+            StateCommand::Reset => {
+                fs::create_dir_all("/run/rugpi/state/.rugpi")?;
+                fs::write("/run/rugpi/state/.rugpi/reset-state", "")?;
+                reboot(false)?;
+            }
+            StateCommand::Overlay(overlay_cmd) => match overlay_cmd {
+                OverlayCommand::SetPersist { persist } => match persist {
+                    Boolean::True => {
+                        fs::create_dir_all("/run/rugpi/state/.rugpi")?;
+                        fs::write("/run/rugpi/state/.rugpi/persist-overlay", "")?;
+                    }
+                    Boolean::False => {
+                        fs::remove_file("/run/rugpi/state/.rugpi/persist-overlay").ok();
+                        if Path::new("/run/rugpi/state/.rugpi/persist-overlay").exists() {
+                            bail!("Unable to unset `overlay-persist`.");
+                        }
+                    }
+                },
+            },
+        },
         Command::Update(update_cmd) => match update_cmd {
             UpdateCommand::Install { image, no_reboot } => {
                 let hot_partitions = hot_partition_set()?;
