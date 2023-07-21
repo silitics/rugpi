@@ -8,8 +8,9 @@ Here is a quick reference for the filesystem hierarchy:
 
 - `/`: Root filesystem (read-write with an overlay).
 - `/boot`: Boot partition (read-only).
-- `/run/rugpi/system`: System partition (read-only).
-- `/run/rugpi/data`: Data partition (read-write).
+- `/run/rugpi/mounts/config`: Config boot partition (usually read-only).
+- `/run/rugpi/mounts/system`: System partition (read-only).
+- `/run/rugpi/mounts/data`: Data partition (read-write).
 - `/run/rugpi/state`: System state (read-write bind mounted).
 
 The state directory `/run/rugpi/state` is bind mounted to the active state profile on the data partition.
