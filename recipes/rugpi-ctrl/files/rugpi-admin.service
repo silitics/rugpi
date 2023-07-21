@@ -1,0 +1,9 @@
+[Unit]
+Description=Rugpi Admin
+ConditionFileIsExecutable=/usr/bin/rugpi-admin
+
+[Service]
+ExecStart=/usr/bin/rugpi-admin
+
+[Install]
+WantedBy=multi-user.target

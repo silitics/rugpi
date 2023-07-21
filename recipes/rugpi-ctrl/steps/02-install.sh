@@ -14,3 +14,9 @@ mkdir -p /etc/rugpi || true
 cat >/etc/rugpi/ctrl.toml <<EOF
 system_size = "${RECIPE_PARAM_SYSTEM_SIZE}"
 EOF
+
+install -D -m 644 "${RECIPE_DIR}/files/rugpi-admin.service" -t /usr/lib/systemd/system/
+
+if [ "${RECIPE_PARAM_RUGPI_ADMIN}" = "true" ]; then
+    systemctl enable rugpi-admin
+fi

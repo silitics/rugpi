@@ -6,6 +6,7 @@ pub mod autoboot;
 pub mod loop_dev;
 pub mod mkfs;
 pub mod mount;
+pub mod partitions;
 
 /// Patches `cmdline.txt` to use the given root device and `rugpi-ctrl` as init process.
 pub fn patch_cmdline(path: impl AsRef<Path>, root: impl AsRef<str>) -> io::Result<()> {

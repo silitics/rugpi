@@ -71,7 +71,9 @@ COPY files /usr/share/rugpi/files
 
 RUN mkdir -p /usr/share/rugpi/binaries/{arm64,armhf}
 COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-ctrl /usr/share/rugpi/binaries/arm64/
+COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-admin /usr/share/rugpi/binaries/arm64/
 COPY --from=builder /project/target/armv7-unknown-linux-musleabihf/release/rugpi-ctrl /usr/share/rugpi/binaries/armhf/
+COPY --from=builder /project/target/armv7-unknown-linux-musleabihf/release/rugpi-admin /usr/share/rugpi/binaries/armhf/
 
 WORKDIR /project
 
