@@ -51,6 +51,7 @@ pub fn run(task: &BakeTask) -> anyhow::Result<()> {
         patch_cmdline(
             boot_dir.join("cmdline.txt"),
             format!("PARTUUID={disk_id}-05"),
+            //format!("UUID={root_uuid}"),
         )?;
         // println!("Patching `/etc/fstab`...");
         // patch_fstab(&temp_dir_path.join("etc/fstab"), &disk_id)?;
@@ -66,8 +67,8 @@ pub fn run(task: &BakeTask) -> anyhow::Result<()> {
 //     let cmdline = fs::read_to_string(path)?;
 //     let mut parts = cmdline
 //         .split_ascii_whitespace()
-//         .filter(|part| !part.starts_with("root=") && !part.starts_with("init=") && *part != "quiet")
-//         .map(str::to_owned)
+//         .filter(|part| !part.starts_with("root=") && !part.starts_with("init=") &&
+// *part != "quiet")         .map(str::to_owned)
 //         .collect::<Vec<_>>();
 //     parts.push(format!("root=PARTUUID={disk_id}-05"));
 //     parts.push("init=/usr/bin/rugpi-ctrl".to_owned());

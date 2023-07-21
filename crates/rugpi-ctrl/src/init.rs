@@ -9,8 +9,8 @@ use xscript::{read_str, run, Out, Run};
 use crate::{
     config::Config,
     partitions::{
-        is_block_dev, SD_CARD, SD_PART_BOOT_A, SD_PART_BOOT_B, SD_PART_DATA, SD_PART_SYSTEM_A,
-        SD_PART_SYSTEM_B,
+        is_block_dev, SD_CARD, SD_PART_BOOT_A, SD_PART_BOOT_B, SD_PART_CONFIG, SD_PART_DATA,
+        SD_PART_SYSTEM_A, SD_PART_SYSTEM_B,
     },
     state::{load_state_config, Persist},
 };
@@ -42,6 +42,8 @@ const FDISK: &str = "/usr/sbin/fdisk";
 const FINDMNT: &str = "/usr/bin/findmnt";
 /// The `fsck` executable.
 const FSCK: &str = "/usr/sbin/fsck";
+/// The `mkfs.btrfs` executable.
+const MKFS_BRTFS: &str = "/usr/sbin/mkfs.ext4";
 /// The `mkfs.ext4` executable.
 const MKFS_ETX4: &str = "/usr/sbin/mkfs.ext4";
 /// The `mount` executable.
@@ -57,7 +59,7 @@ const SYNC: &str = "/usr/bin/sync";
 /// The `systemd-machine-id-setup` executable.
 const SYSTEMD_MACHINE_ID_SETUP: &str = "/usr/bin/systemd-machine-id-setup";
 
-const DEFAULT_STATE_DIR: &str = "/run/rugpi/data/state/default";
+const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
 pub fn find_dev(path: impl AsRef<str>) -> anyhow::Result<String> {
     Ok(read_str!([
@@ -68,7 +70,7 @@ pub fn find_dev(path: impl AsRef<str>) -> anyhow::Result<String> {
 pub fn system_dev() -> anyhow::Result<&'static Utf8Path> {
     static SYSTEM_DEV: OnceLock<anyhow::Result<String>> = OnceLock::new();
     SYSTEM_DEV
-        .get_or_init(|| find_dev("/run/rugpi/system"))
+        .get_or_init(|| find_dev("/run/rugpi/mounts/system"))
         .as_ref()
         .map(|device| Utf8Path::new(device))
         .map_err(|error| anyhow!("error retrieving system device: {error}"))
@@ -83,7 +85,37 @@ pub fn hot_partition_set() -> anyhow::Result<PartitionSet> {
     }
 }
 
-pub fn spare_partition_set() -> anyhow::Result<PartitionSet> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum AutobootSection {
+    Unknown,
+    All,
+    Tryboot,
+}
+
+pub fn default_partition_set() -> anyhow::Result<PartitionSet> {
+    let autoboot_txt = fs::read_to_string("/run/rugpi/mounts/config/autoboot.txt")?;
+    let mut section = AutobootSection::Unknown;
+    for line in autoboot_txt.lines() {
+        if line.starts_with("[all]") {
+            section = AutobootSection::All;
+        } else if line.starts_with("[tryboot]") {
+            section = AutobootSection::Tryboot;
+        } else if line.starts_with("[") {
+            section = AutobootSection::Unknown;
+        } else if line.starts_with("boot_partition=2") {
+            if section == AutobootSection::All {
+                return Ok(PartitionSet::A);
+            }
+        } else if line.starts_with("boot_partition=3") {
+            if section == AutobootSection::All {
+                return Ok(PartitionSet::B);
+            }
+        }
+    }
+    bail!("Unable to determine default partition set.");
+}
+
+pub fn cold_partition_set() -> anyhow::Result<PartitionSet> {
     Ok(hot_partition_set()?.flipped())
 }
 
@@ -124,15 +156,15 @@ impl PartitionSet {
 }
 
 pub fn overlay_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/data/overlay")
+    Utf8Path::new("/run/rugpi/mounts/data/overlay")
 }
 
 pub fn overlay_root_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/data/overlay/root")
+    Utf8Path::new("/run/rugpi/mounts/data/overlay/root")
 }
 
 pub fn overlay_work_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/data/overlay/work")
+    Utf8Path::new("/run/rugpi/mounts/data/overlay/work")
 }
 
 pub fn create_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
@@ -163,16 +195,31 @@ fn init() -> anyhow::Result<()> {
     if !is_block_dev(SD_PART_DATA) {
         expand_partition_table(&config)?;
     }
-    // Bind system partition to `/run/rugpi/system`.
-    fs::create_dir_all("/run/rugpi/system").ok();
-    run!([MOUNT, "--bind", "/", "/run/rugpi/system"])?;
+    // Bind system partition to `/run/rugpi/mounts/system`.
+    fs::create_dir_all("/run/rugpi/mounts/system").ok();
+    run!([MOUNT, "--bind", "/", "/run/rugpi/mounts/system"])?;
 
     let hot_partition_set = hot_partition_set()?;
 
+    fs::create_dir_all("/run/rugpi/mounts/config").ok();
+    run!([
+        MOUNT,
+        "-o",
+        "ro",
+        SD_PART_CONFIG,
+        "/run/rugpi/mounts/config"
+    ])?;
+
     // 3️⃣ Check and mount data partition.
     run!([FSCK, "-y", SD_PART_DATA])?;
-    fs::create_dir_all("/run/rugpi/data").ok();
-    run!([MOUNT, "-o", "noatime", SD_PART_DATA, "/run/rugpi/data"])?;
+    fs::create_dir_all("/run/rugpi/mounts/data").ok();
+    run!([
+        MOUNT,
+        "-o",
+        "noatime",
+        SD_PART_DATA,
+        "/run/rugpi/mounts/data"
+    ])?;
 
     let state_dir = Utf8Path::new(DEFAULT_STATE_DIR);
     fs::create_dir_all(state_dir).ok();
@@ -194,11 +241,16 @@ fn init() -> anyhow::Result<()> {
         "overlay",
         "overlay",
         "-o",
-        "noatime,lowerdir=/,upperdir={overlay_state},workdir=/run/rugpi/data/overlay/work",
-        "/run/rugpi/data/overlay/root"
+        "noatime,lowerdir=/,upperdir={overlay_state},workdir=/run/rugpi/mounts/data/overlay/work",
+        "/run/rugpi/mounts/data/overlay/root"
     ])?;
 
-    run!([MOUNT, "--rbind", "/run", "/run/rugpi/data/overlay/root/run"])?;
+    run!([
+        MOUNT,
+        "--rbind",
+        "/run",
+        "/run/rugpi/mounts/data/overlay/root/run"
+    ])?;
 
     run!([
         MOUNT,
@@ -296,7 +348,7 @@ fn init() -> anyhow::Result<()> {
         &CString::new(CHROOT).unwrap(),
         &[
             CString::new("chroot").unwrap(),
-            CString::new("/run/rugpi/data/overlay/root").unwrap(),
+            CString::new("/run/rugpi/mounts/data/overlay/root").unwrap(),
             CString::new("/sbin/init").unwrap(),
         ],
     )?;

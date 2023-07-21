@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 camino = "1.1.6"
+indoc = "2.0.3"
+xscript = "0.1.2"

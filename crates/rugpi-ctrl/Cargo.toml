@@ -18,3 +18,4 @@ xscript = "0.1.2"
 indoc = "2.0.2"
 toml = "0.7.6"
 rugpi-common = { version = "0.1.0", path = "../rugpi-common" }
+tempdir = "0.3.7"
