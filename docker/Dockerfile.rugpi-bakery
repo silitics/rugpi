@@ -66,6 +66,13 @@ FROM debian:latest AS bakery
 COPY docker/layers/bakery/00-base.sh /tmp/rugpi-docker/00-base.sh
 RUN /tmp/rugpi-docker/00-base.sh
 
+RUN mkdir -p /usr/share/rugpi \
+    && cd /usr/share/rugpi \
+    && wget -O rpi-eeprom-master.zip https://github.com/raspberrypi/rpi-eeprom/archive/refs/heads/master.zip \
+    && unzip rpi-eeprom-master.zip \
+    && mv rpi-eeprom-master rpi-eeprom \
+    && rm -f rpi-eeprom-master.zip
+
 COPY recipes /usr/share/rugpi/recipes
 COPY files /usr/share/rugpi/files
 

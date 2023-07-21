@@ -15,6 +15,7 @@ apt-get -y install \
     git \
     wget \
     xz-utils \
+    zip \
     zsh
 
 apt-get -y clean && rm -rf /var/lib/apt/lists/*
