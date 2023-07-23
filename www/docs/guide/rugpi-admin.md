@@ -11,6 +11,8 @@ In particular, it allows users to update a system simply by uploading an image a
 
 🚧 For now, if you install an update by uploading an image, you will not get any kind of progress indication from the UI and it may seem as nothing is happening. Uploading the image and installing it may take some time. Check your browsers loading indicator to verify whether the image is uploaded and installed. We plan to improve the UI/UX once Rugpi's core is production-ready.
 
+By default, Rugpi Admin is served on port `8088`.
+
 Screenshot:
 
 ![Rugpi Admin Screenshot](../../static/img/screenshots/rugpi-admin.png)
