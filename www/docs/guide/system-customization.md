@@ -5,7 +5,7 @@ sidebar_position: 1
 # System Customization
 
 The main configuration file of Rugpi Bakery is `rugpi-bakery.toml`.
-It specifies which recipes to include and with what parameters.
+It specifies which recipes to include and their parameters.
 
 At the top-level, the recipes to include are specified as a list:
 

@@ -1,6 +1,6 @@
 ---
 slug: introducing-rugpi
-title: "🚧 Draft: Introducing Rugpi"
+title: Introducing Rugpi
 authors: koehlma
 tags: [introduction, rugpi]
 ---
