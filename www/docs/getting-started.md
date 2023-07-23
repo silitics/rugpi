@@ -95,7 +95,7 @@ Building an image is generally a three-step process:
 
    The resulting image `build/image.img` is now ready to be written to an SD card, e.g., using Raspberry Pi Imager.
 
-   On the first boot, Rugpi Ctrl will repartition the SD card and then reboot into the actual system.
+   On the first boot, Rugpi Ctrl will repartition the SD card and then boot into the actual system.
    Once the system is running, you should be able to visit the static website via the system's IP address and connect via SSH.
 
 Congratulations! You built your first image with Rugpi Bakery. 🙌
