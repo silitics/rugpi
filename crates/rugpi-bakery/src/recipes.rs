@@ -4,6 +4,7 @@ use std::{collections::HashMap, ffi::OsStr, fmt, fs, ops, path::Path, sync::Arc}
 
 use anyhow::{anyhow, bail, Context};
 use camino::Utf8PathBuf;
+use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
 /// A library of recipes.
@@ -27,7 +28,7 @@ impl RecipeLibrary {
     }
 
     /// Retrieves a recipe from the library.
-    pub fn get(&self, name: &RecipeName) -> anyhow::Result<&Arc<Recipe>> {
+    pub fn get(&self, name: &RecipeName) -> Anyhow<&Arc<Recipe>> {
         self.0
             .get(name)
             .ok_or_else(|| anyhow!("recipe with name `{name}` does not exist"))
@@ -74,7 +75,7 @@ impl<'lib> RecipeLoader<'lib> {
     }
 
     /// Loads a recipe from the given path.
-    pub fn load(&mut self, path: &Path) -> anyhow::Result<()> {
+    pub fn load(&mut self, path: &Path) -> Anyhow<()> {
         let path = Utf8PathBuf::from_path_buf(path.to_path_buf())
             .map_err(|_| anyhow!("recipe path must be valid UTF-8"))?;
         let name = path
@@ -111,7 +112,7 @@ impl<'lib> RecipeLoader<'lib> {
     }
 
     /// Loads all recipes from the given path.
-    pub fn load_all(&mut self, path: &Path) -> anyhow::Result<()> {
+    pub fn load_all(&mut self, path: &Path) -> Anyhow<()> {
         for entry in fs::read_dir(path)? {
             self.load(&entry?.path())?;
         }
@@ -222,7 +223,7 @@ pub struct RecipeStep {
 
 impl RecipeStep {
     /// Tries to load a recipe step from the provided path.
-    fn load(path: &Path) -> anyhow::Result<Self> {
+    fn load(path: &Path) -> Anyhow<Self> {
         let filename = path
             .file_name()
             .and_then(OsStr::to_str)
@@ -267,10 +268,12 @@ pub enum StepKind {
 mod tests {
     use std::path::Path;
 
+    use rugpi_common::Anyhow;
+
     use crate::recipes::RecipeLibrary;
 
     #[test]
-    pub fn test_load_builtin_library() -> anyhow::Result<()> {
+    pub fn test_load_builtin_library() -> Anyhow<()> {
         let mut library = RecipeLibrary::new();
         library
             .loader()

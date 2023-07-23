@@ -1,4 +1,5 @@
 use clap::Parser;
+use rugpi_common::Anyhow;
 use tasks::{
     bake::{self, BakeTask},
     customize::{self, CustomizeTask},
@@ -26,7 +27,7 @@ pub enum Cmd {
     Bake(BakeTask),
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Anyhow<()> {
     let args = Args::parse();
     match &args.cmd {
         Cmd::Extract(task) => {

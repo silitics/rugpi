@@ -2,10 +2,11 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
+use rugpi_common::{loop_dev::LoopDevice, mount::Mounted, Anyhow};
 use tempdir::TempDir;
 use xscript::{run, Run};
 
-use crate::utils::{download, LoopDevice, Mounted};
+use crate::utils::download;
 
 #[derive(Debug, Parser)]
 pub struct ExtractTask {
@@ -16,7 +17,7 @@ pub struct ExtractTask {
 }
 
 impl ExtractTask {
-    pub fn run(&self) -> anyhow::Result<()> {
+    pub fn run(&self) -> Anyhow<()> {
         let mut image_path = if self.image.starts_with("http") {
             download(&self.image)?
         } else {

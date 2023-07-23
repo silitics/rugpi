@@ -783,7 +783,7 @@ dependencies = [
  "indoc",
  "rugpi-common",
  "tokio",
- "xscript",
+ "xscript 0.2.0",
 ]
 
 [[package]]
@@ -801,7 +801,7 @@ dependencies = [
  "thiserror",
  "toml",
  "url",
- "xscript",
+ "xscript 0.2.0",
 ]
 
 [[package]]
@@ -811,7 +811,7 @@ dependencies = [
  "anyhow",
  "camino",
  "indoc",
- "xscript",
+ "xscript 0.2.0",
 ]
 
 [[package]]
@@ -827,7 +827,7 @@ dependencies = [
  "serde",
  "tempdir",
  "toml",
- "xscript",
+ "xscript 0.2.0",
 ]
 
 [[package]]
@@ -1334,10 +1334,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6dba555a30c6a4ee3365d3cc9e5cbdd2362c256c629b3c926f08ac642aacc0a"
 
 [[package]]
+name = "xscript"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5cb5aba94ee9fd4d8bd891ed0a84cc06b3c78f37c5e477a1053a9e2c561b383"
+
+[[package]]
 name = "xtask"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
- "xscript",
+ "xscript 0.1.2",
 ]

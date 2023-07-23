@@ -1,21 +1,23 @@
-use std::{ffi::CString, fs, io, path::Path, process, sync::OnceLock, thread, time::Duration};
+use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 
-use anyhow::{anyhow, bail, ensure};
+use anyhow::{bail, ensure};
 use camino::Utf8Path;
-use indoc::formatdoc;
-use rugpi_common::patch_cmdline;
-use xscript::{read_str, run, Out, Run};
+use rugpi_common::{
+    partitions::{
+        devices::{SD_CARD, SD_PART_BOOT_A, SD_PART_CONFIG, SD_PART_DATA},
+        get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
+        sfdisk_system_layout,
+    },
+    patch_cmdline, Anyhow,
+};
+use xscript::{run, Run};
 
 use crate::{
     config::Config,
-    partitions::{
-        is_block_dev, SD_CARD, SD_PART_BOOT_A, SD_PART_BOOT_B, SD_PART_CONFIG, SD_PART_DATA,
-        SD_PART_SYSTEM_A, SD_PART_SYSTEM_B,
-    },
-    state::{load_state_config, Persist},
+    state::{load_state_config, Persist, STATE_CONFIG_DIR},
 };
 
-pub fn main() -> anyhow::Result<()> {
+pub fn main() -> Anyhow<()> {
     ensure!(is_init_process(), "process must be the init process");
     let result = init();
     match &result {
@@ -32,28 +34,19 @@ pub fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// The `chroot` executable.
-const CHROOT: &str = "/usr/sbin/chroot";
+/// Indicates whether the process is the init process.
+pub fn is_init_process() -> bool {
+    std::process::id() == 1
+}
+
 /// The `cp` executable.
 const CP: &str = "/usr/bin/cp";
-/// The `fdisk` executable.
-const FDISK: &str = "/usr/sbin/fdisk";
-/// The `findmnt` executable.
-const FINDMNT: &str = "/usr/bin/findmnt";
 /// The `fsck` executable.
 const FSCK: &str = "/usr/sbin/fsck";
-/// The `mkfs.btrfs` executable.
-const MKFS_BRTFS: &str = "/usr/sbin/mkfs.ext4";
-/// The `mkfs.ext4` executable.
-const MKFS_ETX4: &str = "/usr/sbin/mkfs.ext4";
 /// The `mount` executable.
 const MOUNT: &str = "/usr/bin/mount";
-/// The `partprobe` executable.
-const PARTPROBE: &str = "/usr/sbin/partprobe";
-/// The `reboot` executable.
-const REBOOT: &str = "/usr/sbin/reboot";
-/// The `sfdisk` executable.
-const SFDISK: &str = "/usr/sbin/sfdisk";
+/// The `umount` executable.
+const UMOUNT: &str = "/usr/bin/umount";
 /// The `sync` executable.
 const SYNC: &str = "/usr/bin/sync";
 /// The `systemd-machine-id-setup` executable.
@@ -61,181 +54,128 @@ const SYSTEMD_MACHINE_ID_SETUP: &str = "/usr/bin/systemd-machine-id-setup";
 
 const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
-pub fn find_dev(path: impl AsRef<str>) -> anyhow::Result<String> {
-    Ok(read_str!([
-        FINDMNT, "-n", "-o", "SOURCE", "--target", path
-    ])?)
-}
+fn init() -> Anyhow<()> {
+    println!(include_str!("../assets/BANNER.txt"));
+    let config = load_config()?;
 
-pub fn system_dev() -> anyhow::Result<&'static Utf8Path> {
-    static SYSTEM_DEV: OnceLock<anyhow::Result<String>> = OnceLock::new();
-    SYSTEM_DEV
-        .get_or_init(|| find_dev("/run/rugpi/mounts/system"))
-        .as_ref()
-        .map(|device| Utf8Path::new(device))
-        .map_err(|error| anyhow!("error retrieving system device: {error}"))
-}
+    // 1️⃣ Mount essential filesystems.
+    mount_essential_filesystems()?;
 
-pub fn hot_partition_set() -> anyhow::Result<PartitionSet> {
-    let system_dev = system_dev()?.as_str();
-    match system_dev {
-        SD_PART_SYSTEM_A => Ok(PartitionSet::A),
-        SD_PART_SYSTEM_B => Ok(PartitionSet::B),
-        _ => bail!("unable to determine hot partition set, invalid device {system_dev}"),
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum AutobootSection {
-    Unknown,
-    All,
-    Tryboot,
-}
-
-pub fn default_partition_set() -> anyhow::Result<PartitionSet> {
-    let autoboot_txt = fs::read_to_string("/run/rugpi/mounts/config/autoboot.txt")?;
-    let mut section = AutobootSection::Unknown;
-    for line in autoboot_txt.lines() {
-        if line.starts_with("[all]") {
-            section = AutobootSection::All;
-        } else if line.starts_with("[tryboot]") {
-            section = AutobootSection::Tryboot;
-        } else if line.starts_with("[") {
-            section = AutobootSection::Unknown;
-        } else if line.starts_with("boot_partition=2") {
-            if section == AutobootSection::All {
-                return Ok(PartitionSet::A);
-            }
-        } else if line.starts_with("boot_partition=3") {
-            if section == AutobootSection::All {
-                return Ok(PartitionSet::B);
-            }
-        }
-    }
-    bail!("Unable to determine default partition set.");
-}
-
-pub fn cold_partition_set() -> anyhow::Result<PartitionSet> {
-    Ok(hot_partition_set()?.flipped())
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PartitionSet {
-    A,
-    B,
-}
-
-impl PartitionSet {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            PartitionSet::A => "a",
-            PartitionSet::B => "b",
-        }
+    // 2️⃣ Initialize partitions during the first boot.
+    if !is_block_dev(SD_PART_DATA) {
+        initialize_partitions(&config)?;
     }
 
-    pub fn system_dev(self) -> &'static Utf8Path {
-        match self {
-            PartitionSet::A => Utf8Path::new(SD_PART_SYSTEM_A),
-            PartitionSet::B => Utf8Path::new(SD_PART_SYSTEM_B),
-        }
-    }
+    // 3️⃣ Check and mount the data partition.
+    run!([FSCK, "-y", SD_PART_DATA])?;
+    fs::create_dir_all(MOUNT_POINT_DATA).ok();
+    run!([MOUNT, "-o", "noatime", SD_PART_DATA, MOUNT_POINT_DATA])?;
 
-    pub fn boot_dev(self) -> &'static Utf8Path {
-        match self {
-            PartitionSet::A => Utf8Path::new(SD_PART_BOOT_A),
-            PartitionSet::B => Utf8Path::new(SD_PART_BOOT_B),
-        }
-    }
+    // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
+    fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
+    run!([MOUNT, "--bind", "/", MOUNT_POINT_SYSTEM])?;
+    fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
+    run!([MOUNT, "-o", "ro", SD_PART_CONFIG, MOUNT_POINT_CONFIG])?;
 
-    pub fn flipped(self) -> Self {
-        match self {
-            PartitionSet::A => Self::B,
-            PartitionSet::B => Self::A,
-        }
+    // 6️⃣ Setup state in `/run/rugpi/state`.
+    let state_profile = Utf8Path::new(DEFAULT_STATE_DIR);
+    if state_profile.join(".rugpi/reset-state").exists() {
+        // The existence of the file indicates that the state shall be reset.
+        fs::remove_dir_all(state_profile).ok();
     }
+    fs::create_dir_all(state_profile).ok();
+    fs::create_dir_all(STATE_DIR).ok();
+    run!([MOUNT, "--bind", &state_profile, STATE_DIR])?;
+
+    // 7️⃣ Setup the root filesystem overlay.
+    setup_root_overlay(state_profile)?;
+
+    // 8️⃣ Setup the bind mounts for the persistent state.
+    setup_persistent_state(state_profile)?;
+
+    // 9️⃣ Restore the machine id and hand off to Systemd.
+    restore_machine_id()?;
+    exec_chroot_init()?;
+
+    Ok(())
 }
+
+const MOUNT_POINT_SYSTEM: &str = "/run/rugpi/mounts/system";
+const MOUNT_POINT_DATA: &str = "/run/rugpi/mounts/data";
+const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
+
+const STATE_DIR: &str = "/run/rugpi/state";
+
+pub fn state_dir() -> &'static Utf8Path {
+    Utf8Path::new(STATE_DIR)
+}
+
+const OVERLAY_DIR: &str = "/run/rugpi/mounts/data/overlay";
+const OVERLAY_ROOT_DIR: &str = "/run/rugpi/mounts/data/overlay/root";
+const OVERLAY_WORK_DIR: &str = "/run/rugpi/mounts/data/overlay/work";
 
 pub fn overlay_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/mounts/data/overlay")
+    Utf8Path::new(OVERLAY_DIR)
 }
 
 pub fn overlay_root_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/mounts/data/overlay/root")
+    Utf8Path::new(OVERLAY_ROOT_DIR)
 }
 
 pub fn overlay_work_dir() -> &'static Utf8Path {
-    Utf8Path::new("/run/rugpi/mounts/data/overlay/work")
+    Utf8Path::new(OVERLAY_WORK_DIR)
 }
 
-pub fn create_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
-    fn _create_parent_dir(path: &Path) -> io::Result<()> {
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("path `{path:?}` has no parent"),
-            ))
-        }
-    }
-    _create_parent_dir(path.as_ref())
+/// Loads the Rugpi Ctrl configuration.
+fn load_config() -> Anyhow<Config> {
+    Ok(toml::from_str(&fs::read_to_string(
+        "/etc/rugpi/ctrl.toml",
+    )?)?)
 }
 
-fn init() -> anyhow::Result<()> {
-    println!(include_str!("../assets/BANNER.txt"));
-    let config: Config = fs::read_to_string("/etc/rugpi/ctrl.toml")
-        .map_err(|error| anyhow::Error::from(error))
-        .and_then(|config_str| Ok(toml::from_str(&config_str)?))
-        .unwrap_or_default();
-    // 1️⃣ Mount essential filesystems.
+/// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
+fn mount_essential_filesystems() -> Anyhow<()> {
     run!([MOUNT, "-t", "proc", "proc", "/proc"])?;
     run!([MOUNT, "-t", "sysfs", "sys", "/sys"])?;
     run!([MOUNT, "-t", "tmpfs", "tmp", "/run"])?;
-    // 2️⃣ Expand partition table, if data partition does not exist.
-    if !is_block_dev(SD_PART_DATA) {
-        expand_partition_table(&config)?;
+    Ok(())
+}
+
+/// Initializes the partitions and expands the partition table during the first boot.
+fn initialize_partitions(config: &Config) -> Anyhow<()> {
+    eprintln!("Creating system partitions... DO NOT TURN OFF!");
+    let system_size = config.system_size();
+
+    // 1️⃣ Apply the system layout to the SD card and reread the partition table.
+    sfdisk_apply_layout(SD_CARD, sfdisk_system_layout(system_size))?;
+
+    // 2️⃣ Patch the `cmdline.txt` with the new disk id.
+    let disk_id = get_disk_id(SD_CARD)?;
+    run!([MOUNT, SD_PART_BOOT_A, "/boot"])?;
+    patch_cmdline("/boot/cmdline.txt", format!("PARTUUID={disk_id}-05"))?;
+    run!([UMOUNT, "/boot"])?;
+
+    // 3️⃣ Create a file system on the data partition.
+    mkfs_ext4(SD_PART_DATA, "data")?;
+
+    // 4️⃣ Make sure everything is written to disk.
+    run!([SYNC])?;
+
+    Ok(())
+}
+
+/// Sets up the overlay.
+fn setup_root_overlay(state_profile: &Utf8Path) -> Anyhow<()> {
+    let overlay_state = state_profile.join("overlay");
+    if !state_profile.join(".rugpi/persist-overlay").exists() {
+        fs::remove_dir_all(&overlay_state).ok();
     }
-    // Bind system partition to `/run/rugpi/mounts/system`.
-    fs::create_dir_all("/run/rugpi/mounts/system").ok();
-    run!([MOUNT, "--bind", "/", "/run/rugpi/mounts/system"])?;
 
-    let hot_partition_set = hot_partition_set()?;
+    let hot_partitions = get_hot_partitions()?;
+    let hot_overlay_state = overlay_state.join(hot_partitions.as_str());
+    fs::create_dir_all(&hot_overlay_state).ok();
 
-    fs::create_dir_all("/run/rugpi/mounts/config").ok();
-    run!([
-        MOUNT,
-        "-o",
-        "ro",
-        SD_PART_CONFIG,
-        "/run/rugpi/mounts/config"
-    ])?;
-
-    // 3️⃣ Check and mount data partition.
-    run!([FSCK, "-y", SD_PART_DATA])?;
-    fs::create_dir_all("/run/rugpi/mounts/data").ok();
-    run!([
-        MOUNT,
-        "-o",
-        "noatime",
-        SD_PART_DATA,
-        "/run/rugpi/mounts/data"
-    ])?;
-
-    let state_dir = Utf8Path::new(DEFAULT_STATE_DIR);
-    if state_dir.join(".rugpi/reset-state").exists() {
-        fs::remove_dir_all(state_dir).ok();
-    }
-    fs::create_dir_all(state_dir).ok();
-    fs::create_dir_all("/run/rugpi/state").ok();
-    run!([MOUNT, "--bind", &state_dir, "/run/rugpi/state"])?;
-
-    let overlay_state = state_dir.join("overlay").join(hot_partition_set.as_str());
-    if !Path::new("/run/rugpi/state/.rugpi/persist-overlay").exists() {
-        fs::remove_dir_all(state_dir.join("overlay")).ok();
-    }
-    fs::create_dir_all(&overlay_state).ok();
-
-    // 4️⃣ Cleanup temporary data (ignoring any errors).
+    // Reinitialize `work` and `root` directories.
     fs::remove_dir_all(overlay_dir()).ok();
     fs::create_dir_all(overlay_work_dir()).ok();
     fs::create_dir_all(overlay_root_dir()).ok();
@@ -246,45 +186,38 @@ fn init() -> anyhow::Result<()> {
         "overlay",
         "overlay",
         "-o",
-        "noatime,lowerdir=/,upperdir={overlay_state},workdir=/run/rugpi/mounts/data/overlay/work",
-        "/run/rugpi/mounts/data/overlay/root"
+        "noatime,lowerdir=/,upperdir={hot_overlay_state},workdir={OVERLAY_WORK_DIR}",
+        OVERLAY_ROOT_DIR
     ])?;
-
-    run!([
-        MOUNT,
-        "--rbind",
-        "/run",
-        "/run/rugpi/mounts/data/overlay/root/run"
-    ])?;
-
+    run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
     run!([
         MOUNT,
         "-o",
         "ro",
-        hot_partition_set.boot_dev(),
+        hot_partitions.boot_dev(),
         overlay_root_dir().join("boot")
-    ])
-    .ok();
+    ])?;
+    Ok(())
+}
 
-    let new_root = overlay_root_dir();
+/// Sets up the bind mounts required for the persistent state.
+fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
+    let root_dir = overlay_root_dir();
 
-    let state_persist_dir = state_dir.join("persist");
-    fs::create_dir_all(&state_dir).ok();
+    let persist_dir = state_profile.join("persist");
+    fs::create_dir_all(&state_profile).ok();
 
-    let state_config = load_state_config();
+    let state_config = load_state_config(STATE_CONFIG_DIR);
+
     for persist in &state_config.persist {
         match persist {
             Persist::Directory { directory } => {
-                let mut path = Utf8Path::new(directory);
-                if let Ok(stripped) = path.strip_prefix("/") {
-                    path = stripped;
-                }
-                eprintln!("Setting up bind mounds for directory `{path}`...");
-                let system_path = new_root.join(path);
-                let state_path = state_persist_dir.join(path);
+                let directory = path_strip_root(directory.as_ref());
+                eprintln!("Setting up bind mounds for directory `{directory}`...");
+                let system_path = root_dir.join(directory);
+                let state_path = persist_dir.join(directory);
                 if system_path.exists() && !system_path.is_dir() {
-                    eprintln!("Error persisting `{directory}`, not a directory!");
-                    continue;
+                    bail!("Error persisting `{directory}`, not a directory!");
                 }
                 if !state_path.is_dir() {
                     fs::remove_dir_all(&state_path).ok();
@@ -301,16 +234,12 @@ fn init() -> anyhow::Result<()> {
                 run!([MOUNT, "--bind", &state_path, &system_path])?;
             }
             Persist::File { file, default } => {
-                let mut path = Utf8Path::new(file);
-                if let Ok(stripped) = path.strip_prefix("/") {
-                    path = stripped;
-                }
-                eprintln!("Setting up bind mounds for file `{path}`...");
-                let system_path = new_root.join(path);
-                let state_path = state_persist_dir.join(path);
+                let file = path_strip_root(file.as_ref());
+                eprintln!("Setting up bind mounds for file `{file}`...");
+                let system_path = root_dir.join(file);
+                let state_path = persist_dir.join(file);
                 if system_path.exists() && !system_path.is_file() {
-                    eprintln!("Error persisting `{file}`, not a file!");
-                    continue;
+                    bail!("Error persisting `{file}`, not a file!");
                 }
                 if !state_path.is_file() {
                     fs::remove_dir_all(&state_path).ok();
@@ -325,115 +254,60 @@ fn init() -> anyhow::Result<()> {
                     create_parent_dir(&system_path)?;
                     fs::write(&system_path, "")?;
                 }
-                if let Err(error) = run!([MOUNT, "--bind", &state_path, &system_path]) {
-                    eprintln!("{state_path}");
-                    eprintln!("{system_path}");
-                    eprintln!("{error}");
-                    thread::sleep(Duration::from_secs(60));
-                }
+                run!([MOUNT, "--bind", &state_path, &system_path])?;
             }
         }
     }
 
-    let state_machine_id = state_dir.join("machine-id");
-    let system_machine_id = new_root.join("etc/machine-id");
+    Ok(())
+}
+
+/// Strips the root `/` from a path.
+fn path_strip_root(path: &Utf8Path) -> &Utf8Path {
+    if let Ok(stripped) = path.strip_prefix("/") {
+        stripped
+    } else {
+        path
+    }
+}
+
+/// Creates the parent directories of a path.
+fn create_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    fn _create_parent_dir(path: &Path) -> io::Result<()> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("path `{path:?}` has no parent"),
+            ))
+        }
+    }
+    _create_parent_dir(path.as_ref())
+}
+
+/// Makes sure `/etc/machine-id` has been restored/initialized.
+fn restore_machine_id() -> Anyhow<()> {
+    let state_machine_id = state_dir().join("machine-id");
+    let system_machine_id = overlay_root_dir().join("etc/machine-id");
     if !state_machine_id.exists() {
         // Ensure that the `machine-id` is valid.
-        run!([SYSTEMD_MACHINE_ID_SETUP, "--root", new_root])?;
+        run!([SYSTEMD_MACHINE_ID_SETUP, "--root", OVERLAY_ROOT_DIR])?;
         fs::copy(system_machine_id, state_machine_id)?;
     } else {
-        fs::copy(state_machine_id, new_root.join("etc/machine-id"))?;
+        fs::copy(state_machine_id, system_machine_id)?;
     }
-
-    // 5️⃣ Create state directory, if it does not exist.
-    // if !is_dir(DATA_STATE_DIR) {
-    //     fs::create_dir_all(DATA_STATE_DIR)?;
-    // }
-    nix::unistd::execv(
-        &CString::new(CHROOT).unwrap(),
-        &[
-            CString::new("chroot").unwrap(),
-            CString::new("/run/rugpi/mounts/data/overlay/root").unwrap(),
-            CString::new("/sbin/init").unwrap(),
-        ],
-    )?;
     Ok(())
 }
 
-fn expand_partition_table(config: &Config) -> anyhow::Result<()> {
-    let system_size = config.system_size();
-    eprintln!("Creating system partitions... DO NOT TURN OFF!");
-    run!([MOUNT, "-o", "remount,rw", "/"])?;
-    run!([MOUNT, SD_PART_BOOT_A, "/boot"])?;
-    run!([SFDISK, "--no-reread", SD_CARD].with_stdin(formatdoc! {"
-        label: dos
-        unit: sectors
-        grain: 4M
-        
-        config   : type=0c, size=256M
-        boot-a   : type=0c, size=128M
-        boot-b   : type=0c, size=128M
-        
-        extended : type=05
-        
-        system-a : type=83, size={system_size}
-        system-b : type=83, size={system_size}
-        data     : type=83
-    "}))?;
-    run!([FDISK, "-l", SD_CARD].with_stdout(Out::Inherit))?;
-    run!([PARTPROBE])?;
-    // run!([MKFS_BRTFS, "-F", "-L", "system-b", SD_PART_SYSTEM_B])?;
-    run!([MKFS_ETX4, "-F", "-L", "data", SD_PART_DATA])?;
-    let disk_id = xscript::read_str!([SFDISK, "--disk-id", SD_CARD])?
-        .strip_prefix("0x")
-        .ok_or_else(|| anyhow!("`sfdisk` returned invalid disk id"))?
-        .to_owned();
-    // patch_fstab(Utf8Path::new("/etc/fstab"), &disk_id)?;
-    patch_cmdline("/boot/cmdline.txt", format!("PARTUUID={disk_id}-05"))?;
-    // patch_cmdline(Utf8Path::new("/boot/cmdline.txt"), &disk_id)?;
-    reboot()?;
+/// The `chroot` executable.
+const CHROOT: &str = "/usr/sbin/chroot";
+
+/// Changes the root directory and hands off to Systemd.
+fn exec_chroot_init() -> Anyhow<()> {
+    let chroot_prog = &CString::new(CHROOT).unwrap();
+    let new_root = &CString::new(OVERLAY_ROOT_DIR).unwrap();
+    let systemd_init = &CString::new("/sbin/init").unwrap();
+    nix::unistd::execv(chroot_prog, &[chroot_prog, new_root, systemd_init])?;
     Ok(())
-}
-
-pub fn reboot() -> anyhow::Result<()> {
-    run!([REBOOT, "-f"])?;
-    eprint!("Rebooting in 5 seconds...");
-    run!([SYNC])?;
-    thread::sleep(Duration::from_secs(5));
-    process::exit(0)
-}
-
-// pub fn patch_cmdline(path: &Utf8Path, disk_id: &str) -> anyhow::Result<()> {
-//     let cmdline = fs::read_to_string(path)?;
-//     let mut parts = cmdline
-//         .split_ascii_whitespace()
-//         .filter(|part| !part.starts_with("root=") && !part.starts_with("init=") &&
-// *part != "quiet")         .map(str::to_owned)
-//         .collect::<Vec<_>>();
-//     parts.push(format!("root=PARTUUID={disk_id}-05"));
-//     parts.push("init=/usr/bin/rugpi-ctrl".to_owned());
-//     fs::write(path, parts.join(" "))?;
-//     Ok(())
-// }
-
-// pub fn patch_fstab(path: &Utf8Path, disk_id: &str) -> anyhow::Result<()> {
-//     let fstab = fs::read_to_string(path)?;
-//     let lines = fstab
-//         .lines()
-//         .map(|line| {
-//             if line.starts_with("PARTUUID=") {
-//                 let (_, tail) = line.split_once("-").unwrap();
-//                 format!("PARTUUID={disk_id}-{tail}")
-//             } else {
-//                 line.to_owned()
-//             }
-//         })
-//         .collect::<Vec<_>>();
-//     fs::write(path, lines.join("\n"))?;
-//     Ok(())
-// }
-
-/// Indicates whether the process is the init process.
-pub fn is_init_process() -> bool {
-    std::process::id() == 1
 }

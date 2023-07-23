@@ -7,7 +7,8 @@ use axum::{
     Router, Server,
 };
 use clap::Parser;
-use rugpi_common::partitions::{default_partition_set, hot_partition_set};
+#[cfg(not(debug_assertions))]
+use rugpi_common::partitions::{get_default_partitions, get_hot_partitions};
 use tokio::io::AsyncWriteExt;
 #[cfg(not(debug_assertions))]
 use xscript::{run, Run};
@@ -38,8 +39,8 @@ async fn main() {
 #[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
     tokio::task::spawn_blocking(|| {
-        let hot_partitions = hot_partition_set().unwrap();
-        let default_partitions = default_partition_set().unwrap();
+        let hot_partitions = get_hot_partitions().unwrap();
+        let default_partitions = get_default_partitions().unwrap();
         Html(
             include_str!("../assets/index.html")
                 .replace("HOT_PARTITIONS", &hot_partitions.as_str().to_uppercase())

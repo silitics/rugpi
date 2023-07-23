@@ -1,12 +1,15 @@
 [package]
 name = "rugpi-common"
-version = "0.1.0"
+description = "Common utilities for Rugpi Ctrl and Rugpi Bakery."
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
-anyhow = "1.0.71"
-camino = "1.1.6"
+anyhow.workspace = true
+camino.workspace = true
 indoc = "2.0.3"
-xscript = "0.1.2"
+xscript.workspace = true

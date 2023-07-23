@@ -1,6 +1,8 @@
 use camino::Utf8PathBuf;
 use xscript::{read_str, run, Run};
 
+use crate::Anyhow;
+
 /// A loop device with an attached image.
 #[derive(Debug)]
 pub struct LoopDevice {
@@ -9,7 +11,7 @@ pub struct LoopDevice {
 
 impl LoopDevice {
     /// Attaches an image to the next free loop device.
-    pub fn attach(image: impl AsRef<str>) -> anyhow::Result<Self> {
+    pub fn attach(image: impl AsRef<str>) -> Anyhow<Self> {
         let path = read_str!(["losetup", "-f"])?;
         run!(["losetup", "-P", &path, image])?;
         Ok(LoopDevice { path: path.into() })

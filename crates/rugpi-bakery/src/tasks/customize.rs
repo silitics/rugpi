@@ -11,13 +11,13 @@ use std::{
 use anyhow::bail;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
+use rugpi_common::{mount::Mounted, Anyhow};
 use tempdir::TempDir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{
     config::BakeryConfig,
     recipes::{Recipe, RecipeLibrary, StepKind},
-    utils::Mounted,
 };
 
 /// The arguments of the `customize` command.
@@ -29,7 +29,7 @@ pub struct CustomizeTask {
     dest: String,
 }
 
-pub fn run(task: &CustomizeTask) -> anyhow::Result<()> {
+pub fn run(task: &CustomizeTask) -> Anyhow<()> {
     // 1️⃣ Load the Bakery configuration file.
     let current_dir = Utf8PathBuf::try_from(env::current_dir()?)?;
     let config = toml::from_str(&fs::read_to_string(current_dir.join("rugpi-bakery.toml"))?)?;
@@ -51,7 +51,7 @@ struct RecipeJob {
     parameters: HashMap<String, String>,
 }
 
-fn recipe_schedule(config: &BakeryConfig) -> anyhow::Result<Vec<RecipeJob>> {
+fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
     let mut library = RecipeLibrary::new();
     // 1️⃣ Load builtin recipes.
     let builtin_recipes_path = PathBuf::from(
@@ -117,7 +117,7 @@ fn recipe_schedule(config: &BakeryConfig) -> anyhow::Result<Vec<RecipeJob>> {
     Ok(recipes)
 }
 
-fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> anyhow::Result<()> {
+fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> Anyhow<()> {
     let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
     let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
     let _mounted_sys = Mounted::bind("/sys", root_dir_path.join("sys"))?;
@@ -149,7 +149,7 @@ fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> anyhow::Res
                 StepKind::Packages { packages } => {
                     let mut cmd = cmd!("chroot", root_dir_path, "apt-get", "install", "-y");
                     cmd.extend_args(packages);
-                    ParentEnv.run(&cmd.with_vars(vars! {
+                    ParentEnv.run(cmd.with_vars(vars! {
                         DEBIAN_FRONTEND = "noninteractive"
                     }))?;
                 }

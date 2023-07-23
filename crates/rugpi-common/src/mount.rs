@@ -1,14 +1,21 @@
 use camino::Utf8PathBuf;
-use xscript::{run, Run};
+use xscript::{cmd, run, ParentEnv, Run};
+
+use crate::Anyhow;
+
+/// The `mount` executable.
+const MOUNT: &str = "/usr/bin/mount";
+/// The `umount` executable.
+const UMOUNT: &str = "/usr/bin/umount";
 
 pub struct Mounted {
     path: Utf8PathBuf,
 }
 
 impl Mounted {
-    pub fn mount(dev: impl AsRef<str>, dst: impl AsRef<str>) -> anyhow::Result<Self> {
+    pub fn mount(dev: impl AsRef<str>, dst: impl AsRef<str>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!(["mount", dev, dst])?;
+        run!([MOUNT, dev, dst])?;
         Ok(Mounted { path: dst.into() })
     }
 
@@ -16,21 +23,21 @@ impl Mounted {
         fstype: impl AsRef<str>,
         src: impl AsRef<str>,
         dst: impl AsRef<str>,
-    ) -> anyhow::Result<Self> {
+    ) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!(["mount", "-t", fstype, src, dst])?;
+        run!([MOUNT, "-t", fstype, src, dst])?;
         Ok(Mounted { path: dst.into() })
     }
 
-    pub fn bind(src: impl AsRef<str>, dst: impl AsRef<str>) -> anyhow::Result<Self> {
+    pub fn bind(src: impl AsRef<str>, dst: impl AsRef<str>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!(["mount", "--bind", src, dst])?;
+        run!([MOUNT, "--bind", src, dst])?;
         Ok(Mounted { path: dst.into() })
     }
 }
 
 impl Drop for Mounted {
     fn drop(&mut self) {
-        run!(["umount", &self.path]).ok();
+        run!([UMOUNT, &self.path]).ok();
     }
 }

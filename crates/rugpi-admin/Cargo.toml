@@ -13,4 +13,4 @@ clap = { version = "4.3.17", features = ["derive"] }
 indoc = "2.0.3"
 rugpi-common = { version = "0.1.0", path = "../rugpi-common" }
 tokio = { version = "1.29.1", features = ["full"] }
-xscript = "0.1.2"
+xscript.workspace = true

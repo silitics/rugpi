@@ -5,25 +5,23 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use camino::Utf8Path;
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
     autoboot::{AUTOBOOT_A, AUTOBOOT_B},
     loop_dev::LoopDevice,
-    mkfs,
     mount::Mounted,
-    patch_cmdline,
+    partitions::{
+        devices::SD_CARD, get_default_partitions, get_disk_id, get_hot_partitions, mkfs_ext4,
+        mkfs_vfat, PartitionSet,
+    },
+    patch_cmdline, Anyhow, DropGuard,
 };
 use tempdir::TempDir;
 use xscript::{run, Run};
 
-use crate::{
-    init::{cold_partition_set, default_partition_set, hot_partition_set},
-    partitions::SD_CARD,
-};
-
-pub fn main() -> anyhow::Result<()> {
+pub fn main() -> Anyhow<()> {
     let args = Args::parse();
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
@@ -49,43 +47,40 @@ pub fn main() -> anyhow::Result<()> {
         },
         Command::Update(update_cmd) => match update_cmd {
             UpdateCommand::Install { image, no_reboot } => {
-                let hot_partitions = hot_partition_set()?;
-                let default_partitions = default_partition_set()?;
+                let hot_partitions = get_hot_partitions()?;
+                let default_partitions = get_default_partitions()?;
                 let spare_partitions = default_partitions.flipped();
                 if hot_partitions != default_partitions {
                     bail!("Hot partitions are not the default!");
                 }
                 let loop_device = LoopDevice::attach(&image)?;
                 println!("Formatting partitions...");
-                let boot_dev_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
-                let sys_dev_label = format!("system-{}", spare_partitions.as_str());
-                mkfs::make_boot_fs(spare_partitions.boot_dev(), &boot_dev_label)?;
-                mkfs::make_system_fs(spare_partitions.system_dev(), &sys_dev_label)?;
+                let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
+                let system_label = format!("system-{}", spare_partitions.as_str());
+                mkfs_vfat(spare_partitions.boot_dev(), &boot_label)?;
+                mkfs_ext4(spare_partitions.system_dev(), &system_label)?;
                 let temp_dir_image = TempDir::new("rugpi-image")?;
                 let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
                 let temp_dir_spare = TempDir::new("rugpi-spare")?;
                 let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
-                // 1️⃣ Copy system.
+                // 1️⃣ Copy `/`.
                 {
                     let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
                     let _mounted_spare =
                         Mounted::mount(spare_partitions.system_dev(), temp_dir_spare)?;
                     run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
                 }
-                // 1️⃣ Copy boot.
+                // 2️⃣ Copy `/boot`.
                 {
                     let _mounted_image = Mounted::mount(loop_device.partition(2), temp_dir_image)?;
                     let _mounted_spare =
                         Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
                     run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
-                    // Path cmdline.txt.
-                    let disk_id = xscript::read_str!(["sfdisk", "--disk-id", SD_CARD])?
-                        .strip_prefix("0x")
-                        .ok_or_else(|| anyhow!("`sfdisk` returned invalid disk id"))?
-                        .to_owned();
+                    // Patch cmdline.txt.
+                    let disk_id = get_disk_id(SD_CARD)?;
                     let root = match spare_partitions {
-                        crate::init::PartitionSet::A => format!("PARTUUID={disk_id}-05"),
-                        crate::init::PartitionSet::B => format!("PARTUUID={disk_id}-06"),
+                        PartitionSet::A => format!("PARTUUID={disk_id}-05"),
+                        PartitionSet::B => format!("PARTUUID={disk_id}-06"),
                     };
                     patch_cmdline(temp_dir_spare.join("cmdline.txt"), root)?;
                 }
@@ -96,23 +91,25 @@ pub fn main() -> anyhow::Result<()> {
         },
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
-                let hot_partitions = hot_partition_set()?;
-                let cold_partitions = cold_partition_set()?;
-                let default_partitions = default_partition_set()?;
-                let spare_partitions = default_partitions.flipped();
+                let hot_partitions = get_hot_partitions()?;
+                let default_partitions = get_default_partitions()?;
                 println!("Hot: {}", hot_partitions.as_str());
-                println!("Cold: {}", cold_partitions.as_str());
+                println!("Cold: {}", hot_partitions.flipped().as_str());
                 println!("Default: {}", default_partitions.as_str());
-                println!("Spare: {}", spare_partitions.as_str());
+                println!("Spare: {}", default_partitions.flipped().as_str());
             }
             SystemCommand::Commit => {
-                let hot_partitions = hot_partition_set()?;
-                let default_partitions = default_partition_set()?;
+                let hot_partitions = get_hot_partitions()?;
+                let default_partitions = get_default_partitions()?;
                 if hot_partitions != default_partitions {
                     run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
+                    let _remount_guard = DropGuard::new(|| {
+                        run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
+                    });
+
                     let autoboot_txt = match hot_partitions {
-                        crate::init::PartitionSet::A => AUTOBOOT_A,
-                        crate::init::PartitionSet::B => AUTOBOOT_B,
+                        PartitionSet::A => AUTOBOOT_A,
+                        PartitionSet::B => AUTOBOOT_B,
                     };
                     fs::write("/run/rugpi/mounts/config/autoboot.txt.new", autoboot_txt)?;
                     let autoboot_new_file =
@@ -122,7 +119,6 @@ pub fn main() -> anyhow::Result<()> {
                         "/run/rugpi/mounts/config/autoboot.txt.new",
                         "/run/rugpi/mounts/config/autoboot.txt",
                     )?;
-                    run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"])?;
                 } else {
                     println!("Hot partition is already the default!");
                 }
@@ -135,7 +131,7 @@ pub fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn reboot(spare: bool) -> anyhow::Result<()> {
+pub fn reboot(spare: bool) -> Anyhow<()> {
     if spare {
         run!(["reboot", "0 tryboot"])?;
     } else {

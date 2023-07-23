@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
@@ -26,17 +26,26 @@ impl StateConfig {
 #[serde(untagged)]
 pub enum Persist {
     /// Persist a directory.
-    Directory { directory: String },
+    Directory {
+        /// The path of the directory to persist.    
+        directory: String,
+    },
     /// Persist a file.
     File {
+        /// The path to the file to persist.
         file: String,
+        /// The default content to write to the file.
         default: Option<String>,
     },
 }
 
-pub fn load_state_config() -> StateConfig {
+/// The default directory with the configurations for state management.
+pub const STATE_CONFIG_DIR: &str = "/etc/rugpi/state";
+
+/// Loads the state configuration from the provided directory.
+pub fn load_state_config(dir: impl AsRef<Path>) -> StateConfig {
     let mut combined = StateConfig::new();
-    if let Ok(read_dir) = fs::read_dir("/etc/rugpi/state") {
+    if let Ok(read_dir) = fs::read_dir(dir) {
         for entry in read_dir {
             entry
                 .ok()

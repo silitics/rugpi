@@ -8,3 +8,10 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/silitics/rugpi/"
 homepage = "https://oss.silitics.com/rugpi/"
+
+[workspace.dependencies]
+anyhow = "1.0.71"
+camino = "1.1.6"
+clap = { version = "4.3", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+xscript = "0.2.0"
