@@ -4,6 +4,7 @@ import Link from "@docusaurus/Link"
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext"
 import Layout from "@theme/Layout"
 import HomepageFeatures from "@site/src/components/HomepageFeatures"
+import Admonition from "@theme/Admonition"
 
 import styles from "./index.module.css"
 
@@ -24,13 +25,12 @@ function HomepageHeader() {
           Rugpi enables you to{" "}
           <strong>
             build commercial-grade, customized variants of{" "}
-            <a href="https://en.wikipedia.org/wiki/Raspberry_Pi_OS">
-              Raspberry Pi OS
-            </a>{" "}
+            <a href="https://www.raspberrypi.com/software/">Raspberry Pi OS</a>{" "}
           </strong>
-          for your product. It boasts two core features: (1) Transactional{" "}
+          for your project. It boasts three core features: (1) A modern workflow
+          to build customized system images, (2) robust{" "}
           <strong>over-the-air updates with rollback support</strong> of the
-          entire system, including firmware files, and (2){" "}
+          entire system, including firmware files, and (3){" "}
           <strong>managed state</strong> which is preserved across reboots and
           updates.
         </p>
@@ -53,6 +53,26 @@ export default function Home(): JSX.Element {
     <Layout title="Home" description={siteConfig.tagline}>
       <HomepageHeader />
       <main>
+        <div style={{ maxWidth: "80ch", padding: "2rem 0", margin: "0 auto" }}>
+          <Admonition type="caution" title="🚧 EXPERIMENTAL 🚧">
+            <p>
+              Rugpi <strong>is still experimental</strong>. Expect things to
+              change and break!
+            </p>
+            <p>
+              If you have any ideas, suggestions, feedback regarding the early
+              prototype, or anything else you like to discuss, please reach out
+              to us by starting a{" "}
+              <a
+                href="https://github.com/silitics/rugpi/discussions"
+                target="_blank"
+              >
+                discussion on GitHub
+              </a>
+              .
+            </p>
+          </Admonition>
+        </div>
         <HomepageFeatures />
       </main>
     </Layout>

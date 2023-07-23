@@ -35,18 +35,18 @@ In general, any data stored in `/var/rugpi/state` survives updates and reboots.
 However, storing data there is not always possible or convenient.
 Hence, Rugpi Ctrl can be configured to use `--bind` mounts to persist certain parts of the filesystem on the data partition.
 
-For instance, to persist the data stored in a PostgreSQL database, the following configuration file is used:
+For instance, to persist the home directory of the `root` user, the following configuration file is used:
 
-```toml title="/etc/rugpi/state/postgresql.toml"
+```toml title="/etc/rugpi/state/root-home.toml"
 [[persist]]
-directory = "/var/lib/postgresql/data"
+directory = "/root"
 ```
 
-This instructs Rugpi Ctrl to `--bind` mount a persistent and writable directory to `/var/lib/postgresql/data` thereby preserving the state of the PostgreSQL database.
-Note that the `postgresql` recipe automatically adds such a file.
+This instructs Rugpi Ctrl to `--bind` mount a persistent and writable directory to `/root` thereby preserving the entire home directory of the `root` user.
+Note that the `persist-root-home` recipe automatically adds such a file.
 
 Rugpi is similar to Docker in that regard.
-A system should be disposable like a Docker container while any important state, which needs to persist, should be stored in an explicitly declared way (like volumes in Docker).
+A system should be disposable like a Docker container while any important state, that needs to persist, should be stored in an explicitly declared way (like volumes in Docker).
 
 ### Factory Reset
 

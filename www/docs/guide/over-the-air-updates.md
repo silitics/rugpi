@@ -37,15 +37,15 @@ We call the other, non-default set, the *spare set*.
 An update is only possible if the hot set is also the default set.
 That way, if anything goes wrong while installing the update, the system will boot into the previous known-good version by default.
 The Rugpi update mechanism installs the update to the cold spare set of partitions.
-After installing the update, it uses the `tryboot` mechanism of the Raspberry Pi firmware to try booting into the newly installed version, crucially without changing the default set.
+After installing the update, it uses the `tryboot` mechanism of the Raspberry Pi bootloader to try booting into the newly installed version, crucially without changing the default set.
 Hence, if anything goes wrong, the system automatically reboots into the previous version by default.
 Only after booting successfully into the newly installed system, by which the set of partitions with the new version becomes the hot set, and verifying that everything is in working order, the update is made permanent by making the hot set the default set.
 
 ## Updating a System
 
-To update a system, first a `.rugpi-system` artifact needs to be [build using Rugpi Bakery](./building-artifacts).
-Further, this artifact needs to find its way[^2] onto the Raspberry Pi running Rugpi.
-The artifact is then installed to the cold spare set of partitions with:
+To update a system, first an image needs to be [build using Rugpi Bakery](/docs/getting-started).
+Further, this image needs to find its way[^2] onto the Raspberry Pi running Rugpi.
+The image is then installed to the cold spare set of partitions with:
 
 ```shell
 rugpi-ctrl update install <path to the artifact>
@@ -98,3 +98,14 @@ Then, after rebooting, commit the rollback with:
 rugpi-ctrl system commit
 ```
 
+### On Atomicity of Commits
+
+Note that commits are the only critical operation because they modify the default set in the `autoboot.txt`.
+This is done by temporarily remounting the config partition with the `autoboot.txt` such that it is writeable.
+The `autoboot.txt` is then replaced as suggested by [Raspberry Pi's documentation on the `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot).
+As the filesystem is FAT32, the automitcity of this operation cannot be guaranteed.
+Still, Rugpi Ctrl does its best by first creating the new `autoboot.txt` and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.
+However, should the system crash during this process, the FAT32 filesystem may still be corrupted.
+We think that this is an acceptable risk as the likelihood of it happening is very low and any alternatives, like swapping the MBR, may be problematic for other reasons.[^4]
+
+[^4]: If you have any suggestions, please share them with us.

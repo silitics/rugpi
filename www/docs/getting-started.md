@@ -7,6 +7,8 @@ sidebar_position: 1
 Rugpi consists of two components, _Rugpi Bakery_ for building customized images, and _Rugpi Ctrl_ for maintaining and managing a Rugpi system.
 This quick start guide takes you through the steps necessary to build a custom Rugpi image with Rugpi Bakery.
 
+⚠️ **Note that Rugpi only supports the Raspberry Pi 4 family and has not been thoroughly testet yet.**
+
 ## Building an Image
 
 You can [build images locally](#building-an-image-locally) or [using a CI system like GitHub Actions](#using-github-actions).
@@ -28,7 +30,7 @@ First, obtain a local copy of the [Rugpi template](https://github.com/silitics/r
 git clone https://github.com/silitics/rugpi-template
 ```
 
-Note that Rugpi Bakery is distributed as a Docker image because it relies on various Linux tools and facilities to build the image.
+Note that Rugpi Bakery is distributed as a Docker image (for `arm64` and `amd64`) because it relies on various Linux tools and facilities to build the image.
 Building images outside of Docker is fundamentally only possible on Linux and not officially supported.
 So, to build the image locally, a working Docker installation is required.
 The template ships with a `run-bakery` shell script (for Linux and macOS) to run Rugpi Bakery in a temporary container.
@@ -40,7 +42,7 @@ To print the usage instructions of Rugpi Bakery, in the root directory of the te
 ./run-bakery help
 ```
 
-On a non ARM64 system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate ARM64.
+On a non-`arm64` system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate `arm64`.
 The easiest way to do so, and as we are already using Docker, is by running the following command:
 
 ```shell
