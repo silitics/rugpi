@@ -4,14 +4,14 @@ use camino::{Utf8Path, Utf8PathBuf};
 use rugpi_common::Anyhow;
 use sha1::{Digest, Sha1};
 use url::Url;
-use xscript::{read_str, run, Run};
+use xscript::{run, Run};
 
 pub fn download(url: &str) -> Anyhow<Utf8PathBuf> {
     let url = url.parse::<Url>()?;
     let Some(file_name) = url.path_segments().and_then(|segments| segments.last()) else {
         anyhow::bail!("unable to obtain file name from URL");
     };
-    let file_extension = file_name.split_once(".").map(|(_, extension)| extension);
+    let file_extension = file_name.split_once('.').map(|(_, extension)| extension);
     let mut url_hasher = Sha1::new();
     url_hasher.update(url.as_str().as_bytes());
     let url_hash = url_hasher.finalize();

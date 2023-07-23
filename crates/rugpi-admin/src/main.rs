@@ -115,7 +115,7 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
                 let mut image_file =
                     tokio::io::BufWriter::new(tokio::fs::File::create(IMAGE_FILE).await.unwrap());
                 while let Some(chunk) = field.chunk().await.unwrap() {
-                    image_file.write(chunk.deref()).await.unwrap();
+                    image_file.write_all(chunk.deref()).await.unwrap();
                 }
                 image_file.flush().await.unwrap();
                 drop(image_file);

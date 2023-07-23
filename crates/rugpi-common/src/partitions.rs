@@ -48,7 +48,7 @@ pub fn system_dev() -> Anyhow<&'static Utf8Path> {
     SYSTEM_DEV
         .get_or_init(|| find_dev("/run/rugpi/mounts/system"))
         .as_ref()
-        .map(|device| Utf8Path::new(device))
+        .map(Utf8Path::new)
         .map_err(|error| anyhow!("error retrieving system device: {error}"))
 }
 
@@ -76,16 +76,12 @@ pub fn get_default_partitions() -> Anyhow<PartitionSet> {
             section = AutobootSection::All;
         } else if line.starts_with("[tryboot]") {
             section = AutobootSection::Tryboot;
-        } else if line.starts_with("[") {
+        } else if line.starts_with('[') {
             section = AutobootSection::Unknown;
-        } else if line.starts_with("boot_partition=2") {
-            if section == AutobootSection::All {
-                return Ok(PartitionSet::A);
-            }
-        } else if line.starts_with("boot_partition=3") {
-            if section == AutobootSection::All {
-                return Ok(PartitionSet::B);
-            }
+        } else if line.starts_with("boot_partition=2") && section == AutobootSection::All {
+            return Ok(PartitionSet::A);
+        } else if line.starts_with("boot_partition=3") && section == AutobootSection::All {
+            return Ok(PartitionSet::B);
         }
     }
     bail!("Unable to determine default partition set.");
@@ -151,7 +147,6 @@ pub fn sfdisk_image_layout() -> String {
         
         system-a : type=83 
     "# }
-    .to_owned()
 }
 
 /// The `sfdisk` partition layout for a Rugpi system.
@@ -171,7 +166,6 @@ pub fn sfdisk_system_layout(system_size: &str) -> String {
         system-b : type=83, size={system_size}
         data     : type=83
     "# }
-    .to_owned()
 }
 
 /// The `sfdisk` executable.

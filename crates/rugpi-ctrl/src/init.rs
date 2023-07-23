@@ -205,7 +205,7 @@ fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
     let root_dir = overlay_root_dir();
 
     let persist_dir = state_profile.join("persist");
-    fs::create_dir_all(&state_profile).ok();
+    fs::create_dir_all(state_profile).ok();
 
     let state_config = load_state_config(STATE_CONFIG_DIR);
 

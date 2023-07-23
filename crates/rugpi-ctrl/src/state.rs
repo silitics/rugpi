@@ -47,11 +47,13 @@ pub fn load_state_config(dir: impl AsRef<Path>) -> StateConfig {
     let mut combined = StateConfig::new();
     if let Ok(read_dir) = fs::read_dir(dir) {
         for entry in read_dir {
-            entry
+            if let Some(config) = entry
                 .ok()
                 .and_then(|entry| fs::read_to_string(entry.path()).ok())
                 .and_then(|config| toml::from_str(&config).ok())
-                .map(|config| combined.merge(config));
+            {
+                combined.merge(config);
+            }
         }
     }
     combined

@@ -53,12 +53,12 @@ pub fn main() -> Anyhow<()> {
                 if hot_partitions != default_partitions {
                     bail!("Hot partitions are not the default!");
                 }
-                let loop_device = LoopDevice::attach(&image)?;
+                let loop_device = LoopDevice::attach(image)?;
                 println!("Formatting partitions...");
                 let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
                 let system_label = format!("system-{}", spare_partitions.as_str());
-                mkfs_vfat(spare_partitions.boot_dev(), &boot_label)?;
-                mkfs_ext4(spare_partitions.system_dev(), &system_label)?;
+                mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
+                mkfs_ext4(spare_partitions.system_dev(), system_label)?;
                 let temp_dir_image = TempDir::new("rugpi-image")?;
                 let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
                 let temp_dir_spare = TempDir::new("rugpi-spare")?;

@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use xscript::{cmd, run, ParentEnv, Run};
+use xscript::{run, Run};
 
 use crate::Anyhow;
 

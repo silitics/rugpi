@@ -18,6 +18,7 @@ impl RecipeLibrary {
     }
 
     /// Adds a recipe to the library.
+    #[allow(clippy::result_large_err)]
     pub fn add(&mut self, recipe: Recipe) -> Result<(), Recipe> {
         if self.0.contains_key(&recipe.name) {
             Err(recipe)
@@ -230,10 +231,10 @@ impl RecipeStep {
             .ok_or_else(|| anyhow!("unable to determine filename of step `{:?}`", path))?
             .to_owned();
         let (position, kind) = filename
-            .split_once("-")
+            .split_once('-')
             .ok_or_else(|| anyhow!("unable to parse filename of step `{:?}`", path))?;
         let position = position.parse().context("unable to parse step position")?;
-        let kind = match kind.split(".").next().unwrap() {
+        let kind = match kind.split('.').next().unwrap() {
             "packages" => {
                 let packages = fs::read_to_string(path)?
                     .split_whitespace()
