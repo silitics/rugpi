@@ -4,4 +4,4 @@ default = true
 
 [parameters]
 system_size = { default = "4G" }
-rugpi_admin = { default = true }
+rugpi_admin = { default = false }
