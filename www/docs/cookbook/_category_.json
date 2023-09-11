@@ -1,6 +1,6 @@
 {
-    "label": "Rugpi's Internals",
-    "position": 30,
+    "label": "Cookbook",
+    "position": 20,
     "link": {
         "type": "doc",
         "id": "index"

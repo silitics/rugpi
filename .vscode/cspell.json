@@ -2,6 +2,7 @@
   "version": "0.2",
   "words": [
     "ascii",
+    "avahi",
     "blkid",
     "bootloader",
     "BRTFS",
@@ -11,6 +12,8 @@
     "camino",
     "cmdline",
     "composability",
+    "discoverability",
+    "Discoverability",
     "eeprom",
     "execv",
     "fallocate",

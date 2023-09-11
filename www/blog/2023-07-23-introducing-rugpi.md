@@ -40,7 +40,7 @@ Stay tuned for future updates by staring or watching [the project on GitHub](htt
 
 Rugpi is and will stay open-source under the permissive MIT and Apache 2.0 licenses.
 This is great for hobby projects and also minimizes risks for commercial applications.
-Rugpi is backed by our company, [Silitics](https://www.silitics.com), and we offer commercial support as well as development and consulting services.
+Rugpi is backed by my company, [Silitics](https://www.silitics.com), and we offer commercial support as well as development and consulting services.
 If you plan to built a commercial product with Rugpi, we are here to ensure your success.
 
 ### Technical Details in a Nutshell
