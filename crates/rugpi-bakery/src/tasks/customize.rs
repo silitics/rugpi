@@ -9,14 +9,14 @@ use std::{
 };
 
 use anyhow::bail;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use clap::Parser;
 use rugpi_common::{mount::Mounted, Anyhow};
 use tempdir::TempDir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{
-    config::BakeryConfig,
+    config::{load_config, BakeryConfig},
     recipes::{Recipe, RecipeLibrary, StepKind},
 };
 
@@ -31,8 +31,7 @@ pub struct CustomizeTask {
 
 pub fn run(task: &CustomizeTask) -> Anyhow<()> {
     // 1️⃣ Load the Bakery configuration file.
-    let current_dir = Utf8PathBuf::try_from(env::current_dir()?)?;
-    let config = toml::from_str(&fs::read_to_string(current_dir.join("rugpi-bakery.toml"))?)?;
+    let config = load_config()?;
     // 2️⃣ Collect the recipes to apply.
     let jobs = recipe_schedule(&config)?;
     // 3️⃣ Prepare system chroot.

@@ -13,6 +13,8 @@ use rugpi_common::{
 use tempdir::TempDir;
 use xscript::{run, Run};
 
+use crate::config::load_config;
+
 #[derive(Debug, Parser)]
 pub struct BakeTask {
     /// The archive with the system files.
@@ -22,6 +24,7 @@ pub struct BakeTask {
 }
 
 pub fn run(task: &BakeTask) -> Anyhow<()> {
+    let config = load_config()?;
     let archive = Utf8Path::new(&task.archive);
     let image = Utf8Path::new(&task.image);
     let size = calculate_image_size(archive)?;
@@ -54,38 +57,10 @@ pub fn run(task: &BakeTask) -> Anyhow<()> {
     {
         let _mounted_config = Mounted::mount(loop_device.partition(1), temp_dir_path)?;
         run!(["cp", "-rTp", "/usr/share/rugpi/files/config", temp_dir_path])?;
-        run!([
-            "cp",
-            "-f",
-            "/usr/share/rugpi/rpi-eeprom/firmware/stable/pieeprom-2023-05-11.bin",
-            temp_dir_path.join("pieeprom.upd")
-        ])?;
-        run!([
-            "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
-            "-i",
-            temp_dir_path.join("pieeprom.upd"),
-            "-o",
-            temp_dir_path.join("pieeprom.sig")
-        ])?;
-        run!([
-            "cp",
-            "-f",
-            "/usr/share/rugpi/rpi-eeprom/firmware/stable/vl805-000138c0.bin",
-            temp_dir_path.join("vl805.bin")
-        ])?;
-        run!([
-            "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
-            "-i",
-            temp_dir_path.join("vl805.bin"),
-            "-o",
-            temp_dir_path.join("vl805.sig")
-        ])?;
-        run!([
-            "cp",
-            "-f",
-            "/usr/share/rugpi/rpi-eeprom/firmware/stable/recovery.bin",
-            temp_dir_path.join("recovery.bin")
-        ])?;
+        match config.include_firmware {
+            crate::config::IncludeFirmware::None => { /* Do not include any firmware. */ }
+            crate::config::IncludeFirmware::Pi4 => include_pi4_firmware(&temp_dir_path)?,
+        }
     }
     Ok(())
 }
@@ -96,4 +71,40 @@ fn calculate_image_size(archive: &Utf8Path) -> Anyhow<u64> {
     let total_blocks = (total_bytes / 4096) + 1;
     let actual_blocks = (1.2 * (total_blocks as f64)) as u64;
     Ok(actual_blocks * 4096)
+}
+
+fn include_pi4_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
+    run!([
+        "cp",
+        "-f",
+        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/pieeprom-2023-05-11.bin",
+        autoboot_path.join("pieeprom.upd")
+    ])?;
+    run!([
+        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
+        "-i",
+        autoboot_path.join("pieeprom.upd"),
+        "-o",
+        autoboot_path.join("pieeprom.sig")
+    ])?;
+    run!([
+        "cp",
+        "-f",
+        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/vl805-000138c0.bin",
+        autoboot_path.join("vl805.bin")
+    ])?;
+    run!([
+        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
+        "-i",
+        autoboot_path.join("vl805.bin"),
+        "-o",
+        autoboot_path.join("vl805.sig")
+    ])?;
+    run!([
+        "cp",
+        "-f",
+        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/recovery.bin",
+        autoboot_path.join("recovery.bin")
+    ])?;
+    Ok(())
 }
