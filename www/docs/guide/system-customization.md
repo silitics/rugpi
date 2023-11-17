@@ -38,7 +38,7 @@ You have to use priorities to control their order explicitly.
 ### Parameters
 
 Recipes can have _parameters_.
-Parameters are define in the `parameters` section of `recipe.toml`:
+Parameters are defined in the `parameters` section of `recipe.toml`:
 
 ```toml
 [parameters]
