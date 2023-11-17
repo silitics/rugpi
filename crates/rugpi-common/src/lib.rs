@@ -33,6 +33,21 @@ pub fn patch_cmdline(path: impl AsRef<Path>, root: impl AsRef<str>) -> io::Resul
     _patch_cmdline(path.as_ref(), root.as_ref())
 }
 
+/// Patches `config.txt` to not use `initramfs`.
+pub fn patch_config(path: impl AsRef<Path>) -> io::Result<()> {
+    fn _patch_config(path: &Path) -> io::Result<()> {
+        let config = fs::read_to_string(path)?;
+        let lines = config
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("auto_initramfs"))
+            .map(str::to_owned)
+            .collect::<Vec<_>>();
+        fs::write(path, lines.join("\n"))?;
+        Ok(())
+    }
+    _patch_config(path.as_ref())
+}
+
 /// Runs a closure on drop.
 pub struct DropGuard<F: FnOnce()>(Option<F>);
 

@@ -8,7 +8,7 @@ use rugpi_common::{
     loop_dev::LoopDevice,
     mount::Mounted,
     partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout, sfdisk_image_layout},
-    patch_cmdline, Anyhow,
+    patch_cmdline, patch_config, Anyhow,
 };
 use tempdir::TempDir;
 use xscript::{run, Run};
@@ -53,6 +53,8 @@ pub fn run(task: &BakeTask) -> Anyhow<()> {
             boot_dir.join("cmdline.txt"),
             format!("PARTUUID={disk_id}-05"),
         )?;
+        println!("Patching `config.txt`...");
+        patch_config(boot_dir.join("config.txt"))?;
     }
     {
         let _mounted_config = Mounted::mount(loop_device.partition(1), temp_dir_path)?;
