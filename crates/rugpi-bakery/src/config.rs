@@ -34,6 +34,7 @@ pub enum IncludeFirmware {
     None,
     #[default]
     Pi4,
+    Pi5,
 }
 
 /// Load the configuration file from the current directory.

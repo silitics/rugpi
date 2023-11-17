@@ -62,6 +62,7 @@ pub fn run(task: &BakeTask) -> Anyhow<()> {
         match config.include_firmware {
             crate::config::IncludeFirmware::None => { /* Do not include any firmware. */ }
             crate::config::IncludeFirmware::Pi4 => include_pi4_firmware(&temp_dir_path)?,
+            crate::config::IncludeFirmware::Pi5 => include_pi5_firmware(&temp_dir_path)?,
         }
     }
     Ok(())
@@ -106,6 +107,29 @@ fn include_pi4_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
         "cp",
         "-f",
         "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/recovery.bin",
+        autoboot_path.join("recovery.bin")
+    ])?;
+    Ok(())
+}
+
+fn include_pi5_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
+    run!([
+        "cp",
+        "-f",
+        "/usr/share/rugpi/rpi-eeprom/firmware-2712/stable/pieeprom-2023-10-30.bin",
+        autoboot_path.join("pieeprom.upd")
+    ])?;
+    run!([
+        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
+        "-i",
+        autoboot_path.join("pieeprom.upd"),
+        "-o",
+        autoboot_path.join("pieeprom.sig")
+    ])?;
+    run!([
+        "cp",
+        "-f",
+        "/usr/share/rugpi/rpi-eeprom/firmware-2712/stable/recovery.bin",
         autoboot_path.join("recovery.bin")
     ])?;
     Ok(())
