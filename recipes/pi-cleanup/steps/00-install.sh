@@ -7,7 +7,7 @@ export DEBIAN_FRONTEND=noninteractive
 systemctl disable userconfig
 systemctl disable resize2fs_once
 
-# Only exists on older (Debuan Buster) releases.
+# Only exists on older (Debian Bullseye) releases.
 systemctl disable unattended-upgrades.service || true
 
 # Only exists on newer (Debian Bookworm) releases.
