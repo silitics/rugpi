@@ -7,7 +7,9 @@ sidebar_position: 1
 Rugpi consists of two components, _Rugpi Bakery_ for building customized images, and _Rugpi Ctrl_ for maintaining and managing a Rugpi system.
 This quick start guide takes you through the steps necessary to build a custom Rugpi image with Rugpi Bakery.
 
-⚠️ **Note that Rugpi currently only supports 64-bit Raspberry Pi 4 and Compute Module 4.**
+⚠️ **Note that Rugpi currently only supports 64-bit Raspberry Pi 4/5 and Compute Module 4.**
+The template assumes that you are building an image for Raspberry Pi 4.
+For further details, please read the [Supported Boards](./guide/supported-boards.md) section of the user guide.
 
 ## Building an Image
 
