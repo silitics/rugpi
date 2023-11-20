@@ -55,4 +55,4 @@ For further details, read the [user guide](/docs/guide/) and checkout [the sourc
 ### Try it Today!
 
 We invite you to try Rugpi.
-Checkout [the quick start guide](/docs/getting-started) to built your first image and share your recipes, questions, projects, ideas, and suggestions by opening [discussions on GitHub](https://github.com/silitics/rugpi/discussions). 🚀
+Checkout [the quick-start guide](/docs/getting-started) to built your first image and share your recipes, questions, projects, ideas, and suggestions by opening [discussions on GitHub](https://github.com/silitics/rugpi/discussions). 🚀

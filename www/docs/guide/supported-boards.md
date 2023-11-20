@@ -19,6 +19,12 @@ For further details, see [issue #4](https://github.com/silitics/rugpi/issues/4).
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
 
 
+### Raspberry Pi 5
+
+If you are using the quick-start template, please remove the option `include_firmware = "pi4"` from `rugpi-bakery.toml`.
+This option will include the bootloader update for Raspberry Pi 4 (see bellow).
+Updating the bootloader is not necessary for Raspberry Pi 5, as it already comes with the `tryboot` feature out-of-the-box.
+
 ### Raspberry Pi 4 and Compute Module 4
 
 The bootloader version shipped with Raspberry Pi 4 and Compute Module 4 does not support the `tryboot` feature out-of-the-box.
