@@ -47,12 +47,11 @@ fi
 ##############################################################################
 
 echo Bootpart: ${bootpart}
-echo Cmdline: ${cmdline}
+echo Bootargs: ${bootargs}
 
 load mmc 0:${bootpart} ${kernel_addr_r} ${kernel_file}
 setenv kernel_comp_addr_r ${loadaddr}
 setenv kernel_comp_size 0x4000000
-setenv bootargs ${cmdline}
 # Try booting `zImage`.
 booti ${kernel_addr_r} - ${fdt_addr}
 # Try booting `uImage`.
