@@ -29,7 +29,7 @@ if test ${boot_spare} = 1; then
     # Next time, boot from the default partition set again.
     setenv boot_spare 0
     env export -c ${loadaddr} boot_spare
-    save mmc 0:1 ${loadaddr} default.env ${filesize}
+    save mmc 0:1 ${loadaddr} boot_spare.env ${filesize}
 fi
 
 
