@@ -18,7 +18,7 @@ function HomepageHeader() {
           The Commercial-Grade Platform for Raspberry Pi
         </h1>
         <p className="hero__subtitle">
-          Rugpi is an open-source platform empowering you to create innovative
+          Rugpi is an open-source platform empowering you to build innovative
           products based on Raspberry Pi.
         </p>
         <p style={{ maxWidth: "80ch", margin: "1.5em auto" }}>
@@ -56,7 +56,14 @@ export default function Home(): JSX.Element {
         <div style={{ maxWidth: "80ch", padding: "2rem 0", margin: "0 auto" }}>
           <Admonition type="info" title="Stability Guarantees">
             <p>
-              While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. Backwards incompatible changes to the update mechanism will be made only after careful consideration and consultation with our users. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the CLI and APIs are still expected to change.
+              While Rugpi is a young and evolving project, we understand that
+              the lifetime of embedded devices spans multiple years, if not
+              decades. Backwards incompatible changes to the update mechanism
+              will be made only after careful consideration and consultation
+              with our users. This ensures that devices using Rugpi can be
+              updated in the future. If you're developing integrations with
+              Rugpi, please be aware that the CLI and APIs are still expected to
+              change.
             </p>
           </Admonition>
         </div>
