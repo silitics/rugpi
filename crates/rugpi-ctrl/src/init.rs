@@ -8,7 +8,7 @@ use rugpi_common::{
         get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
         sfdisk_system_layout,
     },
-    patch_cmdline, Anyhow,
+    patch_boot, Anyhow,
 };
 use xscript::{run, Run};
 
@@ -152,7 +152,7 @@ fn initialize_partitions(config: &Config) -> Anyhow<()> {
     // 2️⃣ Patch the `cmdline.txt` with the new disk id.
     let disk_id = get_disk_id(SD_CARD)?;
     run!([MOUNT, SD_PART_BOOT_A, "/boot"])?;
-    patch_cmdline("/boot/cmdline.txt", format!("PARTUUID={disk_id}-05"))?;
+    patch_boot("/boot", format!("PARTUUID={disk_id}-05"))?;
     run!([UMOUNT, "/boot"])?;
 
     // 3️⃣ Create a file system on the data partition.

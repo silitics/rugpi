@@ -2,7 +2,10 @@
 
 use std::{fs, io, path::Path};
 
+use crate::boot::uboot::UBootEnv;
+
 pub mod autoboot;
+pub mod boot;
 pub mod loop_dev;
 pub mod mount;
 pub mod partitions;
@@ -11,9 +14,10 @@ pub mod partitions;
 pub type Anyhow<T> = anyhow::Result<T>;
 
 /// Patches `cmdline.txt` to use the given root device and `rugpi-ctrl` as init process.
-pub fn patch_cmdline(path: impl AsRef<Path>, root: impl AsRef<str>) -> io::Result<()> {
-    fn _patch_cmdline(path: &Path, root: &str) -> io::Result<()> {
-        let cmdline = fs::read_to_string(path)?;
+pub fn patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
+    fn _patch_cmdline(path: &Path, root: &str) -> Anyhow<()> {
+        let cmdline_path = path.join("cmdline.txt");
+        let cmdline = fs::read_to_string(&cmdline_path)?;
         let mut parts = cmdline
             .split_ascii_whitespace()
             .filter(|part| {
@@ -27,7 +31,16 @@ pub fn patch_cmdline(path: impl AsRef<Path>, root: impl AsRef<str>) -> io::Resul
         parts.push("panic=60".to_owned());
         parts.push(format!("root={root}"));
         parts.push("init=/usr/bin/rugpi-ctrl".to_owned());
-        fs::write(path, parts.join(" "))?;
+        let cmdline_value = parts.join(" ");
+        fs::write(&cmdline_path, &cmdline_value)?;
+        let boot_env_path = path.join("boot.env");
+        let mut env = if boot_env_path.exists() {
+            UBootEnv::load(&boot_env_path)?
+        } else {
+            UBootEnv::new()
+        };
+        env.set("bootargs", &cmdline_value);
+        env.save(boot_env_path)?;
         Ok(())
     }
     _patch_cmdline(path.as_ref(), root.as_ref())

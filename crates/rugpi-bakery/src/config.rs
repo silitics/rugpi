@@ -6,7 +6,7 @@ use std::{
 };
 
 use camino::Utf8PathBuf;
-use rugpi_common::Anyhow;
+use rugpi_common::{boot::BootFlow, Anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::recipes::{ParameterValue, RecipeName};
@@ -17,15 +17,18 @@ pub struct BakeryConfig {
     /// The recipes to include.
     #[serde(default)]
     pub recipes: HashSet<RecipeName>,
-    /// Include firmware files for Pi 4.
-    #[serde(default)]
-    pub include_firmware: IncludeFirmware,
     /// The recipes to exclude.
     #[serde(default)]
     pub exclude: HashSet<RecipeName>,
     /// Parameters for the recipes.
     #[serde(default)]
     pub parameters: HashMap<RecipeName, HashMap<String, ParameterValue>>,
+    /// Indicates whether to include firmware files in the image.
+    #[serde(default)]
+    pub include_firmware: IncludeFirmware,
+    /// Indicates which boot flow to use for the image.
+    #[serde(default)]
+    pub boot_flow: BootFlow,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

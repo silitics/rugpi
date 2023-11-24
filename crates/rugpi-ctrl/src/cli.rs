@@ -5,18 +5,19 @@ use std::{
     path::Path,
 };
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use camino::Utf8Path;
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
     autoboot::{AUTOBOOT_A, AUTOBOOT_B},
+    boot::{uboot::UBootEnv, BootFlow},
     loop_dev::LoopDevice,
     mount::Mounted,
     partitions::{
-        devices::SD_CARD, get_default_partitions, get_disk_id, get_hot_partitions, mkfs_ext4,
-        mkfs_vfat, PartitionSet,
+        devices::SD_CARD, get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions,
+        mkfs_ext4, mkfs_vfat, PartitionSet,
     },
-    patch_cmdline, Anyhow, DropGuard,
+    patch_boot, Anyhow, DropGuard,
 };
 use tempdir::TempDir;
 use xscript::{run, Run};
@@ -82,7 +83,7 @@ pub fn main() -> Anyhow<()> {
                         PartitionSet::A => format!("PARTUUID={disk_id}-05"),
                         PartitionSet::B => format!("PARTUUID={disk_id}-06"),
                     };
-                    patch_cmdline(temp_dir_spare.join("cmdline.txt"), root)?;
+                    patch_boot(temp_dir_spare, root)?;
                 }
                 if !*no_reboot {
                     reboot(true)?;
@@ -91,14 +92,18 @@ pub fn main() -> Anyhow<()> {
         },
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
-                let hot_partitions = get_hot_partitions()?;
-                let default_partitions = get_default_partitions()?;
+                let boot_flow = get_boot_flow().context("loading boot flow")?;
+                println!("Boot Flow: {}", boot_flow.as_str());
+                let hot_partitions = get_hot_partitions().context("loading hot partitions")?;
+                let default_partitions =
+                    get_default_partitions().context("loading default partitions")?;
                 println!("Hot: {}", hot_partitions.as_str());
                 println!("Cold: {}", hot_partitions.flipped().as_str());
                 println!("Default: {}", default_partitions.as_str());
                 println!("Spare: {}", default_partitions.flipped().as_str());
             }
             SystemCommand::Commit => {
+                let boot_flow = get_boot_flow()?;
                 let hot_partitions = get_hot_partitions()?;
                 let default_partitions = get_default_partitions()?;
                 if hot_partitions != default_partitions {
@@ -106,19 +111,38 @@ pub fn main() -> Anyhow<()> {
                     let _remount_guard = DropGuard::new(|| {
                         run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
                     });
-
-                    let autoboot_txt = match hot_partitions {
-                        PartitionSet::A => AUTOBOOT_A,
-                        PartitionSet::B => AUTOBOOT_B,
-                    };
-                    fs::write("/run/rugpi/mounts/config/autoboot.txt.new", autoboot_txt)?;
-                    let autoboot_new_file =
-                        File::open("/run/rugpi/mounts/config/autoboot.txt.new")?;
-                    autoboot_new_file.sync_all()?;
-                    fs::rename(
-                        "/run/rugpi/mounts/config/autoboot.txt.new",
-                        "/run/rugpi/mounts/config/autoboot.txt",
-                    )?;
+                    match boot_flow {
+                        BootFlow::Tryboot => {
+                            let autoboot_txt = match hot_partitions {
+                                PartitionSet::A => AUTOBOOT_A,
+                                PartitionSet::B => AUTOBOOT_B,
+                            };
+                            fs::write("/run/rugpi/mounts/config/autoboot.txt.new", autoboot_txt)?;
+                            let autoboot_new_file =
+                                File::open("/run/rugpi/mounts/config/autoboot.txt.new")?;
+                            autoboot_new_file.sync_all()?;
+                            fs::rename(
+                                "/run/rugpi/mounts/config/autoboot.txt.new",
+                                "/run/rugpi/mounts/config/autoboot.txt",
+                            )?;
+                        }
+                        BootFlow::UBoot => {
+                            let mut bootpart_env = UBootEnv::new();
+                            match hot_partitions {
+                                PartitionSet::A => bootpart_env.set("bootpart", "2"),
+                                PartitionSet::B => bootpart_env.set("bootpart", "3"),
+                            }
+                            bootpart_env
+                                .save("/run/rugpi/mounts/config/bootpart.default.env.new")?;
+                            let autoboot_new_file =
+                                File::open("/run/rugpi/mounts/config/bootpart.default.env.new")?;
+                            autoboot_new_file.sync_all()?;
+                            fs::rename(
+                                "/run/rugpi/mounts/config/bootpart.default.env.new",
+                                "/run/rugpi/mounts/config/bootpart.default.env",
+                            )?;
+                        }
+                    }
                 } else {
                     println!("Hot partition is already the default!");
                 }
@@ -132,11 +156,30 @@ pub fn main() -> Anyhow<()> {
 }
 
 pub fn reboot(spare: bool) -> Anyhow<()> {
-    if spare {
-        run!(["reboot", "0 tryboot"])?;
-    } else {
-        run!(["reboot"])?;
+    match get_boot_flow()? {
+        BootFlow::Tryboot => {
+            if spare {
+                run!(["reboot", "0 tryboot"])?;
+            } else {
+                run!(["reboot"])?;
+            }
+        }
+        BootFlow::UBoot => {
+            if spare {
+                let mut boot_spare_env = UBootEnv::new();
+                boot_spare_env.set("boot_spare", "1");
+                run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
+                let _remount_guard = DropGuard::new(|| {
+                    run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
+                });
+                // It is safe to directly write to the file here. If the file is corrupt,
+                // the system will simply boot from the default partition set.
+                boot_spare_env.save("/run/rugpi/mounts/config/boot_spare.env")?;
+            }
+            run!(["reboot"])?;
+        }
     }
+
     Ok(())
 }
 

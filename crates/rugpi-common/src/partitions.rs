@@ -5,7 +5,10 @@ use camino::Utf8Path;
 use xscript::{read_str, run, Run};
 
 use self::devices::{SD_PART_SYSTEM_A, SD_PART_SYSTEM_B};
-use crate::Anyhow;
+use crate::{
+    boot::{uboot::UBootEnv, BootFlow},
+    Anyhow,
+};
 
 pub mod devices {
     macro_rules! sd_card_dev_const {
@@ -68,20 +71,45 @@ enum AutobootSection {
     Tryboot,
 }
 
+pub fn get_boot_flow() -> Anyhow<BootFlow> {
+    if Path::new("/run/rugpi/mounts/config/autoboot.txt").exists() {
+        Ok(BootFlow::Tryboot)
+    } else if Path::new("/run/rugpi/mounts/config/boot.scr").exists() {
+        Ok(BootFlow::UBoot)
+    } else {
+        bail!("Unable to determine boot flow.");
+    }
+}
+
 pub fn get_default_partitions() -> Anyhow<PartitionSet> {
-    let autoboot_txt = fs::read_to_string("/run/rugpi/mounts/config/autoboot.txt")?;
-    let mut section = AutobootSection::Unknown;
-    for line in autoboot_txt.lines() {
-        if line.starts_with("[all]") {
-            section = AutobootSection::All;
-        } else if line.starts_with("[tryboot]") {
-            section = AutobootSection::Tryboot;
-        } else if line.starts_with('[') {
-            section = AutobootSection::Unknown;
-        } else if line.starts_with("boot_partition=2") && section == AutobootSection::All {
-            return Ok(PartitionSet::A);
-        } else if line.starts_with("boot_partition=3") && section == AutobootSection::All {
-            return Ok(PartitionSet::B);
+    match get_boot_flow()? {
+        BootFlow::Tryboot => {
+            let autoboot_txt = fs::read_to_string("/run/rugpi/mounts/config/autoboot.txt")?;
+            let mut section = AutobootSection::Unknown;
+            for line in autoboot_txt.lines() {
+                if line.starts_with("[all]") {
+                    section = AutobootSection::All;
+                } else if line.starts_with("[tryboot]") {
+                    section = AutobootSection::Tryboot;
+                } else if line.starts_with('[') {
+                    section = AutobootSection::Unknown;
+                } else if line.starts_with("boot_partition=2") && section == AutobootSection::All {
+                    return Ok(PartitionSet::A);
+                } else if line.starts_with("boot_partition=3") && section == AutobootSection::All {
+                    return Ok(PartitionSet::B);
+                }
+            }
+        }
+        BootFlow::UBoot => {
+            let bootpart_env = UBootEnv::load("/run/rugpi/mounts/config/bootpart.default.env")?;
+            let Some(bootpart) = bootpart_env.get("bootpart") else {
+                bail!("Invalid bootpart environment.");
+            };
+            if bootpart == "2" {
+                return Ok(PartitionSet::A);
+            } else if bootpart == "3" {
+                return Ok(PartitionSet::B);
+            }
         }
     }
     bail!("Unable to determine default partition set.");

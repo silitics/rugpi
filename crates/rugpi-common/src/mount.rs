@@ -1,4 +1,4 @@
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use xscript::{run, Run};
 
 use crate::Anyhow;
@@ -17,6 +17,10 @@ impl Mounted {
         let dst = dst.as_ref();
         run!([MOUNT, dev, dst])?;
         Ok(Mounted { path: dst.into() })
+    }
+
+    pub fn path(&self) -> &Utf8Path {
+        &self.path
     }
 
     pub fn mount_fs(
