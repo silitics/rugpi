@@ -54,22 +54,9 @@ export default function Home(): JSX.Element {
       <HomepageHeader />
       <main>
         <div style={{ maxWidth: "80ch", padding: "2rem 0", margin: "0 auto" }}>
-          <Admonition type="caution" title="🚧 EXPERIMENTAL 🚧">
+          <Admonition type="info" title="Stability Guarantees">
             <p>
-              Rugpi <strong>is still experimental</strong>. Expect things to
-              change and break!
-            </p>
-            <p>
-              If you have any ideas, suggestions, feedback regarding the early
-              prototype, or anything else you like to discuss, please reach out
-              to us by starting a{" "}
-              <a
-                href="https://github.com/silitics/rugpi/discussions"
-                target="_blank"
-              >
-                discussion on GitHub
-              </a>
-              .
+              While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. Backwards incompatible changes to the update mechanism will be made only after careful consideration and consultation with our users. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the CLI and APIs are still expected to change.
             </p>
           </Admonition>
         </div>

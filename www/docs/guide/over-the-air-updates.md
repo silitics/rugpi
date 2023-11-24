@@ -24,7 +24,7 @@ The A/B update scheme uses two sets of system and boot partitions, the A set and
 We call the currently booted set *hot set* and to the other *cold set*.
 The usual partition layout of a Rugpi installation comprises seven partitions:
 
-- Partition 1: Contains the [`autoboot.txt`](https://www.raspberrypi.com/documentation/computers/config_txt.html#autoboot-txt) for switching between the A and B set.
+- Partition 1: Contains the bootloader configuration for switching between the A and B set.
 - Partition 2: The `/boot` partition of the A set.
 - Partition 3: The `/boot` partition of the B set.
 - Partition 4: The extended MBR for the additional partitions.
@@ -32,12 +32,12 @@ The usual partition layout of a Rugpi installation comprises seven partitions:
 - Partition 6: The root partition of the B set.
 - Partition 7: Contains any persistent state (see [State Management](./state-management)).
 
-The `autoboot.txt` specifies the default set of partitions.
+The bootloader specification specifies the default set of partitions.
 We call the other, non-default set, the *spare set*.
 An update is only possible if the hot set is also the default set.
 That way, if anything goes wrong while installing the update, the system will boot into the previous known-good version by default.
 The Rugpi update mechanism installs the update to the cold spare set of partitions.
-After installing the update, it uses the `tryboot` mechanism of the Raspberry Pi bootloader to try booting into the newly installed version, crucially without changing the default set.
+After installing the update, it tries booting into the newly installed version, crucially without changing the default set.
 Hence, if anything goes wrong, the system automatically reboots into the previous version by default.
 Only after booting successfully into the newly installed system, by which the set of partitions with the new version becomes the hot set, and verifying that everything is in working order, the update is made permanent by making the hot set the default set.
 
@@ -100,7 +100,7 @@ rugpi-ctrl system commit
 
 ### On Atomicity of Commits
 
-Note that commits are the only critical operation because they modify the default set in the `autoboot.txt`.
+Note that commits are the only critical operation because they modify the default set.
 This is done by temporarily remounting the config partition with the `autoboot.txt` such that it is writeable.
 The `autoboot.txt` is then replaced as suggested by [Raspberry Pi's documentation on the `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot).
 As the filesystem is FAT32, the automitcity of this operation cannot be guaranteed.

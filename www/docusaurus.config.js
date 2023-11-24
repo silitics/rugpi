@@ -48,14 +48,14 @@ const config = {
         respectPrefersColorScheme: false,
       },
       
-      announcementBar: {
-        id: "under_construction",
-        content:
-          "🚨 <strong>EXPERIMENTAL</strong>: Rugpi <strong>is still experimental</strong>. Expect things to change and break. Do not use in production just yet! 🚨",
-        backgroundColor: "#FFFF00",
-        textColor: "#000000",
-        isCloseable: false,
-      },
+      // announcementBar: {
+      //   id: "under_construction",
+      //   content:
+      //     "🚨 <strong>EXPERIMENTAL</strong>: Rugpi <strong>is still experimental</strong>. Expect things to change and break. Do not use in production just yet! 🚨",
+      //   backgroundColor: "#FFFF00",
+      //   textColor: "#000000",
+      //   isCloseable: false,
+      // },
       navbar: {
         title: "Rugpi",
         logo: {

@@ -8,14 +8,26 @@
     An open-source platform empowering you to build innovative products based on Raspberry Pi.
 </h4>
 
-> 🚧 **EXPERIMENTAL** 🚧
->
-> Rugpi **is still experimental**. Expect things to change and break! ⚠️
-
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of [Raspberry Pi OS](https://www.raspberrypi.com/software/)** for your project.
 It boasts three core features: (1) A modern workflow to build customized system images, (2) robust **over-the-air updates with rollback support** of the entire system, including firmware files, and (3) **managed state** which is preserved across reboots and updates.
 
 Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
+
+### Supported Boards
+
+Currently, Rugpi supports 64-bit variants of Raspberry Pi and Raspberry Pi OS.
+
+| Pi 5 | Pi 4 | Pi 3   | Pi 2 | Pi Zero 2 | Pi Zero | CM 4 | CM 3   |
+| ---- | ---- | ------ | ---- | --------- | ------- | ---- | ------ |
+| ✅   | ✅   | ✅[^1] | ❌   | 🤷‍♂️[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
+
+✅ fully supported, 🤷‍♂️ in principle supported but untested, ❌ not supported
+
+[^1]: Requires the U-Boot boot flow, for further details [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
+
+### Stability Guarantees
+
+While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. Backwards incompatible changes to the update mechanism will be made only after careful consideration and consultation with our users. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the CLI and APIs are still expected to change.
 
 ## ⚖️ Licensing
 

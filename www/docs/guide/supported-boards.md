@@ -4,20 +4,19 @@ sidebar_position: 0
 
 # Supported Boards
 
-Currently, Rugpi supports the following boards with the **64-bit** variant of Raspberry Pi OS:
+Currently, Rugpi supports 64-bit variants of Raspberry Pi and Raspberry Pi OS.
 
-| Pi 5 | Pi 4 | Pi 3 | Pi 2 | Pi Zero 2 | Pi Zero   | CM 4 | CM 3 |
-|------|------|------|------|-----------|-----------|------|------|
-| ✅   | ✅   | ❌   | ❌   | ❌        | ❌        | ✅   | ❌   |
+| Pi 5 | Pi 4 | Pi 3   | Pi 2 | Pi Zero 2 | Pi Zero | CM 4 | CM 3   |
+| ---- | ---- | ------ | ---- | --------- | ------- | ---- | ------ |
+| ✅   | ✅   | ✅[^1] | ❌   | 🤷‍♂️[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
+
+✅ fully supported, 🤷‍♂️ in principle supported but untested, ❌ not supported
+
+[^1]: Requires the U-Boot boot flow, for further details [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
 
 **⚠️ Please also read the remarks for the respective boards bellow.**
 
-Rugpi relies on the [`tryboot` feature of Raspberry Pi's bootloader](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot), which is only supported from Raspberry Pi 4 onwards.
-There are plans to also support older boards without this feature.
-For further details, see [issue #4](https://github.com/silitics/rugpi/issues/4).
-
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
-
 
 ### Raspberry Pi 5
 
@@ -33,5 +32,15 @@ For Compute Module 4, this requires `usbboot` (see [CM4's documentation for deta
 For Raspberry Pi 4, you can set the `include_firmware = "pi4"` option in `rugpi-bakery.toml` to include the bootloader update in the image.
 The bootloader will then be automatically updated when first booting the image.
 Note that after the first boot, the automatic update will be disabled,[^1] i.e., you cannot take the SD card to another Raspberry Pi which does not yet have the update installed.
+
+### Raspberry Pi 3, Zero 2, and CM3
+
+You must enable the U-Boot [boot flow](../internals/boot-flows.md) in `rugpi-bakery.toml`:
+
+```toml
+boot_flow = "u-boot"
+```
+
+**⚠️ The U-Boot boot flow is experimental.**
 
 [^1]: To prevent the EEPROM from being updated on each boot.
