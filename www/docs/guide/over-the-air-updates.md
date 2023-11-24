@@ -32,7 +32,7 @@ The usual partition layout of a Rugpi installation comprises seven partitions:
 - Partition 6: The root partition of the B set.
 - Partition 7: Contains any persistent state (see [State Management](./state-management)).
 
-The bootloader specification specifies the default set of partitions.
+The bootloader configuration specifies the default set of partitions.
 We call the other, non-default set, the *spare set*.
 An update is only possible if the hot set is also the default set.
 That way, if anything goes wrong while installing the update, the system will boot into the previous known-good version by default.
@@ -101,10 +101,10 @@ rugpi-ctrl system commit
 ### On Atomicity of Commits
 
 Note that commits are the only critical operation because they modify the default set.
-This is done by temporarily remounting the config partition with the `autoboot.txt` such that it is writeable.
-The `autoboot.txt` is then replaced as suggested by [Raspberry Pi's documentation on the `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot).
+This is done by temporarily remounting the bootloader configuration partition such that it is writeable.
+For the `tryboot` and U-Boot boot flow, the `autoboot.txt` file and `bootpart.default.env` file are then replaced as suggested by [Raspberry Pi's documentation on the `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot).
 As the filesystem is FAT32, the automitcity of this operation cannot be guaranteed.
-Still, Rugpi Ctrl does its best by first creating the new `autoboot.txt` and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.
+Still, Rugpi Ctrl does its best by first creating a new file and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.
 However, should the system crash during this process, the FAT32 filesystem may still be corrupted.
 We think that this is an acceptable risk as the likelihood of it happening is very low and any alternatives, like swapping the MBR, may be problematic for other reasons.[^4]
 
