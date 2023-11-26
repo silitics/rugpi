@@ -61,6 +61,10 @@ When using the `--no-reboot` flag, a reboot to the cold spare can later be trigg
 rugpi-ctrl system reboot --spare
 ```
 
+Note that a persistent overlay that may exist for the spare partition is deleted prior to installing the update  (see [State Management](./state-management.md)).
+To avoid the overlay from being discarded, use the `--keep-overlay` option when installing the update.
+Please be aware that this may lead to incompatibilities between the overlay and the freshly installed system.
+
 [^2]: How this happens is outside the scope of Rugpi's core functionality.
 
 ### Committing an Update
