@@ -14,16 +14,27 @@ Rugpi Ctrl can be configured to keep this overlay across reboots or discard it.
 By default, the overlay is discarded such that the system is always booted fresh as stored in the root partition.
 In addition, by discarding the overlay on each reboot, accidental state, which would get lost by an update, is discovered early as it is being erased by a simple reboot.
 
-To enable persistency of the overlay of the root filesystem, run:
+To enable persistency of the overlay, use the following option in `ctrl.toml`:
 
-```shell
-rugpi-ctrl state overlay set-persist true
+```toml title="ctrl.toml"
+overlay = "persist"
 ```
 
-To disable persistency of the overlay of the root filesystem, run:
+Note that you must use a recipe to install `ctrl.toml` to `/etc/rugpi` in the image.
+
+**ℹ️ While enabling persistency of the overlay can be convenient and is useful for certain use cases, you should evaluate its usage carefully. It means that any state is kept making the system less resilient and updates more challenging.**
+
+For development purposes, you can also force persistency of the overlay at runtime.
+To this end, run:
 
 ```shell
-rugpi-ctrl state overlay set-persist false
+rugpi-ctrl state overlay force-persist true
+```
+
+To disable force persistency of the overlay, run:
+
+```shell
+rugpi-ctrl state overlay force-persist false
 ```
 
 Note that this will discard the overlay and thereby any modifications which have been made with persistency set to `true`.

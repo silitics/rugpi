@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// The size of the system partition(s).
     pub system_size: Option<String>,
+    pub overlay: Overlay,
 }
 
 impl Config {
@@ -12,4 +13,12 @@ impl Config {
     pub fn system_size(&self) -> &str {
         self.system_size.as_deref().unwrap_or("4G")
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Overlay {
+    Persist,
+    #[default]
+    Discard,
 }

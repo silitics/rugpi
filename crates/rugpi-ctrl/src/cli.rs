@@ -32,14 +32,14 @@ pub fn main() -> Anyhow<()> {
                 reboot(false)?;
             }
             StateCommand::Overlay(overlay_cmd) => match overlay_cmd {
-                OverlayCommand::SetPersist { persist } => match persist {
+                OverlayCommand::ForcePersist { persist } => match persist {
                     Boolean::True => {
                         fs::create_dir_all("/run/rugpi/state/.rugpi")?;
-                        fs::write("/run/rugpi/state/.rugpi/persist-overlay", "")?;
+                        fs::write("/run/rugpi/state/.rugpi/force-persist-overlay", "")?;
                     }
                     Boolean::False => {
-                        fs::remove_file("/run/rugpi/state/.rugpi/persist-overlay").ok();
-                        if Path::new("/run/rugpi/state/.rugpi/persist-overlay").exists() {
+                        fs::remove_file("/run/rugpi/state/.rugpi/force-persist-overlay").ok();
+                        if Path::new("/run/rugpi/state/.rugpi/force-persist-overlay").exists() {
                             bail!("Unable to unset `overlay-persist`.");
                         }
                     }
@@ -222,7 +222,7 @@ pub enum StateCommand {
 #[derive(Debug, Parser)]
 pub enum OverlayCommand {
     /// Set the persistency of the overlay.
-    SetPersist { persist: Boolean },
+    ForcePersist { persist: Boolean },
 }
 
 #[derive(Debug, Parser)]

@@ -13,7 +13,7 @@ use rugpi_common::{
 use xscript::{run, Run};
 
 use crate::{
-    config::Config,
+    config::{Config, Overlay},
     state::{load_state_config, Persist, STATE_CONFIG_DIR},
 };
 
@@ -88,7 +88,7 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "--bind", &state_profile, STATE_DIR])?;
 
     // 7️⃣ Setup the root filesystem overlay.
-    setup_root_overlay(state_profile)?;
+    setup_root_overlay(&config, state_profile)?;
 
     // 8️⃣ Setup the bind mounts for the persistent state.
     setup_persistent_state(state_profile)?;
@@ -126,11 +126,19 @@ pub fn overlay_work_dir() -> &'static Utf8Path {
     Utf8Path::new(OVERLAY_WORK_DIR)
 }
 
+const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
+
+pub fn config_path() -> &'static Utf8Path {
+    Utf8Path::new(CTRL_CONFIG_PATH)
+}
+
 /// Loads the Rugpi Ctrl configuration.
 fn load_config() -> Anyhow<Config> {
-    Ok(toml::from_str(&fs::read_to_string(
-        "/etc/rugpi/ctrl.toml",
-    )?)?)
+    if config_path().exists() {
+        Ok(toml::from_str(&fs::read_to_string(config_path())?)?)
+    } else {
+        Ok(Config::default())
+    }
 }
 
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
@@ -165,9 +173,10 @@ fn initialize_partitions(config: &Config) -> Anyhow<()> {
 }
 
 /// Sets up the overlay.
-fn setup_root_overlay(state_profile: &Utf8Path) -> Anyhow<()> {
+fn setup_root_overlay(config: &Config, state_profile: &Utf8Path) -> Anyhow<()> {
     let overlay_state = state_profile.join("overlay");
-    if !state_profile.join(".rugpi/persist-overlay").exists() {
+    let force_persist = state_profile.join(".rugpi/force-persist-overlay").exists();
+    if !force_persist && !matches!(config.overlay, Overlay::Persist) {
         fs::remove_dir_all(&overlay_state).ok();
     }
 
