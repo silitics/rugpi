@@ -3,5 +3,4 @@ priority = 700_000  # Execute very early.
 default = true
 
 [parameters]
-system_size = { default = "4G" }
 rugpi_admin = { default = false }

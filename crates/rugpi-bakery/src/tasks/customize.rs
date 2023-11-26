@@ -94,6 +94,16 @@ fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
         .map(|name| {
             let recipe = library.get(name).unwrap().clone();
             let recipe_params = config.parameters.get(name);
+            if let Some(params) = recipe_params {
+                for param_name in params.keys() {
+                    if !recipe.info.parameters.contains_key(param_name) {
+                        bail!(
+                            "unknown parameter `{param_name}` of recipe `{}`",
+                            recipe.name
+                        );
+                    }
+                }
+            }
             let mut parameters = HashMap::new();
             for (name, def) in &recipe.info.parameters {
                 if let Some(params) = recipe_params {
