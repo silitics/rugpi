@@ -22,7 +22,7 @@ overlay = "persist"
 
 Note that you must use a recipe to install `ctrl.toml` to `/etc/rugpi` in the image.
 
-**ℹ️ While enabling persistency of the overlay can be convenient and is useful for certain use cases, you should evaluate its usage carefully. It means that any state is kept making the system less resilient and updates more challenging.**
+**⚠️ Cautionary Note:** Enabling persistency of the overlay, while convenient for certain use cases, requires careful consideration. Indiscriminate persistency can easily lead to system corruption due to accidental state or data loss during updates. We recommend selectively persisting state (see below) to avoid potential issues.
 
 For development purposes, you can also force persistency of the overlay at runtime.
 To this end, run:
