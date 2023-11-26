@@ -16,3 +16,6 @@ indoc = "2.0.3"
 serde.workspace = true
 thiserror = "1.0.50"
 xscript.workspace = true
+
+[dev-dependencies]
+clap.workspace = true

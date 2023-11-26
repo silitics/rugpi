@@ -2,6 +2,7 @@
 
 use std::{
     fs::{self, File},
+    io,
     path::Path,
 };
 
@@ -14,6 +15,7 @@ use rugpi_common::{
         uboot::UBootEnv,
         BootFlow,
     },
+    img_stream::ImgStream,
     loop_dev::LoopDevice,
     mount::Mounted,
     partitions::{
@@ -56,6 +58,7 @@ pub fn main() -> Anyhow<()> {
                 image,
                 no_reboot,
                 keep_overlay,
+                stream,
             } => {
                 let hot_partitions = get_hot_partitions()?;
                 let default_partitions = get_default_partitions()?;
@@ -67,37 +70,13 @@ pub fn main() -> Anyhow<()> {
                     let spare_overlay_dir = overlay_dir(spare_partitions);
                     fs::remove_dir_all(spare_overlay_dir).ok();
                 }
-                let loop_device = LoopDevice::attach(image)?;
-                println!("Formatting partitions...");
-                let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
-                let system_label = format!("system-{}", spare_partitions.as_str());
-                mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
-                mkfs_ext4(spare_partitions.system_dev(), system_label)?;
-                let temp_dir_image = TempDir::new("rugpi-image")?;
-                let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
-                let temp_dir_spare = TempDir::new("rugpi-spare")?;
-                let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
-                // 1️⃣ Copy `/`.
-                {
-                    let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
-                    let _mounted_spare =
-                        Mounted::mount(spare_partitions.system_dev(), temp_dir_spare)?;
-                    run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
+
+                if *stream {
+                    install_update_stream(image)?;
+                } else {
+                    install_update_cp(image)?;
                 }
-                // 2️⃣ Copy `/boot`.
-                {
-                    let _mounted_image = Mounted::mount(loop_device.partition(2), temp_dir_image)?;
-                    let _mounted_spare =
-                        Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
-                    run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
-                    // Patch cmdline.txt.
-                    let disk_id = get_disk_id(SD_CARD)?;
-                    let root = match spare_partitions {
-                        PartitionSet::A => format!("PARTUUID={disk_id}-05"),
-                        PartitionSet::B => format!("PARTUUID={disk_id}-06"),
-                    };
-                    patch_boot(temp_dir_spare, root)?;
-                }
+
                 if !*no_reboot {
                     reboot(true)?;
                 }
@@ -196,6 +175,105 @@ pub fn reboot(spare: bool) -> Anyhow<()> {
     Ok(())
 }
 
+fn install_update_cp(image: &String) -> Anyhow<()> {
+    let default_partitions = get_default_partitions()?;
+    let spare_partitions = default_partitions.flipped();
+    let loop_device = LoopDevice::attach(image)?;
+    println!("Formatting partitions...");
+    let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
+    let system_label = format!("system-{}", spare_partitions.as_str());
+    mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
+    mkfs_ext4(spare_partitions.system_dev(), system_label)?;
+    let temp_dir_image = TempDir::new("rugpi-image")?;
+    let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
+    let temp_dir_spare = TempDir::new("rugpi-spare")?;
+    let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
+    // 1️⃣ Copy `/`.
+    {
+        let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
+        let _mounted_spare = Mounted::mount(spare_partitions.system_dev(), temp_dir_spare)?;
+        run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
+    }
+    // 2️⃣ Copy `/boot`.
+    {
+        let _mounted_image = Mounted::mount(loop_device.partition(2), temp_dir_image)?;
+        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
+        run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
+        // Patch cmdline.txt.
+        let disk_id = get_disk_id(SD_CARD)?;
+        let root = match spare_partitions {
+            PartitionSet::A => format!("PARTUUID={disk_id}-05"),
+            PartitionSet::B => format!("PARTUUID={disk_id}-06"),
+        };
+        patch_boot(temp_dir_spare, root)?;
+    }
+    Ok(())
+}
+
+fn install_update_stream(image: &String) -> Anyhow<()> {
+    let default_partitions = get_default_partitions()?;
+    let spare_partitions = default_partitions.flipped();
+    let reader: Box<dyn io::Read> = if image == "-" {
+        Box::new(io::stdin())
+    } else {
+        Box::new(File::open(image)?)
+    };
+    println!("Copying partitions...");
+    let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
+    let system_label = format!("system-{}", spare_partitions.as_str());
+    let mut img_stream = ImgStream::new(reader)?;
+    let mut partition_idx = 0;
+    while let Some(mut partition) = img_stream.next_partition()? {
+        let partition_name = match partition_idx {
+            0 => "CONFIG",
+            1 => "BOOT-A",
+            2 => "BOOT-B",
+            3 => "system-a",
+            4 => "system-b",
+            5 => "data",
+            _ => "<unknown>",
+        };
+        println!(
+            "Found {partition_idx},{partition_name} {}",
+            partition.entry()
+        );
+        match partition_idx {
+            1 => {
+                io::copy(
+                    &mut partition,
+                    &mut fs::File::create(spare_partitions.boot_dev())?,
+                )?;
+                run!(["fatlabel", spare_partitions.boot_dev(), &boot_label])?;
+            }
+            3 => {
+                io::copy(
+                    &mut partition,
+                    &mut fs::File::create(spare_partitions.system_dev())?,
+                )?;
+                run!(["e2label", spare_partitions.system_dev(), &system_label])?;
+            }
+            _ => { /* Nothing to do! */ }
+        }
+
+        partition_idx += 1;
+    }
+
+    let temp_dir_spare = TempDir::new("rugpi-spare")?;
+    let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
+
+    // Path `/boot`.
+    {
+        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
+        let disk_id = get_disk_id(SD_CARD)?;
+        let root = match spare_partitions {
+            PartitionSet::A => format!("PARTUUID={disk_id}-05"),
+            PartitionSet::B => format!("PARTUUID={disk_id}-06"),
+        };
+        patch_boot(temp_dir_spare, root)?;
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, ValueEnum)]
 pub enum Boolean {
     True,
@@ -250,6 +328,9 @@ pub enum UpdateCommand {
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,
+        /// Use the experimental streaming update mechanism.
+        #[clap(long)]
+        stream: bool,
     },
 }
 
