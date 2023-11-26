@@ -9,8 +9,11 @@ use anyhow::{bail, Context};
 use camino::Utf8Path;
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
-    autoboot::{AUTOBOOT_A, AUTOBOOT_B},
-    boot::{uboot::UBootEnv, BootFlow},
+    boot::{
+        tryboot::{AUTOBOOT_A, AUTOBOOT_B},
+        uboot::UBootEnv,
+        BootFlow,
+    },
     loop_dev::LoopDevice,
     mount::Mounted,
     partitions::{

@@ -4,7 +4,6 @@ use std::{fs, io, path::Path};
 
 use crate::boot::uboot::UBootEnv;
 
-pub mod autoboot;
 pub mod boot;
 pub mod loop_dev;
 pub mod mount;

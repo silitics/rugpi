@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub mod tryboot;
 pub mod uboot;
 
 /// Rugpi boot flows.
