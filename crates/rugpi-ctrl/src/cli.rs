@@ -22,6 +22,8 @@ use rugpi_common::{
 use tempdir::TempDir;
 use xscript::{run, Run};
 
+use crate::overlay::overlay_dir;
+
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
     match &args.command {
@@ -47,12 +49,20 @@ pub fn main() -> Anyhow<()> {
             },
         },
         Command::Update(update_cmd) => match update_cmd {
-            UpdateCommand::Install { image, no_reboot } => {
+            UpdateCommand::Install {
+                image,
+                no_reboot,
+                keep_overlay,
+            } => {
                 let hot_partitions = get_hot_partitions()?;
                 let default_partitions = get_default_partitions()?;
                 let spare_partitions = default_partitions.flipped();
                 if hot_partitions != default_partitions {
                     bail!("Hot partitions are not the default!");
+                }
+                if !keep_overlay {
+                    let spare_overlay_dir = overlay_dir(spare_partitions);
+                    fs::remove_dir_all(spare_overlay_dir).ok();
                 }
                 let loop_device = LoopDevice::attach(image)?;
                 println!("Formatting partitions...");
@@ -231,8 +241,12 @@ pub enum UpdateCommand {
     Install {
         /// Path to the image.
         image: String,
+        /// Prevent Rugpi from rebooting the system.
         #[clap(long)]
         no_reboot: bool,
+        /// Do not delete an existing overlay.
+        #[clap(long)]
+        keep_overlay: bool,
     },
 }
 
