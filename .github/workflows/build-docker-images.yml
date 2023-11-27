@@ -18,6 +18,8 @@ jobs:
         platform: [linux/amd64, linux/arm64]
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
 
       - name: Docker Meta
         id: meta
