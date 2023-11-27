@@ -75,6 +75,15 @@ For instance, to download, decompress, and install an image on-the-fly, use:
 curl <url to the image> | xz -d | rugpi-ctrl update install --stream -
 ```
 
+In case the internet connection is unstable, you may also want to use
+
+```shell
+wget -q -t 0 -O - <url to the image> | rugpi-ctrl update install --stream -
+```
+
+to retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
+
+
 Streaming an image is faster because the data only has to be written to the SD card once.
 Furthermore, it has the advantage that the image does not take up precious space on the data partition during the installation.
 
