@@ -76,6 +76,9 @@ RUN mkdir -p /usr/share/rugpi \
 COPY recipes /usr/share/rugpi/recipes
 COPY boot /usr/share/rugpi/boot
 
+COPY docker/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh
+RUN /tmp/rugpi-docker/10-setup.sh
+
 RUN mkdir -p /usr/share/rugpi/binaries/{arm64,armhf}
 COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-ctrl /usr/share/rugpi/binaries/arm64/
 COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-admin /usr/share/rugpi/binaries/arm64/
