@@ -65,6 +65,19 @@ Note that a persistent overlay that may exist for the spare partition is deleted
 To avoid the overlay from being discarded, use the `--keep-overlay` option when installing the update.
 Please be aware that this may lead to incompatibilities between the overlay and the freshly installed system.
 
+Rugpi also has experimental support for streaming updates directly to the SD card instead of first storing the image and then installing it.
+To this end, use the option `--stream`.
+With `--stream`, you can use `-` as artifact path to install an image streamed via stdin to Rugpi Ctrl.
+This also allows using compressed images.
+For instance, to download, decompress, and install an image on-the-fly, use:
+
+```shell
+curl <url to the image> | xz -d | rugpi-ctrl update install --stream -
+```
+
+Streaming an image is faster because the data only has to be written to the SD card once.
+Furthermore, it has the advantage that the image does not take up precious space on the data partition during the installation.
+
 [^2]: How this happens is outside the scope of Rugpi's core functionality.
 
 ### Committing an Update
