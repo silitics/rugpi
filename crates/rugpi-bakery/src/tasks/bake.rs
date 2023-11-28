@@ -14,7 +14,10 @@ use rugpi_common::{
 use tempdir::TempDir;
 use xscript::{run, Run};
 
-use crate::config::{load_config, BakeryConfig, IncludeFirmware};
+use crate::{
+    config::{load_config, BakeryConfig, IncludeFirmware},
+    Args,
+};
 
 #[derive(Debug, Parser)]
 pub struct BakeTask {
@@ -24,8 +27,8 @@ pub struct BakeTask {
     image: String,
 }
 
-pub fn run(task: &BakeTask) -> Anyhow<()> {
-    let config = load_config()?;
+pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
+    let config = load_config(args)?;
     let archive = Utf8Path::new(&task.archive);
     let image = Utf8Path::new(&task.image);
     let size = calculate_image_size(archive)?;

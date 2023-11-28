@@ -18,6 +18,7 @@ use xscript::{cmd, run, vars, ParentEnv, Run};
 use crate::{
     config::{load_config, BakeryConfig},
     recipes::{Recipe, RecipeLibrary, StepKind},
+    Args,
 };
 
 /// The arguments of the `customize` command.
@@ -29,9 +30,9 @@ pub struct CustomizeTask {
     dest: String,
 }
 
-pub fn run(task: &CustomizeTask) -> Anyhow<()> {
+pub fn run(args: &Args, task: &CustomizeTask) -> Anyhow<()> {
     // 1️⃣ Load the Bakery configuration file.
-    let config = load_config()?;
+    let config = load_config(args)?;
     // 2️⃣ Collect the recipes to apply.
     let jobs = recipe_schedule(&config)?;
     // 3️⃣ Prepare system chroot.

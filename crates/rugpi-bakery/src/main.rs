@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use rugpi_common::Anyhow;
 use tasks::{
@@ -13,12 +15,16 @@ pub mod utils;
 
 #[derive(Debug, Parser)]
 pub struct Args {
+    /// Path to `rugpi-bakery.toml` configuration file.
+    #[clap(long)]
+    config: Option<PathBuf>,
+    /// The task to execute.
     #[clap(subcommand)]
-    cmd: Cmd,
+    task: Task,
 }
 
 #[derive(Debug, Parser)]
-pub enum Cmd {
+pub enum Task {
     /// Extract all system files from a given base image.
     Extract(ExtractTask),
     /// Apply modification to the system.
@@ -29,15 +35,15 @@ pub enum Cmd {
 
 fn main() -> Anyhow<()> {
     let args = Args::parse();
-    match &args.cmd {
-        Cmd::Extract(task) => {
+    match &args.task {
+        Task::Extract(task) => {
             task.run()?;
         }
-        Cmd::Customize(args) => {
-            customize::run(args)?;
+        Task::Customize(task) => {
+            customize::run(&args, task)?;
         }
-        Cmd::Bake(task) => {
-            bake::run(task)?;
+        Task::Bake(task) => {
+            bake::run(&args, task)?;
         }
     }
     Ok(())
