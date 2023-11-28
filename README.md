@@ -19,7 +19,7 @@ Currently, Rugpi supports 64-bit variants of Raspberry Pi and Raspberry Pi OS.
 
 | Pi 5 | Pi 4 | Pi 3   | Pi 2 | Pi Zero 2 | Pi Zero | CM 4 | CM 3   |
 | ---- | ---- | ------ | ---- | --------- | ------- | ---- | ------ |
-| ✅   | ✅   | ✅[^1] | ❌   | 🤷‍♂️[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
+| ✅   | ✅   | ✅[^1] | ❌   | ✅[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
 
 ✅ fully supported, 🤷‍♂️ in principle supported but untested, ❌ not supported
 
