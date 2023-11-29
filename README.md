@@ -18,6 +18,8 @@ Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
 In principle, Rugpi supports all Raspberry Pi models.
 For further details, [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
 
+If you like the workflow and want to use Rugpi for other boards than Raspberry Pi, please contact us.
+
 ### Stability Guarantees
 
 While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. Backwards incompatible changes to the update mechanism will be made only after careful consideration and consultation with our users. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the CLI and APIs are still expected to change.
