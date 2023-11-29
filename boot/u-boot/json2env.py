@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Python utility for converting JSON files to U-Boot environments with CRC32 checksums.
+"""
+
 import typing as t
 
 import binascii
@@ -10,12 +14,15 @@ import sys
 
 
 def encode_env(environ: t.Mapping[str, str]) -> bytes:
+    """
+    Encode the given environment.
+    """
     data = (
         b"\0".join(f"{key}={value}".encode("ascii") for key, value in environ.items())
         + b"\0"
     )
-    crc = binascii.crc32(data)
-    return struct.pack("<I", crc) + data
+    checksum = binascii.crc32(data)
+    return struct.pack("<I", checksum) + data
 
 
 def main():

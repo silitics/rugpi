@@ -137,7 +137,7 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
                 "/usr/share/rugpi/boot/u-boot/armhf_config.txt",
                 ctx.mounted_config.path().join("config.txt"),
             )?;
-            for model in ["zerow", "pi1", "pi2"] {
+            for model in ["zerow", "pi1", "pi2", "pi3"] {
                 std::fs::copy(
                     format!("/usr/share/rugpi/boot/u-boot/bin/u-boot-armhf-{model}.bin"),
                     ctx.mounted_config

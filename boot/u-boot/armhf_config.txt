@@ -16,3 +16,6 @@ kernel=u-boot-armhf-pi1.bin
 
 [pi2]
 kernel=u-boot-armhf-pi2.bin
+
+[pi3]
+kernel=u-boot-armhf-pi3.bin
