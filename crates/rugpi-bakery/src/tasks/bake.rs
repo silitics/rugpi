@@ -81,8 +81,8 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
 
     match ctx.config.include_firmware {
         IncludeFirmware::None => { /* Do not include any firmware. */ }
-        IncludeFirmware::Pi4 => include_pi4_firmware(&root_dir_path)?,
-        IncludeFirmware::Pi5 => include_pi5_firmware(&root_dir_path)?,
+        IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
+        IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
     }
     Ok(())
 }
