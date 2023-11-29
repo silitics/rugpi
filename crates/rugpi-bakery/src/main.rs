@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    ffi::{CStr, CString},
+    path::PathBuf,
+};
 
 use clap::Parser;
 use rugpi_common::Anyhow;
@@ -31,6 +34,8 @@ pub enum Task {
     Customize(CustomizeTask),
     /// Bake a final image for distribution.
     Bake(BakeTask),
+    /// Spawn a shell in the Rugpi Bakery Docker container.
+    Shell,
 }
 
 fn main() -> Anyhow<()> {
@@ -44,6 +49,10 @@ fn main() -> Anyhow<()> {
         }
         Task::Bake(task) => {
             bake::run(&args, task)?;
+        }
+        Task::Shell => {
+            let zsh_prog = CString::new("/bin/zsh")?;
+            nix::unistd::execv::<&CStr>(&zsh_prog, &[])?;
         }
     }
     Ok(())
