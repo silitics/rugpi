@@ -4,19 +4,24 @@ sidebar_position: 0
 
 # Supported Boards
 
-Currently, Rugpi supports 64-bit variants of Raspberry Pi and Raspberry Pi OS.
+In principle, Rugpi supports all Raspberry Pi models.
 
-| Pi 5 | Pi 4 | Pi 3   | Pi 2 | Pi Zero 2 | Pi Zero | CM 4 | CM 3   |
-| ---- | ---- | ------ | ---- | --------- | ------- | ---- | ------ |
-| ✅   | ✅   | ✅[^1] | ❌   | ✅[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
+| Pi 5 | Pi 4 | Pi 3   | Pi 2 v1.2 | Pi 2  | Pi 1   | Pi Zero 2 | Pi Zero | CM 4 | CM 3  | CM 1   |
+| ---- | ---- | ------ | --------- | ----- | ------ | --------- | ------- | ---- | ----- | ------ |
+| ✅   | ✅   | ✅[^1]  | ✅[^1]    | 🤷‍♂️[^1] | ✅[^1] | ✅[^1]     | 🤷‍♂️[^1]  | ✅   | 🤷‍♂️[^1] | 🤷‍♂️[^1] |
 
-✅ fully supported, 🤷‍♂️ in principle supported but untested, ❌ not supported
+✅ fully supported, 🤷‍♂️ in principle supported but untested
 
-[^1]: Requires the U-Boot boot flow, for further details [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
+[^1]: Requires the U-Boot boot flow.
 
 **⚠️ Please also read the remarks for the respective boards bellow.**
 
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
+
+For 32-bit models and to build 32-bit images for 64-bit boards, you need to set the `architecture` in `rugpi-bakery.toml`:
+```toml
+architecture = "armhf"
+```
 
 ### Raspberry Pi 5
 
@@ -33,14 +38,14 @@ For Raspberry Pi 4, you can set the `include_firmware = "pi4"` option in `rugpi-
 The bootloader will then be automatically updated when first booting the image.
 Note that after the first boot, the automatic update will be disabled,[^1] i.e., you cannot take the SD card to another Raspberry Pi which does not yet have the update installed.
 
-### Raspberry Pi 3, Zero 2, and CM3
+### Other Boards
 
-You must enable the U-Boot [boot flow](../internals/boot-flows.md) in `rugpi-bakery.toml`:
+For other boards than Pi 5, Pi 4, and CM 4, you must enable the U-Boot [boot flow](../internals/boot-flows.md) in `rugpi-bakery.toml`:
 
 ```toml
 boot_flow = "u-boot"
 ```
 
-**⚠️ The U-Boot boot flow is experimental.**
+**⚠️ The U-Boot boot flow is experimental and does not allow updating the firmware.**
 
 [^1]: To prevent the EEPROM from being updated on each boot.

@@ -15,15 +15,8 @@ Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
 
 ### Supported Boards
 
-Currently, Rugpi supports 64-bit variants of Raspberry Pi and Raspberry Pi OS.
-
-| Pi 5 | Pi 4 | Pi 3   | Pi 2 | Pi Zero 2 | Pi Zero | CM 4 | CM 3   |
-| ---- | ---- | ------ | ---- | --------- | ------- | ---- | ------ |
-| ✅   | ✅   | ✅[^1] | ❌   | ✅[^1]    | ❌      | ✅   | 🤷‍♂️[^1] |
-
-✅ fully supported, 🤷‍♂️ in principle supported but untested, ❌ not supported
-
-[^1]: Requires the U-Boot boot flow, for further details [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
+In principle, Rugpi supports all Raspberry Pi models.
+For further details, [read the docs](https://oss.silitics.com/rugpi/docs/guide/supported-boards).
 
 ### Stability Guarantees
 
