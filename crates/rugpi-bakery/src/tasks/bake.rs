@@ -45,45 +45,50 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
     mkfs_ext4(loop_device.partition(5), "system-a")?;
     let root_dir = TempDir::new("rugpi")?;
     let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
-    let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
-    let mut boot_dir = root_dir_path.join("boot");
-    let boot_firmware_dir = boot_dir.join("firmware");
-    if boot_firmware_dir.exists() {
-        boot_dir = boot_firmware_dir;
+    {
+        let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
+        let mut boot_dir = root_dir_path.join("boot");
+        let boot_firmware_dir = boot_dir.join("firmware");
+        if boot_firmware_dir.exists() {
+            boot_dir = boot_firmware_dir;
+        }
+        fs::create_dir_all(&boot_dir)?;
+        let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
+        let config_dir = TempDir::new("rugpi")?;
+        let config_dir_path = Utf8Path::from_path(config_dir.path()).unwrap();
+        let mounted_config = Mounted::mount(loop_device.partition(1), &config_dir_path)?;
+        let ctx = BakeCtx {
+            config,
+            mounted_boot,
+            mounted_root,
+            mounted_config,
+        };
+
+        run!(["tar", "-x", "-f", &task.archive, "-C", root_dir_path])?;
+        println!("Patching boot configuration...");
+        patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
+        println!("Patching `config.txt`...");
+        patch_config(boot_dir.join("config.txt"))?;
+
+        match ctx.config.boot_flow {
+            BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
+            BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
+        }
+
+        std::fs::copy(
+            "/usr/share/rugpi/boot/u-boot/bin/second.scr",
+            ctx.mounted_boot.path().join("second.scr"),
+        )?;
+
+        match ctx.config.include_firmware {
+            IncludeFirmware::None => { /* Do not include any firmware. */ }
+            IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
+            IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
+        }
     }
-    fs::create_dir_all(&boot_dir)?;
-    let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
-    let config_dir = TempDir::new("rugpi")?;
-    let config_dir_path = Utf8Path::from_path(config_dir.path()).unwrap();
-    let mounted_config = Mounted::mount(loop_device.partition(1), &config_dir_path)?;
-    let ctx = BakeCtx {
-        config,
-        mounted_boot,
-        mounted_root,
-        mounted_config,
-    };
-
-    run!(["tar", "-x", "-f", &task.archive, "-C", root_dir_path])?;
-    println!("Patching boot configuration...");
-    patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
-    println!("Patching `config.txt`...");
-    patch_config(boot_dir.join("config.txt"))?;
-
-    match ctx.config.boot_flow {
-        BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
-        BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
-    }
-
-    std::fs::copy(
-        "/usr/share/rugpi/boot/u-boot/bin/second.scr",
-        ctx.mounted_boot.path().join("second.scr"),
-    )?;
-
-    match ctx.config.include_firmware {
-        IncludeFirmware::None => { /* Do not include any firmware. */ }
-        IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
-        IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
-    }
+    // Shrink root filesystem.
+    run!(["resize2fs", "-M", loop_device.partition(5)])?;
+    run!(["dumpe2fs", "-h", loop_device.partition(5)])?;
     Ok(())
 }
 
