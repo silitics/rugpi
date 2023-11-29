@@ -29,6 +29,9 @@ pub struct BakeryConfig {
     /// Indicates whether to include firmware files in the image.
     #[serde(default)]
     pub include_firmware: IncludeFirmware,
+    /// The target architecture to build an image for.
+    #[serde(default)]
+    pub architecture: Architecture,
     /// Indicates which boot flow to use for the image.
     #[serde(default)]
     pub boot_flow: BootFlow,
@@ -41,6 +44,23 @@ pub enum IncludeFirmware {
     #[default]
     Pi4,
     Pi5,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Architecture {
+    #[default]
+    Arm64,
+    Armhf,
+}
+
+impl Architecture {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Architecture::Arm64 => "arm64",
+            Architecture::Armhf => "armhf",
+        }
+    }
 }
 
 /// Load the configuration file from the current directory.

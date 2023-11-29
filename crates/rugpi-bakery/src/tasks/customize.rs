@@ -40,7 +40,7 @@ pub fn run(args: &Args, task: &CustomizeTask) -> Anyhow<()> {
     let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &task.src, "-C", root_dir_path])?;
-    apply_recipes(&jobs, root_dir_path)?;
+    apply_recipes(&config, &jobs, root_dir_path)?;
     println!("Packing system files...");
     run!(["tar", "-c", "-f", &task.dest, "-C", root_dir_path, "."])?;
     Ok(())
@@ -127,7 +127,11 @@ fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
     Ok(recipes)
 }
 
-fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> Anyhow<()> {
+fn apply_recipes(
+    config: &BakeryConfig,
+    jobs: &Vec<RecipeJob>,
+    root_dir_path: &Utf8Path,
+) -> Anyhow<()> {
     let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
     let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
     let _mounted_sys = Mounted::bind("/sys", root_dir_path.join("sys"))?;
@@ -168,6 +172,7 @@ fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> Anyhow<()> 
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGPI_ROOT_DIR = "/",
+                        RUGPI_ARCH = config.architecture.as_str(),
                         RECIPE_DIR = "/run/rugpi/bakery/recipe/",
                         RECIPE_STEP_PATH = &script,
                     };
@@ -181,6 +186,7 @@ fn apply_recipes(jobs: &Vec<RecipeJob>, root_dir_path: &Utf8Path) -> Anyhow<()> 
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGPI_ROOT_DIR = root_dir_path,
+                        RUGPI_ARCH = config.architecture.as_str(),
                         RECIPE_DIR = &recipe.path,
                         RECIPE_STEP_PATH = &script,
                     };

@@ -15,7 +15,7 @@ use tempdir::TempDir;
 use xscript::{run, Run};
 
 use crate::{
-    config::{load_config, BakeryConfig, IncludeFirmware},
+    config::{load_config, Architecture, BakeryConfig, IncludeFirmware},
     Args,
 };
 
@@ -121,14 +121,33 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
         ctx.mounted_config.path()
     ])?;
     std::fs::remove_file(&ctx.mounted_config.path().join("kernel8.img"))?;
-    std::fs::copy(
-        "/usr/share/rugpi/boot/u-boot/arm64_config.txt",
-        ctx.mounted_config.path().join("config.txt"),
-    )?;
-    std::fs::copy(
-        "/usr/share/rugpi/boot/u-boot/bin/u-boot-arm64.bin",
-        ctx.mounted_config.path().join("u-boot-arm64.bin"),
-    )?;
+    match ctx.config.architecture {
+        Architecture::Arm64 => {
+            std::fs::copy(
+                "/usr/share/rugpi/boot/u-boot/arm64_config.txt",
+                ctx.mounted_config.path().join("config.txt"),
+            )?;
+            std::fs::copy(
+                "/usr/share/rugpi/boot/u-boot/bin/u-boot-arm64.bin",
+                ctx.mounted_config.path().join("u-boot-arm64.bin"),
+            )?;
+        }
+        Architecture::Armhf => {
+            std::fs::copy(
+                "/usr/share/rugpi/boot/u-boot/armhf_config.txt",
+                ctx.mounted_config.path().join("config.txt"),
+            )?;
+            for model in ["zerow", "pi1", "pi2"] {
+                std::fs::copy(
+                    format!("/usr/share/rugpi/boot/u-boot/bin/u-boot-armhf-{model}.bin"),
+                    ctx.mounted_config
+                        .path()
+                        .join(format!("u-boot-armhf-{model}.bin")),
+                )?;
+            }
+        }
+    }
+
     std::fs::copy(
         "/usr/share/rugpi/boot/u-boot/bin/boot.scr",
         ctx.mounted_config.path().join("boot.scr"),

@@ -14,7 +14,7 @@ RUN ./00-prepare.sh
 
 # Build U-Boot binaries.
 WORKDIR /home/uboot/u-boot-2023.10
-COPY ./configs/* configs
+COPY ./configs/* configs/
 COPY ./steps/01-build.sh .
 RUN ./01-build.sh
 

@@ -39,7 +39,7 @@ apt-get -y clean && rm -rf /var/lib/apt/lists/*
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --no-modify-path --default-toolchain "${RUST_VERSION}"
 
-rustup target add armv7-unknown-linux-musleabihf  # Raspberry Pi (32-bit)
+rustup target add arm-unknown-linux-musleabihf  # Raspberry Pi (32-bit)
 rustup target add aarch64-unknown-linux-musl  # Raspberry Pi (64-bit)
 
 cargo install cargo-chef --locked

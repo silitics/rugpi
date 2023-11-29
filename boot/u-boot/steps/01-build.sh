@@ -27,3 +27,6 @@ function build_uboot() {
 }
 
 build_uboot arm64 64 rpi_arm64_rugpi_defconfig
+build_uboot armhf-zerow 32 rpi_armhf_zerow_rugpi_defconfig
+build_uboot armhf-pi1 32 rpi_armhf_pi1_rugpi_defconfig
+build_uboot armhf-pi2 32 rpi_armhf_pi2_rugpi_defconfig
