@@ -132,7 +132,7 @@ const config = {
             ],
           },
         ],
-        copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div>`,
+        copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div><div style="margin-top: 0.5em"><small>Raspberry Pi is a trademark of Raspberry Pi Ltd</small></div>`,
       },
       prism: {
         theme: require("prism-react-renderer/themes/oceanicNext"),
