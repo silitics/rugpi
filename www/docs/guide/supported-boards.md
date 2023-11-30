@@ -23,6 +23,11 @@ For 32-bit models and to build 32-bit images for 64-bit boards, you need to set 
 architecture = "armhf"
 ```
 
+To build 32-bit images, you also need to enable emulation of `armhf` in Docker:
+```shell
+docker run --privileged --rm tonistiigi/binfmt --install armhf
+```
+
 ### Raspberry Pi 5
 
 If you are using the quick-start template, please remove the option `include_firmware = "pi4"` from `rugpi-bakery.toml`.
