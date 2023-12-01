@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// The size of the system partition(s).
     pub system_size: Option<String>,
+    /// Indicates what to do with the overlay.
+    #[serde(default)]
     pub overlay: Overlay,
 }
 
