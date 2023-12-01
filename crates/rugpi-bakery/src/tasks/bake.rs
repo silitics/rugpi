@@ -87,8 +87,8 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
         }
     }
     // Shrink root filesystem.
-    run!(["resize2fs", "-M", loop_device.partition(5)])?;
-    run!(["dumpe2fs", "-h", loop_device.partition(5)])?;
+    // run!(["resize2fs", "-M", loop_device.partition(5)])?;
+    // run!(["dumpe2fs", "-h", loop_device.partition(5)])?;
     Ok(())
 }
 
