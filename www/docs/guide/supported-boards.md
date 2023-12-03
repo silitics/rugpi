@@ -8,7 +8,7 @@ In principle, Rugpi supports all Raspberry Pi models.
 
 | Pi 5 | Pi 4 | Pi 3   | Pi 2 v1.2 | Pi 2  | Pi 1   | Pi Zero 2 | Pi Zero | CM 4 | CM 3  | CM 1   |
 | ---- | ---- | ------ | --------- | ----- | ------ | --------- | ------- | ---- | ----- | ------ |
-| ✅   | ✅   | ✅[^1]  | ✅[^1]    | 🤷‍♂️[^1] | ✅[^1] | ✅[^1]     | 🤷‍♂️[^1]  | ✅   | 🤷‍♂️[^1] | 🤷‍♂️[^1] |
+| ✅   | ✅   | ✅[^1]  | ✅[^1]    | 🤷‍♂️[^1] | ✅[^1] | ✅[^1]     | ✅[^1]  | ✅   | 🤷‍♂️[^1] | 🤷‍♂️[^1] |
 
 ✅ fully supported, 🤷‍♂️ in principle supported but untested
 
@@ -27,6 +27,9 @@ To build 32-bit images, you also need to enable emulation of `armhf` in Docker:
 ```shell
 docker run --privileged --rm tonistiigi/binfmt --install armhf
 ```
+
+For `armhf`, note that the architecture reported by `uname -m` during the build process is `armv7l`, however, when running the image later on a non-ARMv7 board (e.g., Pi Zero or Pi 1), then the architecture will be `armv6l`.
+Make sure that the binaries you install are compatible with the `armv6l` architecture, if you aim to deploy the image to these boards.
 
 ### Raspberry Pi 5
 
