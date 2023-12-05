@@ -1,5 +1,7 @@
-/** @type {import('@docusaurus/types').Config} */
-const config = {
+import type {Config} from '@docusaurus/types';
+import type * as Preset from '@docusaurus/preset-classic';
+
+const config: Config = {
   title: "Rugpi",
   tagline: "An open-source platform empowering you to build innovative products based on Raspberry Pi.",
   url: "https://oss.silitics.com/",
@@ -22,7 +24,6 @@ const config = {
   presets: [
     [
       "classic",
-      /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
@@ -35,12 +36,11 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
-      }),
+      }) satisfies Preset.Options,
     ],
   ],
 
   themeConfig:
-    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       colorMode: {
         defaultMode: "dark",
@@ -135,10 +135,10 @@ const config = {
         copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div><div style="margin-top: 0.5em"><small>Raspberry Pi is a trademark of Raspberry Pi Ltd</small></div>`,
       },
       prism: {
-        theme: require("prism-react-renderer/themes/oceanicNext"),
+        theme: require("prism-react-renderer").themes.vsDark,
         additionalLanguages: ["rust", "toml"],
       },
-    }),
+    }) satisfies Preset.ThemeConfig,
 }
 
-module.exports = config
+export default config;
