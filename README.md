@@ -32,4 +32,6 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ---
 
-Made with ❤️ by [Silitics](https://www.silitics.com).
+Made with ❤️ for OSS by [Silitics](https://www.silitics.com).
+
+<sub>Raspberry Pi is a trademark of Raspberry Pi Ltd</sub>
