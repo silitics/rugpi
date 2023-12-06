@@ -7,6 +7,9 @@
 <h4 align="center">
     An open-source platform empowering you to build innovative products based on Raspberry Pi.
 </h4>
+<p align="center">
+  <a href="https://github.com/silitics/rugpi/releases"><img alt="Rugpi Version" src="https://img.shields.io/github/v/tag/silitics/rugpi?label=version"></a>
+</p>
 
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of [Raspberry Pi OS](https://www.raspberrypi.com/software/)** for your project.
 It boasts three core features: (1) A modern workflow to build customized system images, (2) robust **over-the-air updates with rollback support** of the entire system, including firmware files, and (3) **managed state** which is preserved across reboots and updates.
