@@ -36,7 +36,12 @@ pub enum Task {
     Bake(BakeTask),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
-    Update,
+    Update(UpdateTask),
+}
+
+#[derive(Debug, Parser)]
+pub struct UpdateTask {
+    version: Option<String>,
 }
 
 fn main() -> Anyhow<()> {
@@ -55,10 +60,15 @@ fn main() -> Anyhow<()> {
             let zsh_prog = CString::new("/bin/zsh")?;
             nix::unistd::execv::<&CStr>(&zsh_prog, &[])?;
         }
-        Task::Update => {
-            println!("Update Rugpi Bakery...");
-            std::fs::write("run-bakery", include_str!("../assets/run-bakery"))?;
+        Task::Update(task) => {
+            let version = task.version.as_deref().unwrap_or("v0");
+            println!("Switch Rugpi Bakery to version `{version}`...");
+            std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
     }
     Ok(())
+}
+
+fn interpolate_run_bakery(version: &str) -> String {
+    include_str!("../assets/run-bakery").replace("%%DEFAULT_VERSION%%", version)
 }
