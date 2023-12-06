@@ -26,17 +26,18 @@ We have tested the images on various models.
 A big shout out and many thanks go to [Reuben Miller](https://github.com/reubenmiller), who helped significantly with testing.
 In particular, Rugpi is known to work on Raspberry Pi Zero 2 W, a low-cost but still powerful variant of Raspberry Pi.
 Having extended support beyond the latest boards by integrating with [U-Boot](https://docs.u-boot.org/en/latest/), we are now also confident that Rugpi can be brought to other boards than Raspberry Pi.
-While building an amazing, optimized experience for Raspberry Pi clearly remains our focus, feel free to contact us in case you like Rugpi and want to use it with a different single-board computer.
+While building a seamless, optimized experience for Raspberry Pi clearly remains our focus, feel free to contact us in case you like Rugpi and want to use it with a different single-board computer.
 
 In addition to support for all models of Raspberry Pi, Rugpi now also supports **streaming updates directly to the underlying storage**.
-Furthermore, there is now an option to persist the writeable overlay by default making it easier to persist user-defined customizations in the field.
+Furthermore, there is now an option to persist the writeable overlay by default making it easier to apply user-defined customizations in the field.
 
 ### What's next?
 
-Having validated and expanded the foundational design, we now look ahead to the future.
-We plan to introduce a layer system to Rugpi.
+Having validated Rugpi's foundational design, we now aim to further extend its features.
+In particular, we plan to introduce a layer system to Rugpi.
 Layers will be cached and shared between different variants of a system image.
 Furthermore, they will enable a crucial feature, **fail-safe delta updates**.
+We also plan to introduce *recipe collections* and making it easier to share recipes, collections, and layers.
 
 ### Industry Adoption and Collaboration
 
@@ -47,4 +48,4 @@ To learn more, checkout the [thin-edge.io Rugpi reference repository](https://gi
 
 If you're planning to adopt Rugpi or have feedback to share, we want to hear from you!
 Your contributions and insights are invaluable as we continue to shape the future of Rugpi.
-Join the community and share your experiences with Rugpi [by opening a discussion on GitHub](https://github.com/silitics/rugpi/discussions).
+Join the community and share your experiences with Rugpi [by opening a discussion on GitHub](https://github.com/silitics/rugpi/discussions/new?category=show-and-tell).
