@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - ci
+      # - ci
     paths:
       - ".github/**"
       - "www/**"

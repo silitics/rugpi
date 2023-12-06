@@ -1,32 +1,60 @@
-name: Build Docker Images
+name: Build Rugpi Bakery
 
 on:
+  schedule:
+    # This creates the nightly version of Rugpi Bakery.
+    - cron: '0 0 * * *'
   push:
+    branches:
+      - '*'
+    tags:
+      - 'v*'
+  pull_request:
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: "ghcr.io/silitics/rugpi-bakery"
-  PI_BASE_IMAGE: "https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-05-03/2023-05-03-raspios-bullseye-arm64-lite.img.xz"
 
 jobs:
-  build-docker-images:
-    name: Build Docker Images
+  metadata:
+    name: Docker Image Metedata
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm64]
+    outputs:
+      labels: ${{ steps.meta.outputs.labels }}
+      json: ${{ steps.meta.outputs.json }}
+      version: ${{ steps.meta.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-
       - name: Docker Meta
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.IMAGE_NAME }}
-
+          tags: |
+            type=schedule,pattern=nightly
+            type=schedule,pattern=nightly-{{date 'YYYYMMDD'}}
+            type=semver,pattern=v{{major}}.{{minor}}.{{patch}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
+            type=ref,event=branch
+            type=ref,event=pr
+          labels: |
+            org.opencontainers.image.title=Rugpi Bakery
+            org.opencontainers.image.vendor=Silitics GmbH
+  
+  build-platform-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [metadata]
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -39,7 +67,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Build and Push Image
         id: build
         uses: docker/build-push-action@v4
@@ -47,13 +75,17 @@ jobs:
           context: .
           file: docker/Dockerfile.rugpi-bakery
           platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: ${{ needs.metadata.outputs.labels }}
           push: true
           tags: ${{ env.IMAGE_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-
+          build-args: |
+            BUILDTIME=${{ fromJSON(needs.metadata.outputs.json).labels['org.opencontainers.image.created'] }}
+            VERSION=${{ fromJSON(needs.metadata.outputs.json).labels['org.opencontainers.image.version'] }}
+            REVISION=${{ fromJSON(needs.metadata.outputs.json).labels['org.opencontainers.image.revision'] }}
+      
       - name: Export Digest
         run: |
           mkdir -p /tmp/digests
@@ -67,12 +99,13 @@ jobs:
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
-  merge-docker-images:
+  
+  build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    name: Merge Docker Images
     needs:
-      - build-docker-images
+      - metadata
+      - build-platform-images
     steps:
       - name: Download Digests
         uses: actions/download-artifact@v3
@@ -83,14 +116,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Docker Meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
-
       - name: Login to Container Registry
         uses: docker/login-action@v2
         with:
@@ -100,38 +125,13 @@ jobs:
 
       - name: Create Manifest List and Push
         working-directory: /tmp/digests
+        env:
+          # We use an environment variable here because the shell knows how to properly escape JSON.
+          METADATA_JSON: ${{ needs.metadata.outputs.json }}
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$METADATA_JSON") \
             $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
       
       - name: Inspect Image
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-
-  build-template-image:
-    name: Build Image
-    runs-on: ubuntu-latest
-    needs: [merge-docker-images]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - name: List Files
-        working-directory: ./template
-        run: ls -l
-
-      - name: Install QEMU
-        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
-
-      - name: Extract Image
-        working-directory: ./template
-        run: ./run-bakery extract ${{ env.PI_BASE_IMAGE }} build/base.tar
-
-      - name: Customize System
-        working-directory: ./template
-        run: ./run-bakery customize build/base.tar build/customized.tar
-
-      - name: Bake Image
-        working-directory: ./template
-        run: ./run-bakery bake build/customized.tar build/customized.img
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.metadata.outputs.version }}
