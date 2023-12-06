@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
                     "docker",
                     "build",
                     "-t",
-                    "ghcr.io/silitics/rugpi-bakery:latest",
+                    "ghcr.io/silitics/rugpi-bakery:dev",
                     "-f",
                     "docker/Dockerfile.rugpi-bakery",
                     "."

@@ -36,6 +36,7 @@ pub enum Task {
     Bake(BakeTask),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
+    Update,
 }
 
 fn main() -> Anyhow<()> {
@@ -53,6 +54,10 @@ fn main() -> Anyhow<()> {
         Task::Shell => {
             let zsh_prog = CString::new("/bin/zsh")?;
             nix::unistd::execv::<&CStr>(&zsh_prog, &[])?;
+        }
+        Task::Update => {
+            println!("Update Rugpi Bakery...");
+            std::fs::write("run-bakery", include_str!("../assets/run-bakery"))?;
         }
     }
     Ok(())
