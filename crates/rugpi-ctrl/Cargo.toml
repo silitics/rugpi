@@ -18,4 +18,4 @@ xscript.workspace = true
 indoc = "2.0.2"
 toml = "0.7.6"
 rugpi-common = { path = "../rugpi-common" }
-tempdir = "0.3.7"
+tempfile = "3.8.1"

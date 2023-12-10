@@ -1,0 +1,34 @@
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "arm-unknown-linux-musleabihf" },
+    { triple = "aarch64-unknown-linux-musl" },
+]
+all-features = true
+no-default-features = false
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "deny"
+notice = "warn"
+
+[licenses]
+unlicensed = "deny"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "Unicode-DFS-2016",
+]
+copyleft = "deny"
+allow-osi-fsf-free = "neither"
+default = "deny"
+confidence-threshold = 0.96
+
+[licenses.private]
+ignore = false
+
+[bans]
+multiple-versions = "allow"

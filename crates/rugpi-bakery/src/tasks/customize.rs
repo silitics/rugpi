@@ -12,7 +12,7 @@ use anyhow::bail;
 use camino::Utf8Path;
 use clap::Parser;
 use rugpi_common::{mount::Mounted, Anyhow};
-use tempdir::TempDir;
+use tempfile::{tempdir, TempDir};
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{
@@ -36,7 +36,7 @@ pub fn run(args: &Args, task: &CustomizeTask) -> Anyhow<()> {
     // 2️⃣ Collect the recipes to apply.
     let jobs = recipe_schedule(&config)?;
     // 3️⃣ Prepare system chroot.
-    let root_dir = TempDir::new("rugpi")?;
+    let root_dir = tempdir()?;
     let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &task.src, "-C", root_dir_path])?;

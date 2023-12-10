@@ -11,7 +11,7 @@ use rugpi_common::{
     partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout, sfdisk_image_layout},
     patch_boot, patch_config, Anyhow,
 };
-use tempdir::TempDir;
+use tempfile::{tempdir, TempDir};
 use xscript::{run, Run};
 
 use crate::{
@@ -43,7 +43,7 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
     mkfs_vfat(loop_device.partition(1), "CONFIG")?;
     mkfs_vfat(loop_device.partition(2), "BOOT-A")?;
     mkfs_ext4(loop_device.partition(5), "system-a")?;
-    let root_dir = TempDir::new("rugpi")?;
+    let root_dir = tempdir()?;
     let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
     {
         let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
@@ -54,7 +54,7 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
         }
         fs::create_dir_all(&boot_dir)?;
         let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
-        let config_dir = TempDir::new("rugpi")?;
+        let config_dir = tempdir()?;
         let config_dir_path = Utf8Path::from_path(config_dir.path()).unwrap();
         let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
         let ctx = BakeCtx {

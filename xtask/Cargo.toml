@@ -10,4 +10,4 @@ repository.workspace = true
 [dependencies]
 anyhow = "1.0.71"
 clap = { version = "4.3.10", features = ["derive"] }
-xscript = "0.1.1"
+xscript = "0.2.0"

@@ -24,7 +24,7 @@ use rugpi_common::{
     },
     patch_boot, Anyhow, DropGuard,
 };
-use tempdir::TempDir;
+use tempfile::{tempdir, TempDir};
 use xscript::{run, Run};
 
 use crate::overlay::overlay_dir;
@@ -184,9 +184,9 @@ fn install_update_cp(image: &String) -> Anyhow<()> {
     let system_label = format!("system-{}", spare_partitions.as_str());
     mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
     mkfs_ext4(spare_partitions.system_dev(), system_label)?;
-    let temp_dir_image = TempDir::new("rugpi-image")?;
+    let temp_dir_image = tempdir()?;
     let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
-    let temp_dir_spare = TempDir::new("rugpi-spare")?;
+    let temp_dir_spare = tempdir()?;
     let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
     // 1️⃣ Copy `/`.
     {
@@ -258,7 +258,7 @@ fn install_update_stream(image: &String) -> Anyhow<()> {
         partition_idx += 1;
     }
 
-    let temp_dir_spare = TempDir::new("rugpi-spare")?;
+    let temp_dir_spare = tempdir()?;
     let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
 
     // Path `/boot`.
