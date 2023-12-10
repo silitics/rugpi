@@ -11,7 +11,7 @@ use rugpi_common::{
     partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout, sfdisk_image_layout},
     patch_boot, patch_config, Anyhow,
 };
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::{

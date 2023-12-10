@@ -24,7 +24,7 @@ use rugpi_common::{
     },
     patch_boot, Anyhow, DropGuard,
 };
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::overlay::overlay_dir;

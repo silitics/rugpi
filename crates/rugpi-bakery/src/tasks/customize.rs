@@ -12,7 +12,7 @@ use anyhow::bail;
 use camino::Utf8Path;
 use clap::Parser;
 use rugpi_common::{mount::Mounted, Anyhow};
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{

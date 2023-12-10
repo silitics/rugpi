@@ -3,7 +3,7 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
 use rugpi_common::{loop_dev::LoopDevice, mount::Mounted, Anyhow};
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::utils::download;
