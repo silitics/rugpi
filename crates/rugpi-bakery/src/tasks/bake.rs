@@ -56,7 +56,7 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
         let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
         let config_dir = TempDir::new("rugpi")?;
         let config_dir_path = Utf8Path::from_path(config_dir.path()).unwrap();
-        let mounted_config = Mounted::mount(loop_device.partition(1), &config_dir_path)?;
+        let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
         let ctx = BakeCtx {
             config,
             mounted_boot,
@@ -160,16 +160,16 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
     std::fs::write(ctx.mounted_config.path().join("cmdline.txt"), "")?;
 
     let mut env = UBootEnv::new();
-    env.set("bootpart", "2".to_owned());
+    env.set("bootpart", "2");
     env.save(ctx.mounted_config.path().join("bootpart.default.env"))?;
 
     let mut env = UBootEnv::new();
-    env.set("boot_spare", "0".to_owned());
+    env.set("boot_spare", "0");
     env.save(ctx.mounted_config.path().join("boot_spare.disabled.env"))?;
     env.save(ctx.mounted_config.path().join("boot_spare.env"))?;
 
     let mut env = UBootEnv::new();
-    env.set("boot_spare", "1".to_owned());
+    env.set("boot_spare", "1");
     env.save(ctx.mounted_config.path().join("boot_spare.enabled.env"))?;
 
     Ok(())

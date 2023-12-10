@@ -3,7 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     env, fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use rugpi_common::{boot::BootFlow, Anyhow};
@@ -65,7 +65,7 @@ impl Architecture {
 
 /// Load the configuration file from the current directory.
 pub fn load_config(args: &Args) -> Anyhow<BakeryConfig> {
-    let current_dir = PathBuf::try_from(env::current_dir()?)?;
+    let current_dir = env::current_dir()?;
     let config_path = args
         .config
         .as_deref()
