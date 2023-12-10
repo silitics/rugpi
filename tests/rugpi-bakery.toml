@@ -1,0 +1,7 @@
+recipes = ["set-hostname", "persist-root-home", "ssh", "zsh"]
+
+[parameters.set-hostname]
+hostname = "rugpi-tests"
+
+[parameters.rugpi-ctrl]
+rugpi_admin = true
