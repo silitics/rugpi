@@ -58,11 +58,10 @@ export default function Home(): JSX.Element {
             <p>
               While Rugpi is a young and evolving project, we understand that
               the lifetime of embedded devices spans multiple years, if not
-              decades. Backwards incompatible changes to the update mechanism
-              will be made only after careful consideration and consultation
-              with our users. This ensures that devices using Rugpi can be
-              updated in the future. If you're developing integrations with
-              Rugpi, please be aware that the CLI and APIs are still expected to
+              decades. We aim to maintain backwards-compatibility for updates.
+              This ensures that devices using Rugpi can be updated in the
+              future. If you're developing integrations with Rugpi, please be
+              aware that the building pipeline, CLI, and APIs are expected to
               change.
             </p>
           </Admonition>

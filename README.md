@@ -8,7 +8,8 @@
     An open-source platform empowering you to build innovative products based on Raspberry Pi.
 </h4>
 <p align="center">
-  <a href="https://github.com/silitics/rugpi/releases"><img alt="Rugpi Version" src="https://img.shields.io/github/v/tag/silitics/rugpi?label=version"></a>
+  <a href="https://github.com/silitics/rugpi/releases"><img alt="Rugpi Version Badge" src="https://img.shields.io/github/v/tag/silitics/rugpi?label=version"></a>
+  <a href="https://github.com/silitics/rugpi/actions"><img alt="Pipeline Status Badge" src="https://img.shields.io/github/actions/workflow/status/silitics/rugpi/check-and-lint.yml"></a>
 </p>
 
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of [Raspberry Pi OS](https://www.raspberrypi.com/software/)** for your project.
@@ -25,7 +26,7 @@ If you like the workflow and want to use Rugpi for other boards than Raspberry P
 
 ### Stability Guarantees
 
-While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. Backwards incompatible changes to the update mechanism will be made only after careful consideration and consultation with our users. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the CLI and APIs are still expected to change.
+While Rugpi is a young and evolving project, we understand that the lifetime of embedded devices spans multiple years, if not decades. We aim to maintain backwards-compatibility for updates. This ensures that devices using Rugpi can be updated in the future. If you're developing integrations with Rugpi, please be aware that the building pipeline, CLI, and APIs are expected to change.
 
 ## ⚖️ Licensing
 
