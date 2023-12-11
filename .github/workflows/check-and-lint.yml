@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install Nightly Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
       - name: Cargo Deny
         uses: EmbarkStudios/cargo-deny-action@v1
 
