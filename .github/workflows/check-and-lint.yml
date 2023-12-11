@@ -12,14 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Nightly Toolchain
-        uses: dtolnay/rust-toolchain@nightly
-
       - name: Cargo Deny
         uses: EmbarkStudios/cargo-deny-action@v1
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features
+      
+      - name: Install Nightly Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy, rustfmt
 
       - name: Format
         run: cargo +nightly fmt --check
