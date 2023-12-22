@@ -16,6 +16,10 @@ fi
 
 RUGPI_BAKERY_IMAGE=${RUGPI_BAKERY_IMAGE:-"ghcr.io/silitics/rugpi-bakery:${RUGPI_VERSION}"}
 
+if [ -t 0 ] && [ -t 1 ]; then
+    DOCKER_FLAGS="${DOCKER_FLAGS} -it"
+fi
+
 exec $DOCKER run --rm --privileged \
     $DOCKER_FLAGS \
     -v "$(pwd)":/project \
