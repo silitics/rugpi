@@ -134,7 +134,7 @@ impl GitSource {
         if !path.exists() {
             run!(["git", "clone", &self.url, path.to_string_lossy()])?;
         }
-        let env = LocalEnv::new(&path);
+        let env = LocalEnv::new(path);
         if fetch {
             run!(env, ["git", "fetch", "--all"])?;
         }

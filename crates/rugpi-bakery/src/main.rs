@@ -1,5 +1,4 @@
 use std::{
-    env,
     ffi::{CStr, CString},
     path::PathBuf,
 };
