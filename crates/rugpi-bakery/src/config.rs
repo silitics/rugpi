@@ -11,12 +11,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     recipes::{ParameterValue, RecipeName},
+    repositories::sources::Source,
     Args,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BakeryConfig {
+    /// The repositories to use.
+    #[serde(default)]
+    pub repositories: HashMap<String, Source>,
     /// The recipes to include.
     #[serde(default)]
     pub recipes: HashSet<RecipeName>,
