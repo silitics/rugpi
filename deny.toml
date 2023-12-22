@@ -21,6 +21,7 @@ allow = [
     "Apache-2.0",
     "BSD-3-Clause",
     "Unicode-DFS-2016",
+    "MPL-2.0",
 ]
 copyleft = "deny"
 allow-osi-fsf-free = "neither"
