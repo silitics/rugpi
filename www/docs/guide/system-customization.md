@@ -24,7 +24,7 @@ exclude = [...]
 ## Recipes
 
 A recipe describes modifications to the system.
-Rugpi Bakery comes with a set of [builtin recipes](https://github.com/silitics/rugpi/tree/main/recipes) which you can use.
+Rugpi Bakery comes with a set of [core recipes](https://github.com/silitics/rugpi/tree/main/repositories/core/recipes) which you can use.
 Additional guides and recipes for reoccurring problems are also described in the [Rugpi Cookbook](../cookbook).
 
 Each recipe has its own directory with a `recipe.toml` configuration file.
