@@ -3,5 +3,5 @@
 	url = ../rugpi-template.git
 
 [submodule "extra"]
-	path = extra
+	path = repositories/extra
 	url = ../rugpi-extra.git

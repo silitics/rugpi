@@ -73,7 +73,7 @@ RUN mkdir -p /usr/share/rugpi \
     && mv rpi-eeprom-master rpi-eeprom \
     && rm -f rpi-eeprom-master.zip
 
-COPY recipes /usr/share/rugpi/recipes
+COPY repositories /usr/share/rugpi/repositories
 COPY boot /usr/share/rugpi/boot
 
 COPY docker/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh

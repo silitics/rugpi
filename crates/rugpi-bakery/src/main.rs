@@ -6,7 +6,10 @@ use std::{
 use clap::Parser;
 use colored::Colorize;
 use config::load_config;
-use repositories::Repositories;
+use repositories::{
+    sources::{PathSource, Source},
+    Repositories,
+};
 use rugpi_common::Anyhow;
 use tasks::{
     bake::{self, BakeTask},
@@ -75,6 +78,12 @@ fn main() -> Anyhow<()> {
             let config = load_config(&args)?;
             let root_dir = std::env::current_dir()?;
             let mut repositories = Repositories::new(&root_dir);
+            repositories.load_source(
+                Source::Path(PathSource {
+                    path: "/usr/share/rugpi/repositories/core".into(),
+                }),
+                false,
+            )?;
             repositories.load_root(config.repositories.clone(), true)?;
             for (_, repository) in repositories.iter() {
                 println!(

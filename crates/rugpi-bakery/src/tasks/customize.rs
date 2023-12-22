@@ -56,7 +56,7 @@ fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
     // 1️⃣ Load builtin recipes.
     let builtin_recipes_path = PathBuf::from(
         env::var("RUGPI_BUILTIN_RECIPES_PATH")
-            .unwrap_or_else(|_| "/usr/share/rugpi/recipes".to_owned()),
+            .unwrap_or_else(|_| "/usr/share/rugpi/repositories/core/recipes".to_owned()),
     );
     library.loader().load_all(&builtin_recipes_path)?;
     // 2️⃣ Load custom recipes.
