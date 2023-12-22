@@ -1,3 +1,7 @@
 [submodule "template"]
 	path = template
 	url = ../rugpi-template.git
+
+[submodule "extra"]
+	path = extra
+	url = ../rugpi-extra.git
