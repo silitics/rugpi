@@ -36,7 +36,7 @@ Note that Rugpi Bakery is distributed as a Docker image (for `arm64` and `amd64`
 Building images outside of Docker is fundamentally only possible on Linux and not officially supported.
 So, to build the image locally, a working Docker installation is required.
 The template ships with a `run-bakery` shell script (for Linux and macOS) to run Rugpi Bakery in a temporary container.
-For Windows, an equivalent `run-bakery.bat` batch file is provided.
+For Windows, please run Rugpi Bakery inside WSL.
 
 To print the usage instructions of Rugpi Bakery, in the root directory of the template, run:
 
