@@ -8,6 +8,7 @@ if [ $# -eq 0 ]; then
 fi
 
 export RUGPI_BAKERY_IMAGE=$1
+export RUGPI_DEV=true
 
 ./scripts/build-images.sh
 
