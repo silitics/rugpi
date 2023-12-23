@@ -77,7 +77,7 @@ fn main() -> Anyhow<()> {
         Task::Pull => {
             let config = load_config(&args)?;
             let root_dir = std::env::current_dir()?;
-            let mut repositories = Repositories::new(&root_dir);
+            let mut repositories = Repositories::new(root_dir);
             repositories.load_source(
                 Source::Path(PathSource {
                     path: "/usr/share/rugpi/repositories/core".into(),

@@ -7,7 +7,6 @@ use std::{
 };
 
 use anyhow::{bail, Context};
-use camino::Utf8Path;
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
     boot::{
@@ -185,9 +184,9 @@ fn install_update_cp(image: &String) -> Anyhow<()> {
     mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
     mkfs_ext4(spare_partitions.system_dev(), system_label)?;
     let temp_dir_image = tempdir()?;
-    let temp_dir_image = Utf8Path::from_path(temp_dir_image.path()).unwrap();
+    let temp_dir_image = temp_dir_image.path();
     let temp_dir_spare = tempdir()?;
-    let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
+    let temp_dir_spare = temp_dir_spare.path();
     // 1️⃣ Copy `/`.
     {
         let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
@@ -259,7 +258,7 @@ fn install_update_stream(image: &String) -> Anyhow<()> {
     }
 
     let temp_dir_spare = tempdir()?;
-    let temp_dir_spare = Utf8Path::from_path(temp_dir_spare.path()).unwrap();
+    let temp_dir_spare = temp_dir_spare.path();
 
     // Path `/boot`.
     {

@@ -1,12 +1,13 @@
 //! Loop device interface.
 
-use camino::{Utf8Path, Utf8PathBuf};
+use std::path::{Path, PathBuf};
+
 use rugpi_common::Anyhow;
 use sha1::{Digest, Sha1};
 use url::Url;
 use xscript::{run, Run};
 
-pub fn download(url: &str) -> Anyhow<Utf8PathBuf> {
+pub fn download(url: &str) -> Anyhow<PathBuf> {
     let url = url.parse::<Url>()?;
     let Some(file_name) = url.path_segments().and_then(|segments| segments.last()) else {
         anyhow::bail!("unable to obtain file name from URL");
@@ -20,7 +21,7 @@ pub fn download(url: &str) -> Anyhow<Utf8PathBuf> {
         cache_file_name.push('.');
         cache_file_name.push_str(extension);
     }
-    let cache_file_path = Utf8Path::new(".rugpi/cache").join(cache_file_name);
+    let cache_file_path = Path::new(".rugpi/cache").join(cache_file_name);
     if !cache_file_path.exists() {
         std::fs::create_dir_all(".rugpi/cache")?;
         run!(["wget", "-O", &cache_file_path, url.as_str()])?;

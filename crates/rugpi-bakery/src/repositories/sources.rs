@@ -132,7 +132,7 @@ impl GitSource {
     /// The *fetch* flag indicates whether updates should be fetched from the remote.
     fn checkout(&self, path: &Path, fetch: bool) -> Anyhow<()> {
         if !path.exists() {
-            run!(["git", "clone", &self.url, path.to_string_lossy()])?;
+            run!(["git", "clone", &self.url, path])?;
         }
         let env = LocalEnv::new(path);
         if fetch {

@@ -1,8 +1,7 @@
 //! Creates an image.
 
-use std::fs;
+use std::{fs, path::Path};
 
-use camino::Utf8Path;
 use clap::Parser;
 use rugpi_common::{
     boot::{uboot::UBootEnv, BootFlow},
@@ -29,8 +28,8 @@ pub struct BakeTask {
 
 pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
     let config = load_config(args)?;
-    let archive = Utf8Path::new(&task.archive);
-    let image = Utf8Path::new(&task.image);
+    let archive = Path::new(&task.archive);
+    let image = Path::new(&task.image);
     let size = calculate_image_size(archive)?;
     println!("Size: {} bytes", size);
     fs::remove_file(image).ok();
@@ -44,7 +43,7 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
     mkfs_vfat(loop_device.partition(2), "BOOT-A")?;
     mkfs_ext4(loop_device.partition(5), "system-a")?;
     let root_dir = tempdir()?;
-    let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
+    let root_dir_path = root_dir.path();
     {
         let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
         let mut boot_dir = root_dir_path.join("boot");
@@ -55,7 +54,7 @@ pub fn run(args: &Args, task: &BakeTask) -> Anyhow<()> {
         fs::create_dir_all(&boot_dir)?;
         let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
         let config_dir = tempdir()?;
-        let config_dir_path = Utf8Path::from_path(config_dir.path()).unwrap();
+        let config_dir_path = config_dir.path();
         let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
         let ctx = BakeCtx {
             config,
@@ -100,7 +99,7 @@ struct BakeCtx {
     mounted_config: Mounted,
 }
 
-fn calculate_image_size(archive: &Utf8Path) -> Anyhow<u64> {
+fn calculate_image_size(archive: &Path) -> Anyhow<u64> {
     let archive_bytes = fs::metadata(archive)?.len();
     let total_bytes = archive_bytes + (256 + 128 + 128) * 1024 * 1024;
     let total_blocks = (total_bytes / 4096) + 1;
@@ -125,7 +124,7 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
         ctx.mounted_boot.path(),
         ctx.mounted_config.path()
     ])?;
-    std::fs::remove_file(&ctx.mounted_config.path().join("kernel8.img"))?;
+    std::fs::remove_file(ctx.mounted_config.path().join("kernel8.img"))?;
     match ctx.config.architecture {
         Architecture::Arm64 => {
             std::fs::copy(
@@ -175,7 +174,7 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
     Ok(())
 }
 
-fn include_pi4_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
+fn include_pi4_firmware(autoboot_path: &Path) -> Anyhow<()> {
     run!([
         "cp",
         "-f",
@@ -211,7 +210,7 @@ fn include_pi4_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
     Ok(())
 }
 
-fn include_pi5_firmware(autoboot_path: &Utf8Path) -> Anyhow<()> {
+fn include_pi5_firmware(autoboot_path: &Path) -> Anyhow<()> {
     run!([
         "cp",
         "-f",

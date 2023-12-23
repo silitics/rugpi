@@ -1,7 +1,11 @@
-use std::{fs, os::unix::prelude::FileTypeExt, path::Path, sync::OnceLock};
+use std::{
+    fs,
+    os::unix::prelude::FileTypeExt,
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
 use anyhow::{anyhow, bail};
-use camino::Utf8Path;
 use xscript::{read_str, run, Run};
 
 use self::devices::{SD_PART_SYSTEM_A, SD_PART_SYSTEM_B};
@@ -40,23 +44,21 @@ pub fn is_dir(path: impl AsRef<Path>) -> bool {
 /// The `findmnt` executable.
 const FINDMNT: &str = "/usr/bin/findmnt";
 
-pub fn find_dev(path: impl AsRef<str>) -> Anyhow<String> {
-    Ok(read_str!([
-        FINDMNT, "-n", "-o", "SOURCE", "--target", path
-    ])?)
+pub fn find_dev(path: impl AsRef<Path>) -> Anyhow<PathBuf> {
+    Ok(read_str!([FINDMNT, "-n", "-o", "SOURCE", "--target", path.as_ref()])?.into())
 }
 
-pub fn system_dev() -> Anyhow<&'static Utf8Path> {
-    static SYSTEM_DEV: OnceLock<Anyhow<String>> = OnceLock::new();
+pub fn system_dev() -> Anyhow<&'static Path> {
+    static SYSTEM_DEV: OnceLock<Anyhow<PathBuf>> = OnceLock::new();
     SYSTEM_DEV
         .get_or_init(|| find_dev("/run/rugpi/mounts/system"))
         .as_ref()
-        .map(Utf8Path::new)
+        .map(AsRef::as_ref)
         .map_err(|error| anyhow!("error retrieving system device: {error}"))
 }
 
 pub fn get_hot_partitions() -> Anyhow<PartitionSet> {
-    let system_dev = system_dev()?.as_str();
+    let system_dev = &*system_dev()?.to_string_lossy();
     match system_dev {
         SD_PART_SYSTEM_A => Ok(PartitionSet::A),
         SD_PART_SYSTEM_B => Ok(PartitionSet::B),
@@ -133,17 +135,17 @@ impl PartitionSet {
         }
     }
 
-    pub fn system_dev(self) -> &'static Utf8Path {
+    pub fn system_dev(self) -> &'static Path {
         match self {
-            PartitionSet::A => Utf8Path::new(devices::SD_PART_SYSTEM_A),
-            PartitionSet::B => Utf8Path::new(devices::SD_PART_SYSTEM_B),
+            PartitionSet::A => Path::new(devices::SD_PART_SYSTEM_A),
+            PartitionSet::B => Path::new(devices::SD_PART_SYSTEM_B),
         }
     }
 
-    pub fn boot_dev(self) -> &'static Utf8Path {
+    pub fn boot_dev(self) -> &'static Path {
         match self {
-            PartitionSet::A => Utf8Path::new(devices::SD_PART_BOOT_A),
-            PartitionSet::B => Utf8Path::new(devices::SD_PART_BOOT_B),
+            PartitionSet::A => Path::new(devices::SD_PART_BOOT_A),
+            PartitionSet::B => Path::new(devices::SD_PART_BOOT_B),
         }
     }
 
@@ -202,8 +204,8 @@ const SFDISK: &str = "/usr/sbin/sfdisk";
 const PARTPROBE: &str = "/usr/sbin/partprobe";
 
 /// Returns the disk id of the provided image or device.
-pub fn get_disk_id(path: impl AsRef<str>) -> Anyhow<String> {
-    fn _disk_id(path: &str) -> Anyhow<String> {
+pub fn get_disk_id(path: impl AsRef<Path>) -> Anyhow<String> {
+    fn _disk_id(path: &Path) -> Anyhow<String> {
         Ok(read_str!([SFDISK, "--disk-id", path])?
             .strip_prefix("0x")
             .ok_or_else(|| anyhow!("`sfdisk` returned invalid disk id"))?
@@ -213,8 +215,8 @@ pub fn get_disk_id(path: impl AsRef<str>) -> Anyhow<String> {
 }
 
 /// Partitions an image or device with the provided layout.
-pub fn sfdisk_apply_layout(path: impl AsRef<str>, layout: impl AsRef<str>) -> Anyhow<()> {
-    fn _sfdisk_apply_layout(path: &str, layout: &str) -> Anyhow<()> {
+pub fn sfdisk_apply_layout(path: impl AsRef<Path>, layout: impl AsRef<str>) -> Anyhow<()> {
+    fn _sfdisk_apply_layout(path: &Path, layout: &str) -> Anyhow<()> {
         run!([SFDISK, "--no-reread", path].with_stdin(layout))?;
         if is_block_dev(path) {
             run!([PARTPROBE, path])?;
@@ -230,13 +232,13 @@ const MKFS_ETX4: &str = "/usr/sbin/mkfs.ext4";
 const MKFS_VFAT: &str = "/usr/sbin/mkfs.vfat";
 
 /// Formats a boot partition with FAT32.
-pub fn mkfs_vfat(dev: impl AsRef<str>, label: impl AsRef<str>) -> Anyhow<()> {
-    run!([MKFS_VFAT, "-n", label, dev])?;
+pub fn mkfs_vfat(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
+    run!([MKFS_VFAT, "-n", label.as_ref(), dev.as_ref()])?;
     Ok(())
 }
 
 /// Formats a system partition with EXT4.
-pub fn mkfs_ext4(dev: impl AsRef<str>, label: impl AsRef<str>) -> Anyhow<()> {
-    run!([MKFS_ETX4, "-F", "-L", label, dev])?;
+pub fn mkfs_ext4(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
+    run!([MKFS_ETX4, "-F", "-L", label.as_ref(), dev.as_ref()])?;
     Ok(())
 }

@@ -1,9 +1,14 @@
 //! Data structures for representing recipes.
 
-use std::{collections::HashMap, ffi::OsStr, fmt, fs, ops, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    fmt, fs, ops,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::{anyhow, bail, Context};
-use camino::Utf8PathBuf;
 use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
@@ -77,11 +82,11 @@ impl<'lib> RecipeLoader<'lib> {
 
     /// Loads a recipe from the given path.
     pub fn load(&mut self, path: &Path) -> Anyhow<()> {
-        let path = Utf8PathBuf::from_path_buf(path.to_path_buf())
-            .map_err(|_| anyhow!("recipe path must be valid UTF-8"))?;
+        let path = path.to_path_buf();
         let name = path
             .file_name()
             .ok_or_else(|| anyhow!("unable to determine recipe name from path `{path:?}`"))?
+            .to_string_lossy()
             .into();
         let info_path = path.join("recipe.toml");
         let info = toml::from_str(
@@ -131,7 +136,7 @@ pub struct Recipe {
     /// The steps of the recipe.
     pub steps: Vec<RecipeStep>,
     /// The path of the recipe.
-    pub path: Utf8PathBuf,
+    pub path: PathBuf,
 }
 
 /// A name of a recipe.

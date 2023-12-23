@@ -1,7 +1,6 @@
 use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 
 use anyhow::{bail, ensure};
-use camino::Utf8Path;
 use rugpi_common::{
     partitions::{
         devices::{SD_CARD, SD_PART_BOOT_A, SD_PART_CONFIG, SD_PART_DATA},
@@ -78,7 +77,7 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "-o", "ro", SD_PART_CONFIG, MOUNT_POINT_CONFIG])?;
 
     // 6️⃣ Setup state in `/run/rugpi/state`.
-    let state_profile = Utf8Path::new(DEFAULT_STATE_DIR);
+    let state_profile = Path::new(DEFAULT_STATE_DIR);
     if state_profile.join(".rugpi/reset-state").exists() {
         // The existence of the file indicates that the state shall be reset.
         fs::remove_dir_all(state_profile).ok();
@@ -106,30 +105,30 @@ const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
 
 const STATE_DIR: &str = "/run/rugpi/state";
 
-pub fn state_dir() -> &'static Utf8Path {
-    Utf8Path::new(STATE_DIR)
+pub fn state_dir() -> &'static Path {
+    Path::new(STATE_DIR)
 }
 
 const OVERLAY_DIR: &str = "/run/rugpi/mounts/data/overlay";
 const OVERLAY_ROOT_DIR: &str = "/run/rugpi/mounts/data/overlay/root";
 const OVERLAY_WORK_DIR: &str = "/run/rugpi/mounts/data/overlay/work";
 
-pub fn overlay_dir() -> &'static Utf8Path {
-    Utf8Path::new(OVERLAY_DIR)
+pub fn overlay_dir() -> &'static Path {
+    Path::new(OVERLAY_DIR)
 }
 
-pub fn overlay_root_dir() -> &'static Utf8Path {
-    Utf8Path::new(OVERLAY_ROOT_DIR)
+pub fn overlay_root_dir() -> &'static Path {
+    Path::new(OVERLAY_ROOT_DIR)
 }
 
-pub fn overlay_work_dir() -> &'static Utf8Path {
-    Utf8Path::new(OVERLAY_WORK_DIR)
+pub fn overlay_work_dir() -> &'static Path {
+    Path::new(OVERLAY_WORK_DIR)
 }
 
 const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
 
-pub fn config_path() -> &'static Utf8Path {
-    Utf8Path::new(CTRL_CONFIG_PATH)
+pub fn config_path() -> &'static Path {
+    Path::new(CTRL_CONFIG_PATH)
 }
 
 /// Loads the Rugpi Ctrl configuration.
@@ -173,7 +172,7 @@ fn initialize_partitions(config: &Config) -> Anyhow<()> {
 }
 
 /// Sets up the overlay.
-fn setup_root_overlay(config: &Config, state_profile: &Utf8Path) -> Anyhow<()> {
+fn setup_root_overlay(config: &Config, state_profile: &Path) -> Anyhow<()> {
     let overlay_state = state_profile.join("overlay");
     let force_persist = state_profile.join(".rugpi/force-persist-overlay").exists();
     if !force_persist && !matches!(config.overlay, Overlay::Persist) {
@@ -189,6 +188,7 @@ fn setup_root_overlay(config: &Config, state_profile: &Utf8Path) -> Anyhow<()> {
     fs::create_dir_all(overlay_work_dir()).ok();
     fs::create_dir_all(overlay_root_dir()).ok();
 
+    let hot_overlay_state = hot_overlay_state.to_string_lossy();
     run!([
         MOUNT,
         "-t",
@@ -210,7 +210,7 @@ fn setup_root_overlay(config: &Config, state_profile: &Utf8Path) -> Anyhow<()> {
 }
 
 /// Sets up the bind mounts required for the persistent state.
-fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
+fn setup_persistent_state(state_profile: &Path) -> Anyhow<()> {
     let root_dir = overlay_root_dir();
 
     let persist_dir = state_profile.join("persist");
@@ -222,11 +222,17 @@ fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
         match persist {
             Persist::Directory { directory } => {
                 let directory = path_strip_root(directory.as_ref());
-                eprintln!("Setting up bind mounds for directory `{directory}`...");
+                eprintln!(
+                    "Setting up bind mounds for directory `{}`...",
+                    directory.to_string_lossy()
+                );
                 let system_path = root_dir.join(directory);
                 let state_path = persist_dir.join(directory);
                 if system_path.exists() && !system_path.is_dir() {
-                    bail!("Error persisting `{directory}`, not a directory!");
+                    bail!(
+                        "Error persisting `{}`, not a directory!",
+                        directory.to_string_lossy()
+                    );
                 }
                 if !state_path.is_dir() {
                     fs::remove_dir_all(&state_path).ok();
@@ -244,11 +250,14 @@ fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
             }
             Persist::File { file, default } => {
                 let file = path_strip_root(file.as_ref());
-                eprintln!("Setting up bind mounds for file `{file}`...");
+                eprintln!(
+                    "Setting up bind mounds for file `{}`...",
+                    file.to_string_lossy()
+                );
                 let system_path = root_dir.join(file);
                 let state_path = persist_dir.join(file);
                 if system_path.exists() && !system_path.is_file() {
-                    bail!("Error persisting `{file}`, not a file!");
+                    bail!("Error persisting `{}`, not a file!", file.to_string_lossy());
                 }
                 if !state_path.is_file() {
                     fs::remove_dir_all(&state_path).ok();
@@ -272,7 +281,7 @@ fn setup_persistent_state(state_profile: &Utf8Path) -> Anyhow<()> {
 }
 
 /// Strips the root `/` from a path.
-fn path_strip_root(path: &Utf8Path) -> &Utf8Path {
+fn path_strip_root(path: &Path) -> &Path {
     if let Ok(stripped) = path.strip_prefix("/") {
         stripped
     } else {

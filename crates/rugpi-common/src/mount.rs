@@ -1,4 +1,5 @@
-use camino::{Utf8Path, Utf8PathBuf};
+use std::path::{Path, PathBuf};
+
 use xscript::{run, Run};
 
 use crate::Anyhow;
@@ -9,33 +10,33 @@ const MOUNT: &str = "/usr/bin/mount";
 const UMOUNT: &str = "/usr/bin/umount";
 
 pub struct Mounted {
-    path: Utf8PathBuf,
+    path: PathBuf,
 }
 
 impl Mounted {
-    pub fn mount(dev: impl AsRef<str>, dst: impl AsRef<str>) -> Anyhow<Self> {
+    pub fn mount(dev: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, dev, dst])?;
+        run!([MOUNT, dev.as_ref(), dst])?;
         Ok(Mounted { path: dst.into() })
     }
 
-    pub fn path(&self) -> &Utf8Path {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 
     pub fn mount_fs(
         fstype: impl AsRef<str>,
-        src: impl AsRef<str>,
-        dst: impl AsRef<str>,
+        src: impl AsRef<Path>,
+        dst: impl AsRef<Path>,
     ) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, "-t", fstype, src, dst])?;
+        run!([MOUNT, "-t", fstype.as_ref(), src.as_ref(), dst])?;
         Ok(Mounted { path: dst.into() })
     }
 
-    pub fn bind(src: impl AsRef<str>, dst: impl AsRef<str>) -> Anyhow<Self> {
+    pub fn bind(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, "--bind", src, dst])?;
+        run!([MOUNT, "--bind", src.as_ref(), dst])?;
         Ok(Mounted { path: dst.into() })
     }
 }

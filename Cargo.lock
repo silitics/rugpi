@@ -181,15 +181,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
-name = "camino"
-version = "1.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c59e92b5a388f549b863a7bea62612c09f24c8393560709a54558a9abdfb3b9c"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -751,7 +742,7 @@ dependencies = [
  "indoc",
  "rugpi-common",
  "tokio",
- "xscript",
+ "xscript 0.3.0",
 ]
 
 [[package]]
@@ -759,7 +750,6 @@ name = "rugpi-bakery"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "camino",
  "clap",
  "colored",
  "hex",
@@ -771,7 +761,7 @@ dependencies = [
  "thiserror",
  "toml",
  "url",
- "xscript",
+ "xscript 0.3.0",
 ]
 
 [[package]]
@@ -779,13 +769,12 @@ name = "rugpi-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "camino",
  "clap",
  "crc32fast",
  "indoc",
  "serde",
  "thiserror",
- "xscript",
+ "xscript 0.3.0",
 ]
 
 [[package]]
@@ -793,7 +782,6 @@ name = "rugpi-ctrl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "camino",
  "clap",
  "indoc",
  "nix 0.26.4",
@@ -801,7 +789,7 @@ dependencies = [
  "serde",
  "tempfile",
  "toml",
- "xscript",
+ "xscript 0.3.0",
 ]
 
 [[package]]
@@ -1379,10 +1367,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5cb5aba94ee9fd4d8bd891ed0a84cc06b3c78f37c5e477a1053a9e2c561b383"
 
 [[package]]
+name = "xscript"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5429ec0fcaf4e130adce8fa9d73fb7e7f075fcb92e8f371b8356ccfec44a927e"
+
+[[package]]
 name = "xtask"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
- "xscript",
+ "xscript 0.2.0",
 ]

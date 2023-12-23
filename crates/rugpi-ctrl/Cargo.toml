@@ -9,7 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-camino.workspace = true
 clap.workspace = true
 serde.workspace = true
 nix = "0.26.2"

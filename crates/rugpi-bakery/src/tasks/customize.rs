@@ -4,12 +4,11 @@ use std::{
     collections::{HashMap, HashSet},
     env, fs,
     ops::Deref,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
 use anyhow::bail;
-use camino::Utf8Path;
 use clap::Parser;
 use rugpi_common::{mount::Mounted, Anyhow};
 use tempfile::tempdir;
@@ -37,7 +36,7 @@ pub fn run(args: &Args, task: &CustomizeTask) -> Anyhow<()> {
     let jobs = recipe_schedule(&config)?;
     // 3️⃣ Prepare system chroot.
     let root_dir = tempdir()?;
-    let root_dir_path = Utf8Path::from_path(root_dir.path()).unwrap();
+    let root_dir_path = root_dir.path();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &task.src, "-C", root_dir_path])?;
     apply_recipes(&config, &jobs, root_dir_path)?;
@@ -127,11 +126,7 @@ fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
     Ok(recipes)
 }
 
-fn apply_recipes(
-    config: &BakeryConfig,
-    jobs: &Vec<RecipeJob>,
-    root_dir_path: &Utf8Path,
-) -> Anyhow<()> {
+fn apply_recipes(config: &BakeryConfig, jobs: &Vec<RecipeJob>, root_dir_path: &Path) -> Anyhow<()> {
     let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
     let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
     let _mounted_sys = Mounted::bind("/sys", root_dir_path.join("sys"))?;
