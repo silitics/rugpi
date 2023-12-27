@@ -40,7 +40,7 @@ pub struct Repositories {
     /// The repositories of the collection.
     repositories: Vec<Option<Repository>>,
     /// Table for finding repositories by their source.
-    source_to_repository: HashMap<SourceId, RepositoryId>,
+    source_to_repository: HashMap<SourceId, RepositoryIdx>,
     /// Path to the project's root directory.
     root_dir: PathBuf,
 }
@@ -57,13 +57,13 @@ impl Repositories {
     }
 
     /// Iterator over the loaded repositories.
-    pub fn iter(&self) -> impl Iterator<Item = (RepositoryId, &Repository)> {
+    pub fn iter(&self) -> impl Iterator<Item = (RepositoryIdx, &Repository)> {
         self.repositories
             .iter()
             .enumerate()
             .map(|(idx, repository)| {
                 (
-                    RepositoryId(idx),
+                    RepositoryIdx(idx),
                     repository
                         .as_ref()
                         .expect("repository has not been fully loaded yet"),
@@ -78,7 +78,7 @@ impl Repositories {
         &mut self,
         repositories: HashMap<String, Source>,
         update: bool,
-    ) -> Anyhow<RepositoryId> {
+    ) -> Anyhow<RepositoryIdx> {
         self.load_repository(
             Source::Path(PathSource { path: "".into() }).materialize(&self.root_dir, update)?,
             RepositoryConfig {
@@ -93,7 +93,7 @@ impl Repositories {
     /// Load a repository from the given source and return its id.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub fn load_source(&mut self, source: Source, update: bool) -> Anyhow<RepositoryId> {
+    pub fn load_source(&mut self, source: Source, update: bool) -> Anyhow<RepositoryIdx> {
         let source_id = source.id();
         if let Some(id) = self.source_to_repository.get(&source_id).cloned() {
             let Some(repository) = &self.repositories[id.0] else {
@@ -125,12 +125,12 @@ impl Repositories {
         source: MaterializedSource,
         config: RepositoryConfig,
         update: bool,
-    ) -> Anyhow<RepositoryId> {
+    ) -> Anyhow<RepositoryIdx> {
         if self.source_to_repository.contains_key(&source.id) {
             bail!("repository from {} has already been loaded", source.id);
         }
         eprintln!("=> loading repository from source {}", source.id);
-        let id = RepositoryId(self.repositories.len());
+        let id = RepositoryIdx(self.repositories.len());
         self.repositories.push(None);
         self.source_to_repository.insert(source.id.clone(), id);
         let mut repositories = HashMap::new();
@@ -148,31 +148,31 @@ impl Repositories {
     }
 }
 
-impl std::ops::Index<RepositoryId> for Repositories {
+impl std::ops::Index<RepositoryIdx> for Repositories {
     type Output = Repository;
 
-    fn index(&self, index: RepositoryId) -> &Self::Output {
+    fn index(&self, index: RepositoryIdx) -> &Self::Output {
         self.repositories[index.0]
             .as_ref()
             .expect("repository has not been fully loaded yet")
     }
 }
 
-/// Uniquely identifies a repository.
+/// An index uniquely identifying a repository in [`Repositories`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RepositoryId(usize);
+pub struct RepositoryIdx(usize);
 
 /// A repository.
 #[derive(Debug)]
 pub struct Repository {
     /// The id of the repository.
-    pub id: RepositoryId,
+    pub id: RepositoryIdx,
     /// The source of the repository.
     pub source: MaterializedSource,
     /// The configuration of the repository.
     pub config: RepositoryConfig,
     /// The repositories used by the repository.
-    pub repositories: HashMap<String, RepositoryId>,
+    pub repositories: HashMap<String, RepositoryIdx>,
 }
 
 /// Repository configuration.
