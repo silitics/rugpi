@@ -130,21 +130,21 @@ impl Repositories {
             bail!("repository from {} has already been loaded", source.id);
         }
         eprintln!("=> loading repository from source {}", source.id);
-        let id = RepositoryIdx(self.repositories.len());
+        let idx = RepositoryIdx(self.repositories.len());
         self.repositories.push(None);
-        self.source_to_repository.insert(source.id.clone(), id);
+        self.source_to_repository.insert(source.id.clone(), idx);
         let mut repositories = HashMap::new();
         for (name, source) in &config.repositories {
             repositories.insert(name.clone(), self.load_source(source.clone(), update)?);
         }
         let repository = Repository {
-            id,
+            idx,
             source,
             config,
             repositories,
         };
-        self.repositories[id.0] = Some(repository);
-        Ok(id)
+        self.repositories[idx.0] = Some(repository);
+        Ok(idx)
     }
 }
 
@@ -165,8 +165,8 @@ pub struct RepositoryIdx(usize);
 /// A repository.
 #[derive(Debug)]
 pub struct Repository {
-    /// The id of the repository.
-    pub id: RepositoryIdx,
+    /// The index of the repository.
+    pub idx: RepositoryIdx,
     /// The source of the repository.
     pub source: MaterializedSource,
     /// The configuration of the repository.
