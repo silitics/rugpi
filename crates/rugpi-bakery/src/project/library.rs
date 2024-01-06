@@ -45,7 +45,7 @@ impl Library {
     pub fn lookup(&self, repository: RepositoryIdx, name: &str) -> Option<RecipeIdx> {
         if let Some((dependency_name, recipe_name)) = name.split_once('/') {
             let dependency_idx = match dependency_name {
-                "rugpi" => self.repositories.core_repository,
+                "core" => self.repositories.core_repository,
                 _ => *self.repositories.repositories[repository]
                     .repositories
                     .get(dependency_name)?,
