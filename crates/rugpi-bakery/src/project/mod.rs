@@ -7,6 +7,7 @@ use rugpi_common::Anyhow;
 use self::{config::BakeryConfig, repositories::ProjectRepositories};
 
 pub mod config;
+pub mod library;
 pub mod recipes;
 pub mod repositories;
 

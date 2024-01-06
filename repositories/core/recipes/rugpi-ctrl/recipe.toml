@@ -1,6 +1,5 @@
 description = "install and configure Rugpi Ctrl"
 priority = 700_000  # Execute very early.
-default = true
 
 [parameters]
 rugpi_admin = { default = false }

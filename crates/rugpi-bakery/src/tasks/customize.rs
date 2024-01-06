@@ -2,13 +2,13 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    env, fs,
+    fs,
     ops::Deref,
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
 };
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use clap::Parser;
 use rugpi_common::{mount::Mounted, Anyhow};
 use tempfile::tempdir;
@@ -16,7 +16,8 @@ use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::project::{
     config::BakeryConfig,
-    recipes::{Recipe, RecipeLibrary, StepKind},
+    library::Library,
+    recipes::{Recipe, StepKind},
     Project,
 };
 
@@ -30,8 +31,10 @@ pub struct CustomizeTask {
 }
 
 pub fn run(project: &Project, task: &CustomizeTask) -> Anyhow<()> {
+    let repositories = project.load_repositories()?;
+    let library = Library::load(repositories)?;
     // Collect the recipes to apply.
-    let jobs = recipe_schedule(&project.config)?;
+    let jobs = recipe_schedule(&project.config, &library)?;
     // Prepare system chroot.
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();
@@ -48,50 +51,69 @@ struct RecipeJob {
     parameters: HashMap<String, String>,
 }
 
-fn recipe_schedule(config: &BakeryConfig) -> Anyhow<Vec<RecipeJob>> {
-    let mut library = RecipeLibrary::new();
-    // 1️⃣ Load builtin recipes.
-    let builtin_recipes_path = PathBuf::from(
-        env::var("RUGPI_BUILTIN_RECIPES_PATH")
-            .unwrap_or_else(|_| "/usr/share/rugpi/repositories/core/recipes".to_owned()),
-    );
-    library.loader().load_all(&builtin_recipes_path)?;
-    // 2️⃣ Load custom recipes.
-    let custom_recipes_path = env::current_dir()?.join("recipes");
-    if custom_recipes_path.is_dir() {
-        library
-            .loader()
-            .with_default(true)
-            .load_all(&custom_recipes_path)?;
-    }
-    // 3️⃣ Collect the recipes to apply. This is certainly not the most efficient
-    // implementation, but for our purposes it should suffice.
-    let mut stack = (&library)
-        .into_iter()
-        .filter_map(|(name, recipe)| {
+fn recipe_schedule(config: &BakeryConfig, library: &Library) -> Anyhow<Vec<RecipeJob>> {
+    let excluded = config
+        .exclude
+        .iter()
+        .map(|name| {
+            library
+                .lookup(library.repositories.root_repository, name.deref())
+                .ok_or_else(|| anyhow!("recipe with name {name} not found"))
+        })
+        .collect::<Anyhow<HashSet<_>>>()?;
+    let mut stack = library
+        .recipes
+        .iter()
+        .filter_map(|(idx, recipe)| {
             let is_default = recipe.info.default.unwrap_or_default();
-            let is_excluded = config.exclude.contains(name);
+            let is_excluded = excluded.contains(&idx);
             if is_default && !is_excluded {
-                Some(name)
+                Some(idx)
             } else {
                 None
             }
         })
         .collect::<Vec<_>>();
-    stack.extend(&config.recipes);
-    let mut recipe_names = stack.iter().cloned().collect::<HashSet<_>>();
-    while let Some(name) = stack.pop() {
-        for name in &library.get(name)?.info.dependencies {
-            if recipe_names.insert(name) {
-                stack.push(name);
+    stack.extend(
+        config
+            .recipes
+            .iter()
+            .map(|name| {
+                library
+                    .lookup(library.repositories.root_repository, name.deref())
+                    .ok_or_else(|| anyhow!("recipe with name {name} not found"))
+            })
+            .collect::<Anyhow<Vec<_>>>()?,
+    );
+    let mut visited = stack.iter().cloned().collect::<HashSet<_>>();
+    while let Some(idx) = stack.pop() {
+        let recipe = &library.recipes[idx];
+        for name in &recipe.info.dependencies {
+            let dependency_idx = library
+                .lookup(recipe.repository, name.deref())
+                .ok_or_else(|| anyhow!("recipe with name {name} not found"))?;
+            if visited.insert(dependency_idx) {
+                stack.push(dependency_idx);
             }
         }
     }
-    let mut recipes = recipe_names
+    let parameters = config
+        .parameters
+        .iter()
+        .map(|(name, parameters)| {
+            Ok((
+                library
+                    .lookup(library.repositories.root_repository, name.deref())
+                    .ok_or_else(|| anyhow!("recipe with name {name} not found"))?,
+                parameters,
+            ))
+        })
+        .collect::<Anyhow<HashMap<_, _>>>()?;
+    let mut recipes = visited
         .into_iter()
-        .map(|name| {
-            let recipe = library.get(name).unwrap().clone();
-            let recipe_params = config.parameters.get(name);
+        .map(|idx| {
+            let recipe = library.recipes[idx].clone();
+            let recipe_params = parameters.get(&idx);
             if let Some(params) = recipe_params {
                 for param_name in params.keys() {
                     if !recipe.info.parameters.contains_key(param_name) {

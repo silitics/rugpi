@@ -1,3 +1,0 @@
-description = "install Nginx"
-priority = 80_000
-dependencies = ["apt-update"]

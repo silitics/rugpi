@@ -1,3 +1,2 @@
 description = "remove unnecessary Raspberry Pi OS functionality"
 priority = 700_000  # Execute very early.
-default = true

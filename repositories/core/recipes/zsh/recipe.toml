@@ -1,6 +1,0 @@
-description = "install and configure ZSH"
-priority = 80_000
-dependencies = ["apt-update"]
-
-[parameters]
-make_default = { default = true }

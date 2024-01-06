@@ -1,0 +1,2 @@
+description = "Raspberry Pi meta recipe"
+dependencies = ["pi-cleanup", "persist-fake-hwclock", "disable-swap", "rugpi-ctrl"]

@@ -12,64 +12,21 @@ use anyhow::{anyhow, bail, Context};
 use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
-/// A library of recipes.
-#[derive(Debug, Clone, Default)]
-pub struct RecipeLibrary(HashMap<RecipeName, Arc<Recipe>>);
-
-impl RecipeLibrary {
-    /// Constructs an empty recipe library.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Adds a recipe to the library.
-    #[allow(clippy::result_large_err)]
-    pub fn add(&mut self, recipe: Recipe) -> Result<(), Recipe> {
-        if self.0.contains_key(&recipe.name) {
-            Err(recipe)
-        } else {
-            self.0.insert(recipe.name.clone(), Arc::new(recipe));
-            Ok(())
-        }
-    }
-
-    /// Retrieves a recipe from the library.
-    pub fn get(&self, name: &RecipeName) -> Anyhow<&Arc<Recipe>> {
-        self.0
-            .get(name)
-            .ok_or_else(|| anyhow!("recipe with name `{name}` does not exist"))
-    }
-
-    /// Returns a loader for the library.
-    pub fn loader(&mut self) -> RecipeLoader {
-        RecipeLoader::new(self)
-    }
-}
-
-impl<'lib> IntoIterator for &'lib RecipeLibrary {
-    type Item = (&'lib RecipeName, &'lib Arc<Recipe>);
-
-    type IntoIter = std::collections::hash_map::Iter<'lib, RecipeName, Arc<Recipe>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
-}
+use super::repositories::RepositoryIdx;
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]
-pub struct RecipeLoader<'lib> {
-    /// The library into which recipes shall be loaded.
-    library: &'lib mut RecipeLibrary,
+pub struct RecipeLoader {
+    repository: RepositoryIdx,
     /// Indicates whether the recipe should be included by default.
     default: Option<bool>,
 }
 
-impl<'lib> RecipeLoader<'lib> {
+impl RecipeLoader {
     /// Constructs a loader with default settings.
-    fn new(library: &'lib mut RecipeLibrary) -> Self {
+    pub fn new(repository: RepositoryIdx) -> Self {
         Self {
-            library,
+            repository,
             default: None,
         }
     }
@@ -81,7 +38,7 @@ impl<'lib> RecipeLoader<'lib> {
     }
 
     /// Loads a recipe from the given path.
-    pub fn load(&mut self, path: &Path) -> Anyhow<()> {
+    pub fn load(&self, path: &Path) -> Anyhow<Recipe> {
         let path = path.to_path_buf();
         let name = path
             .file_name()
@@ -103,6 +60,7 @@ impl<'lib> RecipeLoader<'lib> {
         }
         steps.sort_by_key(|step| step.position);
         let mut recipe = Recipe {
+            repository: self.repository,
             name,
             info,
             steps,
@@ -111,24 +69,14 @@ impl<'lib> RecipeLoader<'lib> {
         if let Some(default) = self.default {
             recipe.info.default.get_or_insert(default);
         }
-        self.library
-            .add(recipe)
-            .map_err(|recipe| anyhow!("a recipe with the name `{}` already exists", recipe.name))?;
-        Ok(())
-    }
-
-    /// Loads all recipes from the given path.
-    pub fn load_all(&mut self, path: &Path) -> Anyhow<()> {
-        for entry in fs::read_dir(path)? {
-            self.load(&entry?.path())?;
-        }
-        Ok(())
+        Ok(recipe)
     }
 }
 
 /// A recipe.
 #[derive(Debug, Clone)]
 pub struct Recipe {
+    pub repository: RepositoryIdx,
     /// The name of the recipe.
     pub name: RecipeName,
     /// Information about the recipe.
@@ -268,21 +216,4 @@ pub enum StepKind {
     Install,
     /// Run a script on the host machine.
     Run,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use rugpi_common::Anyhow;
-
-    use super::RecipeLibrary;
-
-    #[test]
-    pub fn test_load_builtin_library() -> Anyhow<()> {
-        let mut library = RecipeLibrary::new();
-        library
-            .loader()
-            .load_all(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../recipes"))
-    }
 }
