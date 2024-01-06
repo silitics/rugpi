@@ -34,41 +34,68 @@ use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use xscript::{read_str, run, LocalEnv, Run};
 
+use super::Project;
+use crate::idx_vec::{new_idx_type, IdxVec};
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct ProjectRepositories {
+    pub repositories: IdxVec<RepositoryIdx, Repository>,
+    pub root_repository: RepositoryIdx,
+    pub core_repository: RepositoryIdx,
+}
+
+impl ProjectRepositories {
+    pub fn load(project: &Project) -> Anyhow<Self> {
+        let mut repositories = RepositoriesLoader::new(&project.dir);
+        let core = repositories.load_source(
+            Source::Path(PathSource {
+                path: "/usr/share/rugpi/repositories/core".into(),
+            }),
+            false,
+        )?;
+        let root = repositories.load_root(project.config.repositories.clone(), true)?;
+        Ok(Self {
+            repositories: repositories.repositories.map(|_, repo| repo.unwrap()),
+            root_repository: root,
+            core_repository: core,
+        })
+    }
+
+    /// Iterator over the loaded repositories.
+    pub fn iter(&self) -> impl Iterator<Item = (RepositoryIdx, &Repository)> {
+        self.repositories.iter()
+    }
+}
+
+impl std::ops::Index<RepositoryIdx> for ProjectRepositories {
+    type Output = Repository;
+
+    fn index(&self, index: RepositoryIdx) -> &Self::Output {
+        &self.repositories[index]
+    }
+}
+
 /// A collection of repositories.
 #[derive(Debug)]
-pub struct Repositories {
+struct RepositoriesLoader {
     /// The repositories of the collection.
-    repositories: Vec<Option<Repository>>,
+    repositories: IdxVec<RepositoryIdx, Option<Repository>>,
     /// Table for finding repositories by their source.
     source_to_repository: HashMap<SourceId, RepositoryIdx>,
     /// Path to the project's root directory.
     root_dir: PathBuf,
 }
 
-impl Repositories {
+impl RepositoriesLoader {
     /// Create an empty collection of repositories.
     pub fn new(root_dir: impl AsRef<Path>) -> Self {
         let root_dir = root_dir.as_ref();
         Self {
-            repositories: Vec::new(),
+            repositories: IdxVec::new(),
             source_to_repository: HashMap::new(),
             root_dir: root_dir.to_path_buf(),
         }
-    }
-
-    /// Iterator over the loaded repositories.
-    pub fn iter(&self) -> impl Iterator<Item = (RepositoryIdx, &Repository)> {
-        self.repositories
-            .iter()
-            .enumerate()
-            .map(|(idx, repository)| {
-                (
-                    RepositoryIdx(idx),
-                    repository
-                        .as_ref()
-                        .expect("repository has not been fully loaded yet"),
-                )
-            })
     }
 
     /// Load the repository from the project's root directory.
@@ -96,7 +123,7 @@ impl Repositories {
     pub fn load_source(&mut self, source: Source, update: bool) -> Anyhow<RepositoryIdx> {
         let source_id = source.id();
         if let Some(id) = self.source_to_repository.get(&source_id).cloned() {
-            let Some(repository) = &self.repositories[id.0] else {
+            let Some(repository) = &self.repositories[id] else {
                 bail!("cycle while loading repository from:\n{:?}", source);
             };
             if repository.source.source == source {
@@ -143,24 +170,15 @@ impl Repositories {
             config,
             repositories,
         };
-        self.repositories[idx.0] = Some(repository);
+        self.repositories[idx] = Some(repository);
         Ok(idx)
     }
 }
 
-impl std::ops::Index<RepositoryIdx> for Repositories {
-    type Output = Repository;
-
-    fn index(&self, index: RepositoryIdx) -> &Self::Output {
-        self.repositories[index.0]
-            .as_ref()
-            .expect("repository has not been fully loaded yet")
-    }
+new_idx_type! {
+    /// An index uniquely identifying a repository in [`Repositories`].
+    pub RepositoryIdx
 }
-
-/// An index uniquely identifying a repository in [`Repositories`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RepositoryIdx(usize);
 
 /// A repository.
 #[derive(Debug)]

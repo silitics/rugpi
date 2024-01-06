@@ -5,10 +5,7 @@ use std::{
 
 use clap::Parser;
 use colored::Colorize;
-use project::{
-    repositories::{PathSource, Repositories, Source},
-    ProjectLoader,
-};
+use project::{repositories::Source, ProjectLoader};
 use rugpi_common::Anyhow;
 use tasks::{
     bake::{self, BakeTask},
@@ -16,6 +13,7 @@ use tasks::{
     extract::ExtractTask,
 };
 
+pub mod idx_vec;
 pub mod project;
 pub mod tasks;
 pub mod utils;
@@ -75,14 +73,7 @@ fn main() -> Anyhow<()> {
             std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
         Task::Pull => {
-            let mut repositories = Repositories::new(&project.dir);
-            repositories.load_source(
-                Source::Path(PathSource {
-                    path: "/usr/share/rugpi/repositories/core".into(),
-                }),
-                false,
-            )?;
-            repositories.load_root(project.config.repositories.clone(), true)?;
+            let repositories = project.load_repositories()?;
             for (_, repository) in repositories.iter() {
                 println!(
                     "{} {} {}",

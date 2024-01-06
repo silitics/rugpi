@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rugpi_common::Anyhow;
 
-use self::config::BakeryConfig;
+use self::{config::BakeryConfig, repositories::ProjectRepositories};
 
 pub mod config;
 pub mod recipes;
@@ -18,6 +18,13 @@ pub struct Project {
     pub config: BakeryConfig,
     /// The project directory.
     pub dir: PathBuf,
+}
+
+impl Project {
+    /// Load the repositories of the project.
+    pub fn load_repositories(&self) -> Anyhow<ProjectRepositories> {
+        ProjectRepositories::load(self)
+    }
 }
 
 /// Project loader.

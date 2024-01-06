@@ -36,6 +36,7 @@
     "pieeprom",
     "postgresql",
     "rbind",
+    "repr",
     "resolv",
     "rootfstype",
     "rootwait",
