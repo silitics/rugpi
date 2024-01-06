@@ -1,18 +1,18 @@
-//! Data structures for representing a Rugpi Bakery configuration.
+//! Project configuration.
 
 use std::{
     collections::{HashMap, HashSet},
-    env, fs,
+    fs,
     path::Path,
 };
 
+use anyhow::Context;
 use rugpi_common::{boot::BootFlow, Anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use super::{
     recipes::{ParameterValue, RecipeName},
-    repositories::sources::Source,
-    Args,
+    repositories::Source,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +41,17 @@ pub struct BakeryConfig {
     pub boot_flow: BootFlow,
 }
 
+impl BakeryConfig {
+    /// Load the configuration from the given path.
+    pub fn load(path: &Path) -> Anyhow<Self> {
+        toml::from_str(
+            &fs::read_to_string(path)
+                .with_context(|| format!("reading configuration file from {path:?}"))?,
+        )
+        .with_context(|| format!("loading configuration file from {path:?}"))
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum IncludeFirmware {
@@ -65,16 +76,4 @@ impl Architecture {
             Architecture::Armhf => "armhf",
         }
     }
-}
-
-/// Load the configuration file from the current directory.
-pub fn load_config(args: &Args) -> Anyhow<BakeryConfig> {
-    let current_dir = env::current_dir()?;
-    let config_path = args
-        .config
-        .as_deref()
-        .unwrap_or_else(|| Path::new("rugpi-bakery.toml"));
-    Ok(toml::from_str(&fs::read_to_string(
-        current_dir.join(config_path),
-    )?)?)
 }

@@ -276,7 +276,7 @@ mod tests {
 
     use rugpi_common::Anyhow;
 
-    use crate::recipes::RecipeLibrary;
+    use super::RecipeLibrary;
 
     #[test]
     pub fn test_load_builtin_library() -> Anyhow<()> {

@@ -5,10 +5,9 @@ use std::{
 
 use clap::Parser;
 use colored::Colorize;
-use config::load_config;
-use repositories::{
-    sources::{PathSource, Source},
-    Repositories,
+use project::{
+    repositories::{PathSource, Repositories, Source},
+    ProjectLoader,
 };
 use rugpi_common::Anyhow;
 use tasks::{
@@ -17,9 +16,7 @@ use tasks::{
     extract::ExtractTask,
 };
 
-pub mod config;
-pub mod recipes;
-pub mod repositories;
+pub mod project;
 pub mod tasks;
 pub mod utils;
 
@@ -55,15 +52,18 @@ pub struct UpdateTask {
 
 fn main() -> Anyhow<()> {
     let args = Args::parse();
+    let project = ProjectLoader::current_dir()?
+        .with_config_file(args.config.as_deref())
+        .load()?;
     match &args.task {
         Task::Extract(task) => {
             task.run()?;
         }
         Task::Customize(task) => {
-            customize::run(&args, task)?;
+            customize::run(&project, task)?;
         }
         Task::Bake(task) => {
-            bake::run(&args, task)?;
+            bake::run(&project, task)?;
         }
         Task::Shell => {
             let zsh_prog = CString::new("/bin/zsh")?;
@@ -75,16 +75,14 @@ fn main() -> Anyhow<()> {
             std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
         Task::Pull => {
-            let config = load_config(&args)?;
-            let root_dir = std::env::current_dir()?;
-            let mut repositories = Repositories::new(root_dir);
+            let mut repositories = Repositories::new(&project.dir);
             repositories.load_source(
                 Source::Path(PathSource {
                     path: "/usr/share/rugpi/repositories/core".into(),
                 }),
                 false,
             )?;
-            repositories.load_root(config.repositories.clone(), true)?;
+            repositories.load_root(project.config.repositories.clone(), true)?;
             for (_, repository) in repositories.iter() {
                 println!(
                     "{} {} {}",
@@ -98,14 +96,14 @@ fn main() -> Anyhow<()> {
                         .bright_black(),
                 );
                 match &repository.source.source {
-                    repositories::sources::Source::Path(path_source) => {
+                    Source::Path(path_source) => {
                         println!(
                             "  {}{}",
                             "source path ./".bright_black(),
                             path_source.path.to_string_lossy().bright_black()
                         );
                     }
-                    repositories::sources::Source::Git(git_source) => {
+                    Source::Git(git_source) => {
                         println!(
                             "  {}{}",
                             "source git ".bright_black(),

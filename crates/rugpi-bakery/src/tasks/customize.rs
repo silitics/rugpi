@@ -14,10 +14,10 @@ use rugpi_common::{mount::Mounted, Anyhow};
 use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
-use crate::{
-    config::{load_config, BakeryConfig},
+use crate::project::{
+    config::BakeryConfig,
     recipes::{Recipe, RecipeLibrary, StepKind},
-    Args,
+    Project,
 };
 
 /// The arguments of the `customize` command.
@@ -29,17 +29,15 @@ pub struct CustomizeTask {
     dest: String,
 }
 
-pub fn run(args: &Args, task: &CustomizeTask) -> Anyhow<()> {
-    // 1️⃣ Load the Bakery configuration file.
-    let config = load_config(args)?;
-    // 2️⃣ Collect the recipes to apply.
-    let jobs = recipe_schedule(&config)?;
-    // 3️⃣ Prepare system chroot.
+pub fn run(project: &Project, task: &CustomizeTask) -> Anyhow<()> {
+    // Collect the recipes to apply.
+    let jobs = recipe_schedule(&project.config)?;
+    // Prepare system chroot.
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &task.src, "-C", root_dir_path])?;
-    apply_recipes(&config, &jobs, root_dir_path)?;
+    apply_recipes(&project.config, &jobs, root_dir_path)?;
     println!("Packing system files...");
     run!(["tar", "-c", "-f", &task.dest, "-C", root_dir_path, "."])?;
     Ok(())
