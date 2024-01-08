@@ -11,7 +11,6 @@ use rugpi_common::Anyhow;
 pub mod bake;
 pub mod idx_vec;
 pub mod project;
-pub mod tasks;
 pub mod utils;
 
 #[derive(Debug, Parser)]

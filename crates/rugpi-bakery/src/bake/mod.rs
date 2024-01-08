@@ -29,11 +29,10 @@ pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
 }
 
 pub fn bake_layer(project: &Project, arch: Architecture, layer: &str) -> Anyhow<PathBuf> {
-    let layer_config = project
-        .config
-        .layers
-        .get(layer)
-        .ok_or_else(|| anyhow!("unable to find layer {layer}"))?;
+    let library = project.load_library()?;
+    let layer_config = &library.layers[library
+        .lookup_layer(library.repositories.root_repository, layer)
+        .unwrap()];
     if let Some(url) = &layer_config.url {
         let layer_id = sha1(url);
         let system_tar = project

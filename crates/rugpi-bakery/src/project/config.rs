@@ -7,7 +7,7 @@ use clap::ValueEnum;
 use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
-use super::{images::ImageConfig, layers::LayerConfig, repositories::Source};
+use super::{images::ImageConfig, repositories::Source};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -15,9 +15,6 @@ pub struct BakeryConfig {
     /// The repositories to use.
     #[serde(default)]
     pub repositories: HashMap<String, Source>,
-    /// The layers of the project.
-    #[serde(default)]
-    pub layers: HashMap<String, LayerConfig>,
     /// The images of the project.
     #[serde(default)]
     pub images: HashMap<String, ImageConfig>,

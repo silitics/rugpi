@@ -1,5 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::Path,
+};
 
+use anyhow::Context;
+use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
 use super::recipes::{ParameterValue, RecipeName};
@@ -19,4 +25,14 @@ pub struct LayerConfig {
     /// Parameters for the recipes.
     #[serde(default)]
     pub parameters: HashMap<RecipeName, HashMap<String, ParameterValue>>,
+}
+
+impl LayerConfig {
+    pub fn load(path: &Path) -> Anyhow<Self> {
+        toml::from_str(
+            &fs::read_to_string(path)
+                .with_context(|| format!("error reading layer config from `{path:?}`"))?,
+        )
+        .with_context(|| format!("error parsing layer config from path `{path:?}`"))
+    }
 }
