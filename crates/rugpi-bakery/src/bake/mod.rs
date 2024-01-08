@@ -32,7 +32,9 @@ pub fn bake_layer(project: &Project, arch: Architecture, layer: &str) -> Anyhow<
     let library = project.load_library()?;
     let layer_config = &library.layers[library
         .lookup_layer(library.repositories.root_repository, layer)
-        .unwrap()];
+        .unwrap()]
+    .config(arch)
+    .unwrap();
     if let Some(url) = &layer_config.url {
         let layer_id = sha1(url);
         let system_tar = project

@@ -1,9 +1,10 @@
-use std::{collections::HashMap, fs, ops::Deref, sync::Arc};
+use std::{collections::HashMap, fs, ops::Deref, str::FromStr, sync::Arc};
 
 use rugpi_common::Anyhow;
 
 use super::{
-    layers::LayerConfig,
+    config::Architecture,
+    layers::{Layer, LayerConfig},
     recipes::{Recipe, RecipeLoader},
     repositories::{ProjectRepositories, RepositoryIdx},
 };
@@ -12,7 +13,7 @@ use crate::idx_vec::{new_idx_type, IdxVec};
 pub struct Library {
     pub repositories: ProjectRepositories,
     pub recipes: IdxVec<RecipeIdx, Arc<Recipe>>,
-    pub layers: IdxVec<LayerIdx, LayerConfig>,
+    pub layers: IdxVec<LayerIdx, Layer>,
     pub recipe_tables: IdxVec<RepositoryIdx, HashMap<String, RecipeIdx>>,
     pub layer_tables: IdxVec<RepositoryIdx, HashMap<String, LayerIdx>>,
 }
@@ -52,10 +53,24 @@ impl Library {
                     for entry in fs::read_dir(layers_dir)? {
                         let entry = entry?;
                         let path = entry.path();
-                        let layer_name = path.file_stem().unwrap();
+                        let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
+                        let mut arch = None;
+                        if let Some((layer_name, arch_str)) = name.split_once('.') {
+                            arch = Some(Architecture::from_str(arch_str)?);
+                            name = layer_name.to_owned();
+                        }
                         let layer_config = LayerConfig::load(&path)?;
-                        let layer_idx = layers.push(layer_config);
-                        table.insert(layer_name.to_string_lossy().into_owned(), layer_idx);
+                        let layer_idx = *table
+                            .entry(name)
+                            .or_insert_with(|| layers.push(Layer::default()));
+                        match arch {
+                            Some(arch) => {
+                                layers[layer_idx].arch_configs.insert(arch, layer_config);
+                            }
+                            None => {
+                                layers[layer_idx].default_config = Some(layer_config);
+                            }
+                        }
                     }
                     Ok(table)
                 })
