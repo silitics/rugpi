@@ -31,8 +31,7 @@ pub struct CustomizeTask {
 }
 
 pub fn run(project: &Project, task: &CustomizeTask) -> Anyhow<()> {
-    let repositories = project.load_repositories()?;
-    let library = Library::load(repositories)?;
+    let library = project.load_library()?;
     // Collect the recipes to apply.
     let jobs = recipe_schedule(&project.config, &library)?;
     // Prepare system chroot.

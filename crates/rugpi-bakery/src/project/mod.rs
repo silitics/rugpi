@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rugpi_common::Anyhow;
 
-use self::{config::BakeryConfig, repositories::ProjectRepositories};
+use self::{config::BakeryConfig, library::Library, repositories::ProjectRepositories};
 
 pub mod config;
 pub mod library;
@@ -25,6 +25,12 @@ impl Project {
     /// Load the repositories of the project.
     pub fn load_repositories(&self) -> Anyhow<ProjectRepositories> {
         ProjectRepositories::load(self)
+    }
+
+    /// Load the library of the project.
+    pub fn load_library(&self) -> Anyhow<Library> {
+        let repositories = self.load_repositories()?;
+        Library::load(repositories)
     }
 }
 
