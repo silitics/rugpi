@@ -28,3 +28,9 @@ pub fn download(url: &str) -> Anyhow<PathBuf> {
     }
     Ok(cache_file_path)
 }
+
+pub fn sha1(string: &str) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(string.as_bytes());
+    hex::encode(hasher.finalize())
+}

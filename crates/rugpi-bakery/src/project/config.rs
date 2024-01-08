@@ -1,19 +1,13 @@
 //! Project configuration.
 
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-    path::Path,
-};
+use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::Context;
-use rugpi_common::{boot::BootFlow, Anyhow};
+use clap::ValueEnum;
+use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    recipes::{ParameterValue, RecipeName},
-    repositories::Source,
-};
+use super::{images::ImageConfig, layers::LayerConfig, repositories::Source};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -21,24 +15,12 @@ pub struct BakeryConfig {
     /// The repositories to use.
     #[serde(default)]
     pub repositories: HashMap<String, Source>,
-    /// The recipes to include.
+    /// The layers of the project.
     #[serde(default)]
-    pub recipes: HashSet<RecipeName>,
-    /// The recipes to exclude.
+    pub layers: HashMap<String, LayerConfig>,
+    /// The images of the project.
     #[serde(default)]
-    pub exclude: HashSet<RecipeName>,
-    /// Parameters for the recipes.
-    #[serde(default)]
-    pub parameters: HashMap<RecipeName, HashMap<String, ParameterValue>>,
-    /// Indicates whether to include firmware files in the image.
-    #[serde(default)]
-    pub include_firmware: IncludeFirmware,
-    /// The target architecture to build an image for.
-    #[serde(default)]
-    pub architecture: Architecture,
-    /// Indicates which boot flow to use for the image.
-    #[serde(default)]
-    pub boot_flow: BootFlow,
+    pub images: HashMap<String, ImageConfig>,
 }
 
 impl BakeryConfig {
@@ -61,7 +43,8 @@ pub enum IncludeFirmware {
     Pi5,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, ValueEnum)]
+#[clap(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Architecture {
     #[default]

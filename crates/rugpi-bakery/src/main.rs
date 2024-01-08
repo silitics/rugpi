@@ -5,14 +5,10 @@ use std::{
 
 use clap::Parser;
 use colored::Colorize;
-use project::{repositories::Source, ProjectLoader};
+use project::{config::Architecture, repositories::Source, ProjectLoader};
 use rugpi_common::Anyhow;
-use tasks::{
-    bake::{self, BakeTask},
-    customize::{self, CustomizeTask},
-    extract::ExtractTask,
-};
 
+pub mod bake;
 pub mod idx_vec;
 pub mod project;
 pub mod tasks;
@@ -29,13 +25,27 @@ pub struct Args {
 }
 
 #[derive(Debug, Parser)]
+pub enum BakeCommand {
+    Image {
+        image: String,
+        output: PathBuf,
+    },
+    Layer {
+        #[clap(long)]
+        arch: Architecture,
+        layer: String,
+    },
+}
+
+#[derive(Debug, Parser)]
 pub enum Task {
-    /// Extract all system files from a given base image.
-    Extract(ExtractTask),
-    /// Apply modification to the system.
-    Customize(CustomizeTask),
+    // /// Extract all system files from a given base image.
+    // Extract(ExtractTask),
+    // /// Apply modification to the system.
+    // Customize(CustomizeTask),
     /// Bake a final image for distribution.
-    Bake(BakeTask),
+    #[clap(subcommand)]
+    Bake(BakeCommand),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
     Update(UpdateTask),
@@ -54,15 +64,14 @@ fn main() -> Anyhow<()> {
         .with_config_file(args.config.as_deref())
         .load()?;
     match &args.task {
-        Task::Extract(task) => {
-            task.run()?;
-        }
-        Task::Customize(task) => {
-            customize::run(&project, task)?;
-        }
-        Task::Bake(task) => {
-            bake::run(&project, task)?;
-        }
+        Task::Bake(task) => match task {
+            BakeCommand::Image { image, output } => {
+                bake::bake_image(&project, image, output)?;
+            }
+            BakeCommand::Layer { layer, arch } => {
+                bake::bake_layer(&project, *arch, layer)?;
+            }
+        },
         Task::Shell => {
             let zsh_prog = CString::new("/bin/zsh")?;
             nix::unistd::execv::<&CStr>(&zsh_prog, &[])?;

@@ -2,7 +2,6 @@
 
 use std::{fs, path::Path};
 
-use clap::Parser;
 use rugpi_common::{
     boot::{uboot::UBootEnv, BootFlow},
     loop_dev::LoopDevice,
@@ -15,21 +14,11 @@ use xscript::{run, Run};
 
 use crate::project::{
     config::{Architecture, IncludeFirmware},
-    Project,
+    images::ImageConfig,
 };
 
-#[derive(Debug, Parser)]
-pub struct BakeTask {
-    /// The archive with the system files.
-    archive: String,
-    /// The output image.
-    image: String,
-}
-
-pub fn run(project: &Project, task: &BakeTask) -> Anyhow<()> {
-    let archive = Path::new(&task.archive);
-    let image = Path::new(&task.image);
-    let size = calculate_image_size(archive)?;
+pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
+    let size = calculate_image_size(src)?;
     println!("Size: {} bytes", size);
     fs::remove_file(image).ok();
     println!("Creating image...");
@@ -56,19 +45,19 @@ pub fn run(project: &Project, task: &BakeTask) -> Anyhow<()> {
         let config_dir_path = config_dir.path();
         let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
         let ctx = BakeCtx {
-            project,
+            config: image_config,
             mounted_boot,
             mounted_root,
             mounted_config,
         };
 
-        run!(["tar", "-x", "-f", &task.archive, "-C", root_dir_path])?;
+        run!(["tar", "-x", "-f", src, "-C", root_dir_path])?;
         println!("Patching boot configuration...");
         patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
         println!("Patching `config.txt`...");
         patch_config(boot_dir.join("config.txt"))?;
 
-        match project.config.boot_flow {
+        match image_config.boot_flow {
             BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
             BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
         }
@@ -78,7 +67,7 @@ pub fn run(project: &Project, task: &BakeTask) -> Anyhow<()> {
             ctx.mounted_boot.path().join("second.scr"),
         )?;
 
-        match project.config.include_firmware {
+        match image_config.include_firmware {
             IncludeFirmware::None => { /* Do not include any firmware. */ }
             IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
             IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
@@ -91,7 +80,7 @@ pub fn run(project: &Project, task: &BakeTask) -> Anyhow<()> {
 }
 
 struct BakeCtx<'p> {
-    project: &'p Project,
+    config: &'p ImageConfig,
     mounted_boot: Mounted,
     #[allow(unused)]
     mounted_root: Mounted,
@@ -124,7 +113,7 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
         ctx.mounted_config.path()
     ])?;
     std::fs::remove_file(ctx.mounted_config.path().join("kernel8.img"))?;
-    match ctx.project.config.architecture {
+    match ctx.config.architecture {
         Architecture::Arm64 => {
             std::fs::copy(
                 "/usr/share/rugpi/boot/u-boot/arm64_config.txt",

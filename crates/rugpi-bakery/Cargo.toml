@@ -19,5 +19,5 @@ sha1 = "0.10.5"
 tempfile = "3.8.1"
 thiserror = "1.0.43"
 toml = "0.8.8"
-url = "2.4.0"
+url = { version = "2.4.0", features = ["serde"] }
 xscript.workspace = true
