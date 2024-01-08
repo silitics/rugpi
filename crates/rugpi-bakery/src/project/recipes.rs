@@ -59,15 +59,15 @@ impl RecipeLoader {
             }
         }
         steps.sort_by_key(|step| step.position);
-        let mut recipe = Recipe {
+        let recipe = Recipe {
             repository: self.repository,
             name,
             info,
             steps,
             path,
         };
-        if let Some(default) = self.default {
-            recipe.info.default.get_or_insert(default);
+        if recipe.info.default.is_some() {
+            eprintln!("default recipes have been deprecated");
         }
         Ok(recipe)
     }

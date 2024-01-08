@@ -51,50 +51,32 @@ struct RecipeJob {
 }
 
 fn recipe_schedule(config: &BakeryConfig, library: &Library) -> Anyhow<Vec<RecipeJob>> {
-    let excluded = config
-        .exclude
+    let mut stack = config
+        .recipes
         .iter()
         .map(|name| {
             library
                 .lookup(library.repositories.root_repository, name.deref())
                 .ok_or_else(|| anyhow!("recipe with name {name} not found"))
         })
-        .collect::<Anyhow<HashSet<_>>>()?;
-    let mut stack = library
-        .recipes
-        .iter()
-        .filter_map(|(idx, recipe)| {
-            let is_default = recipe.info.default.unwrap_or_default();
-            let is_excluded = excluded.contains(&idx);
-            if is_default && !is_excluded {
-                Some(idx)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-    stack.extend(
-        config
-            .recipes
-            .iter()
-            .map(|name| {
-                library
-                    .lookup(library.repositories.root_repository, name.deref())
-                    .ok_or_else(|| anyhow!("recipe with name {name} not found"))
-            })
-            .collect::<Anyhow<Vec<_>>>()?,
-    );
-    let mut visited = stack.iter().cloned().collect::<HashSet<_>>();
+        .collect::<Anyhow<Vec<_>>>()?;
+    let mut enabled = stack.iter().cloned().collect::<HashSet<_>>();
     while let Some(idx) = stack.pop() {
         let recipe = &library.recipes[idx];
         for name in &recipe.info.dependencies {
             let dependency_idx = library
                 .lookup(recipe.repository, name.deref())
                 .ok_or_else(|| anyhow!("recipe with name {name} not found"))?;
-            if visited.insert(dependency_idx) {
+            if enabled.insert(dependency_idx) {
                 stack.push(dependency_idx);
             }
         }
+    }
+    for excluded in &config.exclude {
+        let excluded = library
+            .lookup(library.repositories.root_repository, excluded.deref())
+            .ok_or_else(|| anyhow!("recipe with name {excluded} not found"))?;
+        enabled.remove(&excluded);
     }
     let parameters = config
         .parameters
@@ -108,7 +90,7 @@ fn recipe_schedule(config: &BakeryConfig, library: &Library) -> Anyhow<Vec<Recip
             ))
         })
         .collect::<Anyhow<HashMap<_, _>>>()?;
-    let mut recipes = visited
+    let mut recipes = enabled
         .into_iter()
         .map(|idx| {
             let recipe = library.recipes[idx].clone();
