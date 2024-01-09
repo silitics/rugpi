@@ -12,6 +12,7 @@ use super::{
     config::Architecture,
     recipes::{ParameterValue, RecipeName},
 };
+use crate::caching::ModificationTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -42,13 +43,22 @@ impl LayerConfig {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Layer {
+    pub modified: ModificationTime,
     pub default_config: Option<LayerConfig>,
     pub arch_configs: HashMap<Architecture, LayerConfig>,
 }
 
 impl Layer {
+    pub fn new(modified: ModificationTime) -> Self {
+        Self {
+            modified,
+            default_config: None,
+            arch_configs: HashMap::new(),
+        }
+    }
+
     /// The layer configuration for the given architecture.
     pub fn config(&self, arch: Architecture) -> Option<&LayerConfig> {
         self.arch_configs

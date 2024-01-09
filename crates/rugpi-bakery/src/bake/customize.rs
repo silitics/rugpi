@@ -14,12 +14,15 @@ use rugpi_common::{mount::Mounted, Anyhow};
 use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
-use crate::project::{
-    config::Architecture,
-    layers::LayerConfig,
-    library::Library,
-    recipes::{Recipe, StepKind},
-    Project,
+use crate::{
+    caching::mtime,
+    project::{
+        config::Architecture,
+        layers::{Layer, LayerConfig},
+        library::Library,
+        recipes::{Recipe, StepKind},
+        Project,
+    },
 };
 
 /// The arguments of the `customize` command.
@@ -34,13 +37,23 @@ pub struct CustomizeTask {
 pub fn customize(
     project: &Project,
     arch: Architecture,
-    layer: &LayerConfig,
+    layer: &Layer,
     src: &Path,
     target: &Path,
 ) -> Anyhow<()> {
     let library = project.load_library()?;
     // Collect the recipes to apply.
-    let jobs = recipe_schedule(layer, &library)?;
+    let config = layer.config(arch).unwrap();
+    let jobs = recipe_schedule(config, &library)?;
+    let last_modified = jobs
+        .iter()
+        .map(|job| job.recipe.modified)
+        .max()
+        .unwrap()
+        .max(layer.modified);
+    if target.exists() && last_modified < mtime(target)? {
+        return Ok(());
+    }
     // Prepare system chroot.
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();

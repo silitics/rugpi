@@ -9,9 +9,9 @@ use project::{config::Architecture, repositories::Source, ProjectLoader};
 use rugpi_common::Anyhow;
 
 pub mod bake;
+pub mod caching;
 pub mod idx_vec;
 pub mod project;
-pub mod utils;
 
 #[derive(Debug, Parser)]
 pub struct Args {

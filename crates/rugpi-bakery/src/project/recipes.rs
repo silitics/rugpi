@@ -13,6 +13,7 @@ use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
 use super::repositories::RepositoryIdx;
+use crate::caching::{mtime_recursive, ModificationTime};
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]
@@ -40,6 +41,7 @@ impl RecipeLoader {
     /// Loads a recipe from the given path.
     pub fn load(&self, path: &Path) -> Anyhow<Recipe> {
         let path = path.to_path_buf();
+        let modified = mtime_recursive(&path)?;
         let name = path
             .file_name()
             .ok_or_else(|| anyhow!("unable to determine recipe name from path `{path:?}`"))?
@@ -61,6 +63,7 @@ impl RecipeLoader {
         steps.sort_by_key(|step| step.position);
         let recipe = Recipe {
             repository: self.repository,
+            modified,
             name,
             info,
             steps,
@@ -76,6 +79,8 @@ impl RecipeLoader {
 /// A recipe.
 #[derive(Debug, Clone)]
 pub struct Recipe {
+    /// The lastest modification time of the recipe.
+    pub modified: ModificationTime,
     pub repository: RepositoryIdx,
     /// The name of the recipe.
     pub name: RecipeName,

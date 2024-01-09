@@ -11,8 +11,8 @@ use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::{
+    caching::{download, sha1},
     project::{config::Architecture, Project},
-    utils::{download, sha1},
 };
 
 pub mod customize;
@@ -28,13 +28,12 @@ pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
     image::make_image(image_config, &baked_layer, output)
 }
 
-pub fn bake_layer(project: &Project, arch: Architecture, layer: &str) -> Anyhow<PathBuf> {
+pub fn bake_layer(project: &Project, arch: Architecture, layer_name: &str) -> Anyhow<PathBuf> {
     let library = project.load_library()?;
-    let layer_config = &library.layers[library
-        .lookup_layer(library.repositories.root_repository, layer)
-        .unwrap()]
-    .config(arch)
-    .unwrap();
+    let layer = &library.layers[library
+        .lookup_layer(library.repositories.root_repository, layer_name)
+        .unwrap()];
+    let layer_config = layer.config(arch).unwrap();
     if let Some(url) = &layer_config.url {
         let layer_id = sha1(url);
         let system_tar = project
@@ -46,7 +45,7 @@ pub fn bake_layer(project: &Project, arch: Architecture, layer: &str) -> Anyhow<
         Ok(system_tar)
     } else if let Some(parent) = &layer_config.parent {
         let src = bake_layer(project, arch, parent)?;
-        let mut layer_string = layer.to_owned();
+        let mut layer_string = layer_name.to_owned();
         layer_string.push('.');
         layer_string.push_str(arch.as_str());
         let layer_id = sha1(&layer_string);
@@ -54,9 +53,7 @@ pub fn bake_layer(project: &Project, arch: Architecture, layer: &str) -> Anyhow<
             .dir
             .join(format!(".rugpi/layers/{layer_id}/system.tar"));
         fs::create_dir_all(target.parent().unwrap()).ok();
-        if !target.exists() {
-            customize::customize(project, arch, layer_config, &src, &target)?;
-        }
+        customize::customize(project, arch, layer, &src, &target)?;
         Ok(target)
     } else {
         bail!("invalid layer configuration")

@@ -8,7 +8,10 @@ use super::{
     recipes::{Recipe, RecipeLoader},
     repositories::{ProjectRepositories, RepositoryIdx},
 };
-use crate::idx_vec::{new_idx_type, IdxVec};
+use crate::{
+    caching::mtime,
+    idx_vec::{new_idx_type, IdxVec},
+};
 
 pub struct Library {
     pub repositories: ProjectRepositories,
@@ -59,10 +62,12 @@ impl Library {
                             arch = Some(Architecture::from_str(arch_str)?);
                             name = layer_name.to_owned();
                         }
+                        let modified = mtime(&path)?;
                         let layer_config = LayerConfig::load(&path)?;
                         let layer_idx = *table
                             .entry(name)
-                            .or_insert_with(|| layers.push(Layer::default()));
+                            .or_insert_with(|| layers.push(Layer::new(modified)));
+                        layers[layer_idx].modified = layers[layer_idx].modified.max(modified);
                         match arch {
                             Some(arch) => {
                                 layers[layer_idx].arch_configs.insert(arch, layer_config);
