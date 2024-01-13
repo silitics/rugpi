@@ -60,7 +60,7 @@ pub fn customize(
     let root_dir_path = root_dir.path();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
-    apply_recipes(arch, &jobs, root_dir_path)?;
+    apply_recipes(project, arch, &jobs, root_dir_path)?;
     println!("Packing system files...");
     run!(["tar", "-c", "-f", &target, "-C", root_dir_path, "."])?;
     Ok(())
@@ -153,7 +153,12 @@ fn recipe_schedule(
     Ok(recipes)
 }
 
-fn apply_recipes(arch: Architecture, jobs: &Vec<RecipeJob>, root_dir_path: &Path) -> Anyhow<()> {
+fn apply_recipes(
+    project: &Project,
+    arch: Architecture,
+    jobs: &Vec<RecipeJob>,
+    root_dir_path: &Path,
+) -> Anyhow<()> {
     let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
     let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
     let _mounted_sys = Mounted::bind("/sys", root_dir_path.join("sys"))?;
@@ -163,6 +168,11 @@ fn apply_recipes(arch: Architecture, jobs: &Vec<RecipeJob>, root_dir_path: &Path
 
     let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
     fs::create_dir_all(&bakery_recipe_path)?;
+
+    let project_dir = root_dir_path.join("run/rugpi/bakery/project");
+    fs::create_dir_all(&project_dir)?;
+
+    let _mounted_project = Mounted::bind(&project.dir, &project_dir)?;
 
     for (idx, job) in jobs.iter().enumerate() {
         let recipe = &job.recipe;
@@ -194,6 +204,7 @@ fn apply_recipes(arch: Architecture, jobs: &Vec<RecipeJob>, root_dir_path: &Path
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGPI_ROOT_DIR = "/",
+                        RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
                         RECIPE_DIR = "/run/rugpi/bakery/recipe/",
                         RECIPE_STEP_PATH = &script,
@@ -208,6 +219,7 @@ fn apply_recipes(arch: Architecture, jobs: &Vec<RecipeJob>, root_dir_path: &Path
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGPI_ROOT_DIR = root_dir_path,
+                        RUGPI_PROJECT_DIR = &project_dir,
                         RUGPI_ARCH = arch.as_str(),
                         RECIPE_DIR = &recipe.path,
                         RECIPE_STEP_PATH = &script,
