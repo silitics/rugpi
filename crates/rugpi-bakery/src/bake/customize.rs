@@ -21,6 +21,7 @@ use crate::{
         layers::{Layer, LayerConfig},
         library::Library,
         recipes::{Recipe, StepKind},
+        repositories::RepositoryIdx,
         Project,
     },
 };
@@ -44,7 +45,7 @@ pub fn customize(
     let library = project.load_library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
-    let jobs = recipe_schedule(config, &library)?;
+    let jobs = recipe_schedule(layer.repo, config, &library)?;
     let last_modified = jobs
         .iter()
         .map(|job| job.recipe.modified)
@@ -70,13 +71,17 @@ struct RecipeJob {
     parameters: HashMap<String, String>,
 }
 
-fn recipe_schedule(layer: &LayerConfig, library: &Library) -> Anyhow<Vec<RecipeJob>> {
+fn recipe_schedule(
+    repo: RepositoryIdx,
+    layer: &LayerConfig,
+    library: &Library,
+) -> Anyhow<Vec<RecipeJob>> {
     let mut stack = layer
         .recipes
         .iter()
         .map(|name| {
             library
-                .lookup(library.repositories.root_repository, name.deref())
+                .lookup(repo, name.deref())
                 .ok_or_else(|| anyhow!("recipe with name {name} not found"))
         })
         .collect::<Anyhow<Vec<_>>>()?;
@@ -94,7 +99,7 @@ fn recipe_schedule(layer: &LayerConfig, library: &Library) -> Anyhow<Vec<RecipeJ
     }
     for excluded in &layer.exclude {
         let excluded = library
-            .lookup(library.repositories.root_repository, excluded.deref())
+            .lookup(repo, excluded.deref())
             .ok_or_else(|| anyhow!("recipe with name {excluded} not found"))?;
         enabled.remove(&excluded);
     }
@@ -104,7 +109,7 @@ fn recipe_schedule(layer: &LayerConfig, library: &Library) -> Anyhow<Vec<RecipeJ
         .map(|(name, parameters)| {
             Ok((
                 library
-                    .lookup(library.repositories.root_repository, name.deref())
+                    .lookup(repo, name.deref())
                     .ok_or_else(|| anyhow!("recipe with name {name} not found"))?,
                 parameters,
             ))

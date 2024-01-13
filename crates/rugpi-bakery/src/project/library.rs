@@ -47,7 +47,7 @@ impl Library {
             repositories
                 .repositories
                 .iter()
-                .map(|(_, repository)| -> Anyhow<_> {
+                .map(|(repo, repository)| -> Anyhow<_> {
                     let mut table = HashMap::new();
                     let layers_dir = repository.source.dir.join("layers");
                     if !layers_dir.exists() {
@@ -66,7 +66,7 @@ impl Library {
                         let layer_config = LayerConfig::load(&path)?;
                         let layer_idx = *table
                             .entry(name)
-                            .or_insert_with(|| layers.push(Layer::new(modified)));
+                            .or_insert_with(|| layers.push(Layer::new(repo, modified)));
                         layers[layer_idx].modified = layers[layer_idx].modified.max(modified);
                         match arch {
                             Some(arch) => {

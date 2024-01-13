@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     config::Architecture,
     recipes::{ParameterValue, RecipeName},
+    repositories::RepositoryIdx,
 };
 use crate::caching::ModificationTime;
 
@@ -45,14 +46,16 @@ impl LayerConfig {
 
 #[derive(Debug)]
 pub struct Layer {
+    pub repo: RepositoryIdx,
     pub modified: ModificationTime,
     pub default_config: Option<LayerConfig>,
     pub arch_configs: HashMap<Architecture, LayerConfig>,
 }
 
 impl Layer {
-    pub fn new(modified: ModificationTime) -> Self {
+    pub fn new(repo: RepositoryIdx, modified: ModificationTime) -> Self {
         Self {
+            repo,
             modified,
             default_config: None,
             arch_configs: HashMap::new(),
