@@ -48,6 +48,8 @@ pub fn bake_layer(project: &Project, arch: Architecture, layer_name: &str) -> An
         let mut layer_string = layer_name.to_owned();
         layer_string.push('.');
         layer_string.push_str(arch.as_str());
+        layer_string.push('.');
+        layer_string.push_str(library.repositories[layer.repo].source.id.as_str());
         let layer_id = sha1(&layer_string);
         let target = project
             .dir
