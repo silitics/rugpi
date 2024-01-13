@@ -107,12 +107,13 @@ fn recipe_schedule(
         .parameters
         .iter()
         .map(|(name, parameters)| {
-            Ok((
-                library
-                    .lookup(repo, name.deref())
-                    .ok_or_else(|| anyhow!("recipe with name {name} not found"))?,
-                parameters,
-            ))
+            let recipe = library
+                .lookup(repo, name.deref())
+                .ok_or_else(|| anyhow!("recipe with name {name} not found"))?;
+            if !enabled.contains(&recipe) {
+                bail!("recipe with name {name} is not part of the layer");
+            }
+            Ok((recipe, parameters))
         })
         .collect::<Anyhow<HashMap<_, _>>>()?;
     let mut recipes = enabled
