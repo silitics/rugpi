@@ -7,10 +7,6 @@ sidebar_position: 1
 Rugpi consists of two components, _Rugpi Bakery_ for building customized images, and _Rugpi Ctrl_ for maintaining and managing a Rugpi system.
 This quick-start guide takes you through the steps necessary to build a custom Rugpi image with Rugpi Bakery.
 
-⚠️ This quick-start guide assumes that you are building an image for Raspberry Pi 4.
-While the workflow is the same for other models, they may need different settings.
-For other models, please read the [Supported Boards](./guide/supported-boards.md) section of the user guide.
-
 ## Building an Image
 
 You can [build images locally](#building-an-image-locally) or [using a CI system like GitHub Actions](#using-github-actions).
@@ -52,55 +48,52 @@ The easiest way to do so, and as we are already using Docker, is by running the 
 docker run --privileged --rm tonistiigi/binfmt --install arm64
 ```
 
-Building an image is generally a three-step process:
+Building an image is generally achieved by the commend:
 
-1. First, you must extract all system files from a base image of Raspberry Pi OS.
-   To this end, the `extract` command is used:
+```shell
+./run-bakery bake image <image name> build/image.img
+```
 
-   ```shell
-   ./run-bakery extract <path to base image> build/base.tar
+The configuration file `rugpi-bakery.toml` defines the available images.
+For instance, to build an image for Raspberry Pi 4 including the necessary firmware update for the `tryboot` boot mechanism, run:
+
+```shell
+./run-bakery bake image pi4 build/image-pi4.img
+```
+
+The images specified in the template use the `customized` *layer* defined in `layers/customized.toml`.
+
+When you build an image, internally, Rugpi Bakery does the following steps:
+
+1. First, it downloads and extracts a base image of Raspberry Pi OS.
+   This is achieved via the following directive:
+
+   ```toml title="layers/customized.toml"
+   parent = "core/raspios-bookworm"
    ```
 
-   The path to the base image can also be a URL.
-   So, for instance, to use Raspberry Pi OS Lite as the basis for your image, run:
+   This will tell Rugpi Bakery to use the layer `raspios-bookworm` provided by Rugpi itself as a basis for the `customized` layer.
+   Note that you can define your own base layers.
+   They simply contain an URL of the base image to use.
 
-   ```shell
-   ./run-bakery extract https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-05-03/2023-05-03-raspios-bullseye-arm64-lite.img.xz build/base.tar
-   ```
-
-   This command produces a `.tar` archive `build/base.tar` in the `build` directory of the template.
-
-2. Next, you apply your customizations.
-   The template contains a `rugpi-bakery.toml` configuration file for Rugpi Bakery.
-   The template's configuration will enable a few *recipes* with the `recipes` directive.
+2. Next, the recipes defined in the layer are applied.
    A *recipe* describes modifications to be made to the system.
-   For instance, the `ssh` recipe enables SSH.
+   For instance, the `core/ssh` recipe enables SSH.
    Recipes can have parameters.
-   For instance, the `root_authorized_keys` parameter of the `ssh` recipe sets `authorized_keys` for the `root` user.
+   For instance, the `root_authorized_keys` parameter of the `core/ssh` recipe sets `authorized_keys` for the `root` user.
    To be able to login as `root` via SSH later, you should replace the existing key with your public key.
    In addition to the builtin recipes, you can supply your own recipes.
    In case of the template, the `hello-world` recipe in the `recipes` directory installs a static website which is served by Nginx.
    For further information about recipes, checkout the [user guide's section on System Customization](./guide/system-customization).
 
-   To customize the base system, according to the `rugpi-bakery.toml`, and with all recipes in the `recipes` directory, run:
-
-   ```shell
-   ./run-bakery customize build/base.tar build/customized.tar
-   ```
-
-   This command produces a `.tar` archive `build/customized.tar` with the customized system.
-
-3. Finally, after applying all customizations, an image is produced with:
-
-   ```shell
-   ./run-bakery bake build/customized.tar build/customized.img
-   ```
-
-   The resulting image `build/image.img` is now ready to be written to an SD card, e.g., using Raspberry Pi Imager.
+3. Finally, after applying all customizations, an image is produced.
+   The resulting image is ready to be written to an SD card, e.g., using Raspberry Pi Imager.
    Note that you cannot use Raspberry Pi Imager to apply any configurations like passwords or WiFi settings.
+   The template also defines images for other boards than Raspberry Pi 4.
+   For further images, we refer to the `rugpi-bakery.toml` configuration file and the [Supported Boards](./guide/supported-boards.md) section of the user guide.
 
-   On the first boot, Rugpi Ctrl will repartition the SD card and then boot into the actual system.
-   Once the system is running, you should be able to visit the static website via the system's IP address and connect via SSH.
+On the first boot, Rugpi Ctrl will repartition the SD card and then boot into the actual system.
+Once the system is running, you should be able to visit the static website via the system's IP address and connect via SSH.
 
 Congratulations! You built your first image with Rugpi Bakery. 🙌
 

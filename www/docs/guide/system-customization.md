@@ -4,22 +4,42 @@ sidebar_position: 1
 
 # System Customization
 
-The main configuration file of Rugpi Bakery is `rugpi-bakery.toml`.
-It specifies which recipes to include and their parameters.
+Generally, the root filesystem of an image is defined by a *layer*.
+The layer to use for an image is defined by the `layer` directory of the image.
+Each layer is defined by a file `<layer name>.toml` in the `layers` directory.
+This file defines the *parent layer*, the recipes to include, and their parameters.
+Note that the parent layer can be an official release of Raspberry Pi OS, e.g., `core/raspios-bookworm`, or any other layer.
 
 At the top-level, the recipes to include are specified as a list:
 
-```toml title="rugpi-bakery.toml"
+```toml title="<layer name>.toml"
 recipes = [...]
 ```
-
-Recipes marked as *default* are automatically included.
-This includes builtin base recipes and all the recipes in the local `recipes` directory (unless `default` is set to `false` for a recipe).
-To exclude specific default recipes, use the `exclude` directive:
+To exclude specific recipes, use the `exclude` directive:
 
 ```toml
 exclude = [...]
 ```
+
+## Repositories
+
+*Repositories* can provide additional recipes and layers.
+The builtin `core` repository is always implicitly available.
+Additional repositories are included in `rugpi-bakery.toml`.
+For instance, the quick-start template includes the `rugpi-extra` repository with:
+
+```toml
+[repositories]
+rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git" }
+```
+
+The recipes and layers defined in the repository can then be used.
+Repositories can also be defined in local directories.
+In this case, they are included with `path` instead of `git`.
+Note that the path must be relative and contained in the root directory of the Rugpi Bakery project (that is the directory containing the `rugpi-bakery.toml` configuration file).
+
+When using Git repositories, additionally `rev`, `branch`, and `tag` properties are supported to specify the Git revision, branch, or tag to use.
+Among other things, this enables semantic versioning of recipes and layers.
 
 ## Recipes
 
