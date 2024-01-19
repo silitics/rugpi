@@ -51,11 +51,10 @@ pub fn bake_layer(project: &Project, arch: Architecture, layer_name: &str) -> An
         layer_string.push('.');
         layer_string.push_str(library.repositories[layer.repo].source.id.as_str());
         let layer_id = sha1(&layer_string);
-        let target = project
-            .dir
-            .join(format!(".rugpi/layers/{layer_id}/system.tar"));
+        let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
+        let target = project.dir.join(&layer_path).join("system.tar");
         fs::create_dir_all(target.parent().unwrap()).ok();
-        customize::customize(project, arch, layer, &src, &target)?;
+        customize::customize(project, arch, layer, &src, &target, &layer_path)?;
         Ok(target)
     } else {
         bail!("invalid layer configuration")

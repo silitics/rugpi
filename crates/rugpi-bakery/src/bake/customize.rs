@@ -15,7 +15,7 @@ use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{
-    caching::mtime,
+    caching::{mtime, mtime_recursive},
     project::{
         config::Architecture,
         layers::{Layer, LayerConfig},
@@ -41,18 +41,31 @@ pub fn customize(
     layer: &Layer,
     src: &Path,
     target: &Path,
+    layer_path: &Path,
 ) -> Anyhow<()> {
     let library = project.load_library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
     let jobs = recipe_schedule(layer.repo, config, &library)?;
-    let last_modified = jobs
+    let mut last_modified = jobs
         .iter()
         .map(|job| job.recipe.modified)
         .max()
         .unwrap()
         .max(layer.modified);
-    if target.exists() && last_modified < mtime(target)? {
+    let mut force_run = false;
+    let used_files = project.dir.join(layer_path.join("rebuild-if-changed.txt"));
+    if used_files.exists() {
+        for line in std::fs::read_to_string(used_files)?.lines() {
+            if let Ok(modified) = mtime_recursive(&project.dir.join(line)) {
+                last_modified = last_modified.max(modified)
+            } else {
+                eprintln!("Error determining modification time for {line}.");
+                force_run = true;
+            }
+        }
+    }
+    if target.exists() && last_modified < mtime(target)? && !force_run {
         return Ok(());
     }
     // Prepare system chroot.
@@ -60,7 +73,7 @@ pub fn customize(
     let root_dir_path = root_dir.path();
     println!("Extracting system files...");
     run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
-    apply_recipes(project, arch, &jobs, root_dir_path)?;
+    apply_recipes(project, arch, &jobs, root_dir_path, layer_path)?;
     println!("Packing system files...");
     run!(["tar", "-c", "-f", &target, "-C", root_dir_path, "."])?;
     Ok(())
@@ -158,6 +171,7 @@ fn apply_recipes(
     arch: Architecture,
     jobs: &Vec<RecipeJob>,
     root_dir_path: &Path,
+    layer_path: &Path,
 ) -> Anyhow<()> {
     let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
     let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
@@ -206,6 +220,7 @@ fn apply_recipes(
                         RUGPI_ROOT_DIR = "/",
                         RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
+                        LAYER_REBUILD_IF_CHANGED = Path::new("/run/rugpi/bakery/project").join(layer_path).join("rebuild-if-changed.txt"),
                         RECIPE_DIR = "/run/rugpi/bakery/recipe/",
                         RECIPE_STEP_PATH = &script,
                     };
@@ -221,6 +236,7 @@ fn apply_recipes(
                         RUGPI_ROOT_DIR = root_dir_path,
                         RUGPI_PROJECT_DIR = &project_dir,
                         RUGPI_ARCH = arch.as_str(),
+                        LAYER_REBUILD_IF_CHANGED = project_dir.join(layer_path).join("rebuild-if-changed.txt"),
                         RECIPE_DIR = &recipe.path,
                         RECIPE_STEP_PATH = &script,
                     };
