@@ -1,7 +1,10 @@
 Prism.languages.shell = {
-  function: {
-    pattern: /(\sxz\s|\bwget\b|\bcurl\b|docker|rugpi-ctrl|\.\/run-bakery|\bgit\b|\bdocker\b)/
+  comment: {
+    pattern: /#.*/,
   },
+  function: {
+    pattern: /(\sxz\s|\bwget\b|\bcurl\b|docker|rugpi-ctrl|\.\/run-bakery|\bgit\b|\bdocker\b|\bif\b|\bthen\b|\bfi\b|\becho\b)/
+  },  
   constant: {
     pattern: /(true|false)/,
     alias: "keyword",
@@ -11,6 +14,6 @@ Prism.languages.shell = {
     alias: "variable",
   },
   punctuation: {
-    pattern: /(\\)/,
+    pattern: /(\\)|;/,
   }
 }

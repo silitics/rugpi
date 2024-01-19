@@ -104,5 +104,31 @@ Note that `run` and `install` are not limited to Bash scripts.
 When running steps, the following environment variables are set.
 
 - `RUGPI_ROOT_DIR`: The root directory of the system.
+- `RUGPI_PROJECT_DIR`: The root directory of the project.
+- `RUGPI_ARCH`: The architecture (`arm64` or `armhf`).
 - `RECIPE_DIR`: The path of the recipe.
 - `RECIPE_STEP_PATH`: The path of the step being executed.
+
+## Layer Caching
+
+By default, layers are cached and only rebuilt if the recipes or their configuration file changes.
+Note that sometimes recipes may use files from the project directory.
+In this case, the recipes should include the following line
+
+```shell
+echo "<path-relative-to-project-dir>" >> "${LAYER_REBUILD_IF_CHANGED}"
+```
+
+where `<path-relative-to-project-dir>` is the path of the used files relative to the project directory.
+This will make the caching mechanism aware of those files and will lead to the layer being rebuilt if any of the files changes.
+
+A common use case would be to load a `.env` with environment variables from the project directory:
+
+```shell
+# Rebuilt the layer if the environment changes.
+echo ".env" >> "${LAYER_REBUILD_IF_CHANGED}"
+# Include the environment, if it exists.
+if [ -f "$RUGPI_PROJECT_DIR/.env" ]; then
+    . "$RUGPI_PROJECT_DIR/.env"
+fi
+```
