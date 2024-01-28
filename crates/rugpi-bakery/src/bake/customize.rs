@@ -88,37 +88,27 @@ fn recipe_schedule(
     let mut stack = layer
         .recipes
         .iter()
-        .map(|name| {
-            library
-                .lookup(repo, name.deref())
-                .ok_or_else(|| anyhow!("recipe with name {name} not found"))
-        })
+        .map(|name| library.try_lookup(repo, name.deref()))
         .collect::<Anyhow<Vec<_>>>()?;
     let mut enabled = stack.iter().cloned().collect::<HashSet<_>>();
     while let Some(idx) = stack.pop() {
         let recipe = &library.recipes[idx];
         for name in &recipe.info.dependencies {
-            let dependency_idx = library
-                .lookup(recipe.repository, name.deref())
-                .ok_or_else(|| anyhow!("recipe with name {name} not found"))?;
-            if enabled.insert(dependency_idx) {
-                stack.push(dependency_idx);
+            let dependency = library.try_lookup(recipe.repository, name.deref())?;
+            if enabled.insert(dependency) {
+                stack.push(dependency);
             }
         }
     }
     for excluded in &layer.exclude {
-        let excluded = library
-            .lookup(repo, excluded.deref())
-            .ok_or_else(|| anyhow!("recipe with name {excluded} not found"))?;
+        let excluded = library.try_lookup(repo, excluded.deref())?;
         enabled.remove(&excluded);
     }
     let parameters = layer
         .parameters
         .iter()
         .map(|(name, parameters)| {
-            let recipe = library
-                .lookup(repo, name.deref())
-                .ok_or_else(|| anyhow!("recipe with name {name} not found"))?;
+            let recipe = library.try_lookup(repo, name.deref())?;
             if !enabled.contains(&recipe) {
                 bail!("recipe with name {name} is not part of the layer");
             }
@@ -157,7 +147,6 @@ fn recipe_schedule(
             Ok(RecipeJob { recipe, parameters })
         })
         .collect::<Result<Vec<_>, _>>()?;
-    // 4️⃣ Sort recipes by priority.
     recipes.sort_by_key(|job| -job.recipe.info.priority);
     Ok(recipes)
 }

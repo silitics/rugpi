@@ -11,6 +11,7 @@ use super::{
 use crate::utils::{
     caching::mtime,
     idx_vec::{new_idx_type, IdxVec},
+    prelude::*,
 };
 
 #[derive(Debug)]
@@ -103,6 +104,11 @@ impl Library {
         } else {
             self.recipe_tables[repository].get(name).cloned()
         }
+    }
+
+    pub fn try_lookup(&self, repo: RepositoryIdx, name: &str) -> Anyhow<RecipeIdx> {
+        self.lookup(repo, name)
+            .ok_or_else(|| anyhow!("unable to find recipe {name}"))
     }
 
     pub fn lookup_layer(&self, repo: RepositoryIdx, name: &str) -> Option<LayerIdx> {
