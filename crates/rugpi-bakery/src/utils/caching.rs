@@ -48,7 +48,7 @@ pub fn download(url: &str) -> Anyhow<PathBuf> {
             loop {
                 let chunk_size = response.read(&mut buffer)?;
                 if chunk_size > 0 {
-                    file.write(&buffer[..chunk_size])?;
+                    file.write_all(&buffer[..chunk_size])?;
                     progress.inc(chunk_size as u64);
                 } else {
                     break;
