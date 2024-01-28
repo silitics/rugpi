@@ -11,6 +11,7 @@ pub struct Args {
 
 #[derive(Debug, Parser)]
 pub enum Task {
+    Doc,
     BuildImage,
 }
 
@@ -22,9 +23,9 @@ pub fn project_path() -> PathBuf {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let env = LocalEnv::new(project_path());
     match args.task {
         Task::BuildImage => {
-            let env = LocalEnv::new(project_path());
             run!(
                 env,
                 [
@@ -38,6 +39,14 @@ fn main() -> anyhow::Result<()> {
                 ]
                 .with_stdout(Out::Inherit)
                 .with_stderr(Out::Inherit)
+            )?;
+        }
+        Task::Doc => {
+            run!(
+                env,
+                ["cargo", "+nightly", "doc", "--document-private-items",]
+                    .with_stdout(Out::Inherit)
+                    .with_stderr(Out::Inherit)
             )?;
         }
     }
