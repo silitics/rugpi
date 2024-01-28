@@ -34,11 +34,14 @@ impl Library {
                     let mut table = HashMap::new();
                     let loader =
                         RecipeLoader::new(idx).with_default(idx == repositories.root_repository);
-                    for entry in fs::read_dir(repository.source.dir.join("recipes"))? {
-                        let entry = entry?;
-                        let recipe = loader.load(&entry.path())?;
-                        let recipe_idx = recipes.push(Arc::new(recipe));
-                        table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
+                    let recipes_dir = repository.source.dir.join("recipes");
+                    if recipes_dir.is_dir() {
+                        for entry in fs::read_dir(repository.source.dir.join("recipes"))? {
+                            let entry = entry?;
+                            let recipe = loader.load(&entry.path())?;
+                            let recipe_idx = recipes.push(Arc::new(recipe));
+                            table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
+                        }
                     }
                     Ok(table)
                 })

@@ -27,6 +27,7 @@ pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
         .images
         .get(image)
         .ok_or_else(|| anyhow!("unable to find image {image}"))?;
+    info!("baking image `{image}`");
     let layer_bakery = LayerBakery::new(project, image_config.architecture);
     let baked_layer = layer_bakery.bake_root(&image_config.layer)?;
     image::make_image(image_config, &baked_layer, output)

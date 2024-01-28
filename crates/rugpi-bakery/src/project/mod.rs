@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Context;
 use rugpi_common::Anyhow;
 
 use self::{config::BakeryConfig, library::Library, repositories::ProjectRepositories};
@@ -36,13 +37,16 @@ impl Project {
         self.lazy
             .repositories
             .try_get_or_init(|| ProjectRepositories::load(self).map(Arc::new))
+            .with_context(|| "loading repositories")
     }
 
     /// The library of the project.
     pub fn library(&self) -> Anyhow<&Arc<Library>> {
         self.lazy.library.try_get_or_init(|| {
             let repositories = self.repositories()?.clone();
-            Library::load(repositories).map(Arc::new)
+            Library::load(repositories)
+                .map(Arc::new)
+                .with_context(|| "loading library")
         })
     }
 }
