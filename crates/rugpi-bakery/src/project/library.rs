@@ -8,7 +8,7 @@ use super::{
     recipes::{Recipe, RecipeLoader},
     repositories::{ProjectRepositories, RepositoryIdx},
 };
-use crate::{
+use crate::utils::{
     caching::mtime,
     idx_vec::{new_idx_type, IdxVec},
 };

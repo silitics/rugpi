@@ -13,7 +13,7 @@ use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
 
 use super::repositories::RepositoryIdx;
-use crate::caching::{mtime_recursive, ModificationTime};
+use crate::utils::caching::{mtime_recursive, ModificationTime};
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]

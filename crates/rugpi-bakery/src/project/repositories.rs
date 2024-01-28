@@ -35,7 +35,7 @@ use sha1::{Digest, Sha1};
 use xscript::{read_str, run, LocalEnv, Run};
 
 use super::Project;
-use crate::idx_vec::{new_idx_type, IdxVec};
+use crate::utils::idx_vec::{new_idx_type, IdxVec};
 
 #[derive(Debug)]
 #[non_exhaustive]

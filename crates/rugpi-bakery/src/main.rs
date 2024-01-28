@@ -7,11 +7,11 @@ use clap::Parser;
 use colored::Colorize;
 use project::{config::Architecture, repositories::Source, ProjectLoader};
 use rugpi_common::Anyhow;
+use utils::logging::init_logging;
 
 pub mod bake;
-pub mod caching;
-pub mod idx_vec;
 pub mod project;
+pub mod utils;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -59,6 +59,9 @@ pub struct UpdateTask {
 
 fn main() -> Anyhow<()> {
     let args = Args::parse();
+
+    init_logging();
+
     let project = ProjectLoader::current_dir()?
         .with_config_file(args.config.as_deref())
         .load()?;

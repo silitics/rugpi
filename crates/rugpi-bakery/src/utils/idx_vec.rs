@@ -142,7 +142,7 @@ macro_rules! new_idx_type {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         $vis struct $name(usize);
 
-        impl $crate::idx_vec::Idx for $name {
+        impl $crate::utils::idx_vec::Idx for $name {
             fn as_usize(self) -> usize {
                 self.0
             }

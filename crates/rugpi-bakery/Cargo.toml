@@ -19,5 +19,7 @@ sha1 = "0.10.5"
 tempfile = "3.8.1"
 thiserror = "1.0.43"
 toml = "0.8.8"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 url = { version = "2.4.0", features = ["serde"] }
 xscript.workspace = true

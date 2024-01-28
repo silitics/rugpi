@@ -15,7 +15,6 @@ use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{
-    caching::{mtime, mtime_recursive},
     project::{
         config::Architecture,
         layers::{Layer, LayerConfig},
@@ -24,6 +23,7 @@ use crate::{
         repositories::RepositoryIdx,
         Project,
     },
+    utils::caching::{mtime, mtime_recursive},
 };
 
 /// The arguments of the `customize` command.
@@ -46,7 +46,7 @@ pub fn customize(
     let library = project.library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
-    let jobs = recipe_schedule(layer.repo, config, &library)?;
+    let jobs = recipe_schedule(layer.repo, config, library)?;
     let mut last_modified = jobs
         .iter()
         .map(|job| job.recipe.modified)

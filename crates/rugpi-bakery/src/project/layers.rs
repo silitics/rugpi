@@ -13,7 +13,7 @@ use super::{
     recipes::{ParameterValue, RecipeName},
     repositories::RepositoryIdx,
 };
-use crate::caching::ModificationTime;
+use crate::utils::caching::ModificationTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

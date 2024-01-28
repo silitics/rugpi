@@ -11,8 +11,8 @@ use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::{
-    caching::{download, sha1},
     project::{config::Architecture, Project},
+    utils::caching::{download, sha1},
 };
 
 pub mod customize;
