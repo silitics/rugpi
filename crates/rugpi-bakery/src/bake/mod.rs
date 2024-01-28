@@ -29,7 +29,7 @@ pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
 }
 
 pub fn bake_layer(project: &Project, arch: Architecture, layer_name: &str) -> Anyhow<PathBuf> {
-    let library = project.load_library()?;
+    let library = project.library()?;
     let layer = &library.layers[library
         .lookup_layer(library.repositories.root_repository, layer_name)
         .unwrap()];

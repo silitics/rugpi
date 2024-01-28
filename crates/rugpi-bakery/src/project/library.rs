@@ -13,8 +13,9 @@ use crate::{
     idx_vec::{new_idx_type, IdxVec},
 };
 
+#[derive(Debug)]
 pub struct Library {
-    pub repositories: ProjectRepositories,
+    pub repositories: Arc<ProjectRepositories>,
     pub recipes: IdxVec<RecipeIdx, Arc<Recipe>>,
     pub layers: IdxVec<LayerIdx, Layer>,
     pub recipe_tables: IdxVec<RepositoryIdx, HashMap<String, RecipeIdx>>,
@@ -22,7 +23,7 @@ pub struct Library {
 }
 
 impl Library {
-    pub fn load(repositories: ProjectRepositories) -> Anyhow<Self> {
+    pub fn load(repositories: Arc<ProjectRepositories>) -> Anyhow<Self> {
         let mut recipes = IdxVec::new();
         let tables = IdxVec::<RepositoryIdx, _>::from_vec(
             repositories

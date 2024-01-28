@@ -81,8 +81,7 @@ fn main() -> Anyhow<()> {
             std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
         Task::Pull => {
-            let repositories = project.load_repositories()?;
-            for (_, repository) in repositories.iter() {
+            for (_, repository) in project.repositories()?.iter() {
                 println!(
                     "{} {} {}",
                     repository.source.id.as_short_str().blue(),

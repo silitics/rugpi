@@ -43,7 +43,7 @@ pub fn customize(
     target: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
-    let library = project.load_library()?;
+    let library = project.library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
     let jobs = recipe_schedule(layer.repo, config, &library)?;

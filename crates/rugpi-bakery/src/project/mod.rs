@@ -1,6 +1,10 @@
 //! In-memory representation of Rugpi Bakery projects.
 
-use std::path::{Path, PathBuf};
+use std::{
+    cell::OnceCell,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use rugpi_common::Anyhow;
 
@@ -13,6 +17,25 @@ pub mod library;
 pub mod recipes;
 pub mod repositories;
 
+/// Extension trait for [`OnceCell`].
+pub trait OnceCellExt<T> {
+    /// Gets the contents of the cell or tries to initialize it.
+    ///
+    /// We can remove this once `get_or_try_init` lands in the standard library (see
+    /// [#109737](https://github.com/rust-lang/rust/issues/109737)).
+    fn try_get_or_init<E>(&self, init: impl FnOnce() -> Result<T, E>) -> Result<&T, E>;
+}
+
+impl<T> OnceCellExt<T> for OnceCell<T> {
+    fn try_get_or_init<E>(&self, init: impl FnOnce() -> Result<T, E>) -> Result<&T, E> {
+        if let Some(value) = self.get() {
+            return Ok(value);
+        }
+        self.set(init()?).ok();
+        Ok(self.get().unwrap())
+    }
+}
+
 /// A project.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -21,19 +44,34 @@ pub struct Project {
     pub config: BakeryConfig,
     /// The project directory.
     pub dir: PathBuf,
+    /// Lazily initialized fields.
+    lazy: ProjectLazy,
 }
 
 impl Project {
-    /// Load the repositories of the project.
-    pub fn load_repositories(&self) -> Anyhow<ProjectRepositories> {
-        ProjectRepositories::load(self)
+    /// The repositories of the project.
+    pub fn repositories(&self) -> Anyhow<&Arc<ProjectRepositories>> {
+        self.lazy
+            .repositories
+            .try_get_or_init(|| ProjectRepositories::load(self).map(Arc::new))
     }
 
-    /// Load the library of the project.
-    pub fn load_library(&self) -> Anyhow<Library> {
-        let repositories = self.load_repositories()?;
-        Library::load(repositories)
+    /// The library of the project.
+    pub fn library(&self) -> Anyhow<&Arc<Library>> {
+        self.lazy.library.try_get_or_init(|| {
+            let repositories = self.repositories()?.clone();
+            Library::load(repositories).map(Arc::new)
+        })
     }
+}
+
+/// Lazily initialized fields of [`Project`].
+#[derive(Debug, Default)]
+struct ProjectLazy {
+    /// The repositories of the project.
+    repositories: OnceCell<Arc<ProjectRepositories>>,
+    /// The library of the project.
+    library: OnceCell<Arc<Library>>,
 }
 
 /// Project loader.
@@ -80,6 +118,7 @@ impl ProjectLoader {
         Ok(Project {
             dir: self.project_dir,
             config,
+            lazy: ProjectLazy::default(),
         })
     }
 }
