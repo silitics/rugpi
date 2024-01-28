@@ -1,7 +1,18 @@
-recipes = ["set-hostname", "persist-root-home", "ssh", "zsh"]
+[repositories]
+rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git" }
 
-[parameters.set-hostname]
-hostname = "rugpi-tests"
+[images.tryboot]
+layer = "customized"
 
-[parameters.rugpi-ctrl]
-rugpi_admin = true
+[images.pi4]
+layer = "customized"
+include_firmware = "pi4"
+
+[images.u-boot]
+layer = "customized"
+boot_flow = "u-boot"
+
+[images.u-boot-armhf]
+layer = "customized"
+architecture = "armhf"
+boot_flow = "u-boot"

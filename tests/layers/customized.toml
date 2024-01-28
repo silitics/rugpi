@@ -1,0 +1,15 @@
+parent = "core/raspios-bookworm"
+
+recipes = [
+    "core/raspberrypi",
+    "core/set-hostname",
+    "core/persist-root-home",
+    "core/ssh",
+    "rugpi-extra/zsh",
+]
+
+[parameters."core/set-hostname"]
+hostname = "rugpi-tests"
+
+[parameters."core/apt-cleanup"]
+autoremove = true
