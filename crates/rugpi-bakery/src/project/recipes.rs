@@ -11,6 +11,7 @@ use std::{
 use anyhow::{anyhow, bail, Context};
 use rugpi_common::Anyhow;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use super::repositories::RepositoryIdx;
 use crate::utils::caching::{mtime_recursive, ModificationTime};
@@ -70,7 +71,7 @@ impl RecipeLoader {
             path,
         };
         if recipe.info.default.is_some() {
-            eprintln!("default recipes have been deprecated");
+            warn!("default recipes have been deprecated");
         }
         Ok(recipe)
     }

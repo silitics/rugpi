@@ -28,14 +28,16 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{bail, Context};
-use rugpi_common::Anyhow;
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use xscript::{read_str, run, LocalEnv, Run};
 
 use super::Project;
-use crate::utils::idx_vec::{new_idx_type, IdxVec};
+use crate::utils::{
+    idx_vec::{new_idx_type, IdxVec},
+    prelude::*,
+};
 
 #[derive(Debug)]
 #[non_exhaustive]
@@ -156,7 +158,7 @@ impl RepositoriesLoader {
         if self.source_to_repository.contains_key(&source.id) {
             bail!("repository from {} has already been loaded", source.id);
         }
-        eprintln!("=> loading repository from source {}", source.id);
+        debug!("loading repository from source {}", source.id);
         let idx = RepositoryIdx(self.repositories.len());
         self.repositories.push(None);
         self.source_to_repository.insert(source.id.clone(), idx);
@@ -275,7 +277,7 @@ impl Source {
     /// The *update* flag indicates whether remote repositories should be updated.
     pub fn materialize(self, root_dir: &Path, update: bool) -> Anyhow<MaterializedSource> {
         let id = self.id();
-        eprintln!("=> materializing source {id}");
+        debug!("materializing source {id}");
         let path = match &self {
             Source::Path(path_source) => root_dir.join(&path_source.path),
             Source::Git(git_source) => {

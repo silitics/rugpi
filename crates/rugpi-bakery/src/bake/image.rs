@@ -12,21 +12,23 @@ use rugpi_common::{
 use tempfile::tempdir;
 use xscript::{run, Run};
 
-use crate::project::{
-    config::{Architecture, IncludeFirmware},
-    images::ImageConfig,
+use crate::{
+    project::{
+        config::{Architecture, IncludeFirmware},
+        images::ImageConfig,
+    },
+    utils::prelude::*,
 };
 
 pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let size = calculate_image_size(src)?;
-    println!("Size: {} bytes", size);
     fs::remove_file(image).ok();
-    println!("Creating image...");
+    info!("creating image (size: {} bytes)", size);
     run!(["fallocate", "-l", "{size}", image])?;
     sfdisk_apply_layout(image, sfdisk_image_layout())?;
     let disk_id = get_disk_id(image)?;
     let loop_device = LoopDevice::attach(image)?;
-    println!("Creating file systems...");
+    info!("creating filesystems");
     mkfs_vfat(loop_device.partition(1), "CONFIG")?;
     mkfs_vfat(loop_device.partition(2), "BOOT-A")?;
     mkfs_ext4(loop_device.partition(5), "system-a")?;
@@ -52,9 +54,9 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
         };
 
         run!(["tar", "-x", "-f", src, "-C", root_dir_path])?;
-        println!("Patching boot configuration...");
+        info!("patching boot configuration");
         patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
-        println!("Patching `config.txt`...");
+        info!("patching `config.txt`");
         patch_config(boot_dir.join("config.txt"))?;
 
         match image_config.boot_flow {
@@ -73,9 +75,6 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
             IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
         }
     }
-    // Shrink root filesystem.
-    // run!(["resize2fs", "-M", loop_device.partition(5)])?;
-    // run!(["dumpe2fs", "-h", loop_device.partition(5)])?;
     Ok(())
 }
 

@@ -1,16 +1,18 @@
 //! Utilities for caching.
 
 use std::{
-    fs, io,
+    fs,
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     time::SystemTime,
 };
 
-use rugpi_common::Anyhow;
+use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use url::Url;
-use xscript::{run, Run};
+
+use crate::utils::prelude::*;
 
 pub fn download(url: &str) -> Anyhow<PathBuf> {
     let url = url.parse::<Url>()?;
@@ -28,16 +30,57 @@ pub fn download(url: &str) -> Anyhow<PathBuf> {
     }
     let cache_file_path = Path::new(".rugpi/cache").join(cache_file_name);
     if !cache_file_path.exists() {
+        info!("downloading `{url}`");
         std::fs::create_dir_all(".rugpi/cache")?;
-        run!(["wget", "-O", &cache_file_path, url.as_str()])?;
+        let mut response = reqwest::blocking::get(url.clone())?;
+        if response.status().is_success() {
+            let Some(size) = response.content_length() else {
+                bail!("server did not send `Content-Length` header");
+            };
+            let progress = ProgressBar::new(size).with_style(
+                ProgressStyle::with_template(
+                    "[{elapsed_precise}] {bar:40.cyan/blue} {bytes}/{total_bytes} [{bytes_per_sec}] {msg}",
+                )
+                .unwrap(),
+            );
+            let mut file = fs::File::create(&cache_file_path)?;
+            let mut buffer = vec![0u8; 8096];
+            loop {
+                let chunk_size = response.read(&mut buffer)?;
+                if chunk_size > 0 {
+                    file.write(&buffer[..chunk_size])?;
+                    progress.inc(chunk_size as u64);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            bail!("error downloading file: {}", response.status());
+        }
     }
     Ok(cache_file_path)
 }
 
-pub fn sha1(string: &str) -> String {
-    let mut hasher = Sha1::new();
-    hasher.update(string.as_bytes());
-    hex::encode(hasher.finalize())
+#[derive(Debug, Default)]
+pub struct Hasher {
+    hasher: Sha1,
+}
+
+impl Hasher {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, tag: &str, value: impl AsRef<[u8]>) {
+        self.hasher.update(tag.as_bytes());
+        self.hasher.update(b":");
+        self.hasher.update(value.as_ref());
+        self.hasher.update(b"\n");
+    }
+
+    pub fn finalize(self) -> String {
+        hex::encode(self.hasher.finalize())
+    }
 }
 
 /// Modification time in seconds since the UNIX epoch.

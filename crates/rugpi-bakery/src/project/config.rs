@@ -1,5 +1,6 @@
 //! Project configuration.
 
+use core::fmt;
 use std::{collections::HashMap, fs, path::Path, str::FromStr};
 
 use anyhow::Context;
@@ -72,5 +73,11 @@ impl Architecture {
             Architecture::Arm64 => "arm64",
             Architecture::Armhf => "armhf",
         }
+    }
+}
+
+impl fmt::Display for Architecture {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }

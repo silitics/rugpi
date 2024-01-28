@@ -46,6 +46,7 @@ impl LayerConfig {
 
 #[derive(Debug)]
 pub struct Layer {
+    pub name: String,
     pub repo: RepositoryIdx,
     pub modified: ModificationTime,
     pub default_config: Option<LayerConfig>,
@@ -53,8 +54,9 @@ pub struct Layer {
 }
 
 impl Layer {
-    pub fn new(repo: RepositoryIdx, modified: ModificationTime) -> Self {
+    pub fn new(name: String, repo: RepositoryIdx, modified: ModificationTime) -> Self {
         Self {
+            name,
             repo,
             modified,
             default_config: None,

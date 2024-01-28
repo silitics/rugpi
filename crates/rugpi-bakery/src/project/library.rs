@@ -66,8 +66,8 @@ impl Library {
                         let modified = mtime(&path)?;
                         let layer_config = LayerConfig::load(&path)?;
                         let layer_idx = *table
-                            .entry(name)
-                            .or_insert_with(|| layers.push(Layer::new(repo, modified)));
+                            .entry(name.clone())
+                            .or_insert_with(|| layers.push(Layer::new(name, repo, modified)));
                         layers[layer_idx].modified = layers[layer_idx].modified.max(modified);
                         match arch {
                             Some(arch) => {

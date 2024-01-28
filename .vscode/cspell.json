@@ -25,6 +25,7 @@
     "github",
     "GPIO",
     "Imager",
+    "indicatif",
     "linux",
     "losetup",
     "lowerdir",

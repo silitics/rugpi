@@ -8,9 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, bail};
-use clap::Parser;
-use rugpi_common::{mount::Mounted, Anyhow};
+use rugpi_common::mount::Mounted;
 use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
@@ -23,17 +21,11 @@ use crate::{
         repositories::RepositoryIdx,
         Project,
     },
-    utils::caching::{mtime, mtime_recursive},
+    utils::{
+        caching::{mtime, mtime_recursive},
+        prelude::*,
+    },
 };
-
-/// The arguments of the `customize` command.
-#[derive(Debug, Parser)]
-pub struct CustomizeTask {
-    /// The source archive with the original system.
-    src: String,
-    /// The destination archive with the modified system.
-    dest: String,
-}
 
 pub fn customize(
     project: &Project,
@@ -47,12 +39,16 @@ pub fn customize(
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
     let jobs = recipe_schedule(layer.repo, config, library)?;
+    if jobs.is_empty() {
+        bail!("layer must have recipes")
+    }
     let mut last_modified = jobs
         .iter()
         .map(|job| job.recipe.modified)
         .max()
         .unwrap()
-        .max(layer.modified);
+        .max(layer.modified)
+        .max(mtime(src)?);
     let mut force_run = false;
     let used_files = project.dir.join(layer_path.join("rebuild-if-changed.txt"));
     if used_files.exists() {
@@ -60,7 +56,7 @@ pub fn customize(
             if let Ok(modified) = mtime_recursive(&project.dir.join(line)) {
                 last_modified = last_modified.max(modified)
             } else {
-                eprintln!("Error determining modification time for {line}.");
+                error!("error determining modification time for {line}");
                 force_run = true;
             }
         }
@@ -71,10 +67,10 @@ pub fn customize(
     // Prepare system chroot.
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();
-    println!("Extracting system files...");
+    info!("extracting system files");
     run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
     apply_recipes(project, arch, &jobs, root_dir_path, layer_path)?;
-    println!("Packing system files...");
+    info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", root_dir_path, "."])?;
     Ok(())
 }
@@ -190,7 +186,7 @@ fn apply_recipes(
 
     for (idx, job) in jobs.iter().enumerate() {
         let recipe = &job.recipe;
-        println!(
+        info!(
             "[{:>2}/{}] {} {:?}",
             idx + 1,
             jobs.len(),
@@ -204,7 +200,7 @@ fn apply_recipes(
         let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
 
         for step in &recipe.steps {
-            println!("    - {}", step.filename);
+            info!("    - {}", step.filename);
             match &step.kind {
                 StepKind::Packages { packages } => {
                     let mut cmd = cmd!("chroot", root_dir_path, "apt-get", "install", "-y");

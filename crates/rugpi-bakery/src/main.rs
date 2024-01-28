@@ -1,11 +1,13 @@
 use std::{
+    convert::Infallible,
     ffi::{CStr, CString},
     path::PathBuf,
 };
 
+use bake::LayerBakery;
 use clap::Parser;
 use colored::Colorize;
-use project::{config::Architecture, repositories::Source, ProjectLoader};
+use project::{config::Architecture, repositories::Source, Project, ProjectLoader};
 use rugpi_common::Anyhow;
 use utils::logging::init_logging;
 
@@ -13,77 +15,83 @@ pub mod bake;
 pub mod project;
 pub mod utils;
 
+/// Command line arguments.
 #[derive(Debug, Parser)]
+#[command(author, about = None, long_about = None)]
 pub struct Args {
-    /// Path to `rugpi-bakery.toml` configuration file.
+    /// Path to the `rugpi-bakery.toml` configuration file.
     #[clap(long)]
     config: Option<PathBuf>,
-    /// The task to execute.
+    /// The command to execute.
     #[clap(subcommand)]
-    task: Task,
+    command: Command,
 }
 
+/// Commands of the CLI.
 #[derive(Debug, Parser)]
-pub enum BakeCommand {
-    Image {
-        image: String,
-        output: PathBuf,
-    },
-    Layer {
-        #[clap(long)]
-        arch: Architecture,
-        layer: String,
-    },
-}
-
-#[derive(Debug, Parser)]
-pub enum Task {
-    // /// Extract all system files from a given base image.
-    // Extract(ExtractTask),
-    // /// Apply modification to the system.
-    // Customize(CustomizeTask),
-    /// Bake a final image for distribution.
+pub enum Command {
+    /// Bake an image or a layer.
     #[clap(subcommand)]
     Bake(BakeCommand),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
-    Update(UpdateTask),
     /// Pull in external repositories.
     Pull,
+    /// Update Rugpi Bakery itself.
+    Update(UpdateCommand),
 }
 
+/// The `bake` command.
 #[derive(Debug, Parser)]
-pub struct UpdateTask {
+pub enum BakeCommand {
+    /// Bake an image.
+    Image {
+        /// The name of the image to bake.
+        image: String,
+        /// The output path of the resulting image.
+        output: PathBuf,
+    },
+    /// Bake a layer.
+    Layer {
+        /// The architecture to bake the layer for.
+        #[clap(long)]
+        arch: Architecture,
+        /// The name of the layer to bake.
+        layer: String,
+    },
+}
+
+/// The `update` command.
+#[derive(Debug, Parser)]
+pub struct UpdateCommand {
+    /// The version to update to.
     version: Option<String>,
 }
 
+/// Entrypoint of the CLI.
 fn main() -> Anyhow<()> {
-    let args = Args::parse();
-
     init_logging();
 
-    let project = ProjectLoader::current_dir()?
-        .with_config_file(args.config.as_deref())
-        .load()?;
-    match &args.task {
-        Task::Bake(task) => match task {
+    let args = Args::parse();
+    let project = load_project(&args)?;
+    match &args.command {
+        Command::Bake(command) => match command {
             BakeCommand::Image { image, output } => {
                 bake::bake_image(&project, image, output)?;
             }
             BakeCommand::Layer { layer, arch } => {
-                bake::bake_layer(&project, *arch, layer)?;
+                LayerBakery::new(&project, *arch).bake_root(layer)?;
             }
         },
-        Task::Shell => {
-            let zsh_prog = CString::new("/bin/zsh")?;
-            nix::unistd::execv::<&CStr>(&zsh_prog, &[])?;
+        Command::Shell => {
+            exec_shell()?;
         }
-        Task::Update(task) => {
+        Command::Update(task) => {
             let version = task.version.as_deref().unwrap_or("v0");
             println!("Switch Rugpi Bakery to version `{version}`...");
             std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
-        Task::Pull => {
+        Command::Pull => {
             for (_, repository) in project.repositories()?.iter() {
                 println!(
                     "{} {} {}",
@@ -120,4 +128,15 @@ fn main() -> Anyhow<()> {
 
 fn interpolate_run_bakery(version: &str) -> String {
     include_str!("../assets/run-bakery").replace("%%DEFAULT_VERSION%%", version)
+}
+
+fn load_project(args: &Args) -> Anyhow<Project> {
+    ProjectLoader::current_dir()?
+        .with_config_file(args.config.as_deref())
+        .load()
+}
+
+fn exec_shell() -> Anyhow<Infallible> {
+    let zsh = CString::new("/bin/zsh").unwrap();
+    Ok(nix::unistd::execv::<&CStr>(&zsh, &[])?)
 }

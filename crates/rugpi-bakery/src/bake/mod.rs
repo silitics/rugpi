@@ -11,8 +11,11 @@ use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::{
-    project::{config::Architecture, Project},
-    utils::caching::{download, sha1},
+    project::{config::Architecture, library::LayerIdx, Project},
+    utils::{
+        caching::{download, Hasher},
+        prelude::*,
+    },
 };
 
 pub mod customize;
@@ -24,40 +27,67 @@ pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
         .images
         .get(image)
         .ok_or_else(|| anyhow!("unable to find image {image}"))?;
-    let baked_layer = bake_layer(project, image_config.architecture, &image_config.layer)?;
+    let layer_bakery = LayerBakery::new(project, image_config.architecture);
+    let baked_layer = layer_bakery.bake_root(&image_config.layer)?;
     image::make_image(image_config, &baked_layer, output)
 }
 
-pub fn bake_layer(project: &Project, arch: Architecture, layer_name: &str) -> Anyhow<PathBuf> {
-    let library = project.library()?;
-    let layer = &library.layers[library
-        .lookup_layer(library.repositories.root_repository, layer_name)
-        .unwrap()];
-    let layer_config = layer.config(arch).unwrap();
-    if let Some(url) = &layer_config.url {
-        let layer_id = sha1(url);
-        let system_tar = project
-            .dir
-            .join(format!(".rugpi/layers/{layer_id}/system.tar"));
-        if !system_tar.exists() {
-            extract(url, &system_tar)?;
+pub struct LayerBakery<'p> {
+    project: &'p Project,
+    arch: Architecture,
+}
+
+impl<'p> LayerBakery<'p> {
+    pub fn new(project: &'p Project, arch: Architecture) -> Self {
+        Self { project, arch }
+    }
+
+    pub fn bake_root(&self, layer: &str) -> Anyhow<PathBuf> {
+        let library = self.project.library()?;
+        let Some(layer) = library.lookup_layer(library.repositories.root_repository, layer) else {
+            bail!("unable to find layer {layer}");
+        };
+        self.bake(layer)
+    }
+
+    pub fn bake(&self, layer: LayerIdx) -> Anyhow<PathBuf> {
+        let repositories = &self.project.repositories()?.repositories;
+        let library = self.project.library()?;
+        let layer = &library.layers[layer];
+        info!("baking layer `{}`", layer.name);
+        let Some(config) = layer.config(self.arch) else {
+            bail!("no layer configuration for architecture `{}`", self.arch);
+        };
+        let mut layer_id = Hasher::new();
+        layer_id.push("layer", &layer.name);
+        layer_id.push("repository", repositories[layer.repo].source.id.as_str());
+        layer_id.push("arch", self.arch.as_str());
+        if let Some(url) = &config.url {
+            layer_id.push("url", url);
+            let layer_id = layer_id.finalize();
+            let system_tar = self
+                .project
+                .dir
+                .join(format!(".rugpi/layers/{layer_id}/system.tar"));
+            if !system_tar.exists() {
+                extract(url, &system_tar)?;
+            }
+            Ok(system_tar)
+        } else if let Some(parent) = &config.parent {
+            layer_id.push("parent", parent);
+            let Some(parent) = library.lookup_layer(layer.repo, parent) else {
+                bail!("unable to find layer `{parent}`");
+            };
+            let src = self.bake(parent)?;
+            let layer_id = layer_id.finalize();
+            let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
+            let target = self.project.dir.join(&layer_path).join("system.tar");
+            fs::create_dir_all(target.parent().unwrap()).ok();
+            customize::customize(self.project, self.arch, layer, &src, &target, &layer_path)?;
+            Ok(target)
+        } else {
+            bail!("invalid layer configuration")
         }
-        Ok(system_tar)
-    } else if let Some(parent) = &layer_config.parent {
-        let src = bake_layer(project, arch, parent)?;
-        let mut layer_string = layer_name.to_owned();
-        layer_string.push('.');
-        layer_string.push_str(arch.as_str());
-        layer_string.push('.');
-        layer_string.push_str(library.repositories[layer.repo].source.id.as_str());
-        let layer_id = sha1(&layer_string);
-        let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
-        let target = project.dir.join(&layer_path).join("system.tar");
-        fs::create_dir_all(target.parent().unwrap()).ok();
-        customize::customize(project, arch, layer, &src, &target, &layer_path)?;
-        Ok(target)
-    } else {
-        bail!("invalid layer configuration")
     }
 }
 
@@ -66,12 +96,12 @@ fn extract(image_url: &str, layer_path: &Path) -> Anyhow<()> {
     if image_path.extension() == Some("xz".as_ref()) {
         let decompressed_image_path = image_path.with_extension("");
         if !decompressed_image_path.is_file() {
-            eprintln!("Decompressing XZ image...");
+            info!("decompressing XZ image");
             run!(["xz", "-d", "-k", image_path])?;
         }
         image_path = decompressed_image_path;
     }
-    eprintln!("Creating `.tar` archive with system files...");
+    info!("creating `.tar` archive with system files");
     if let Some(parent) = layer_path.parent() {
         if !parent.exists() {
             fs::create_dir_all(parent)?;
