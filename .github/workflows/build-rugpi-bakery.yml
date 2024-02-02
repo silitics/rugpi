@@ -30,12 +30,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          # Include this once we released version 1.0.0.
+          # type=semver,pattern=v{{major}}
           tags: |
             type=schedule,pattern=nightly
             type=schedule,pattern=nightly-{{date 'YYYYMMDD'}}
             type=semver,pattern=v{{major}}.{{minor}}.{{patch}}
             type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
             type=ref,event=branch
             type=ref,event=pr
           labels: |
