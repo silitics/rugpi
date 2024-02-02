@@ -41,14 +41,14 @@ To print the usage instructions of Rugpi Bakery, in the root directory of the te
 ./run-bakery help
 ```
 
-On a non-`arm64` system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate `arm64`.
-The easiest way to do so, and as we are already using Docker, is by running the following command:
+On a non-`arm64` system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate `arm64` (analogously for `armhf`).
+The easiest way to do so, and as we are already using Docker anyway, is by running the following command:
 
 ```shell
 docker run --privileged --rm tonistiigi/binfmt --install arm64
 ```
 
-Building an image is generally achieved by the commend:
+Building an image is then generally achieved by the commend:
 
 ```shell
 ./run-bakery bake image <image name> build/image.img
@@ -62,6 +62,7 @@ For instance, to build an image for Raspberry Pi 4 including the necessary firmw
 ```
 
 The images specified in the template use the `customized` *layer* defined in `layers/customized.toml`.
+A layer specifies the base system and the modification which should be done to it.
 
 When you build an image, internally, Rugpi Bakery does the following steps:
 

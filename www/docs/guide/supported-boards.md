@@ -5,6 +5,10 @@ sidebar_position: 0
 # Supported Boards
 
 In principle, Rugpi supports all Raspberry Pi models.
+**We may also extend support to other boards in the future.
+If you are interested in support for other boards, please open a [discussion](https://github.com/silitics/rugpi/discussions) or [contact us directly](mailto:rugpi@silitics.com?subject=Rugpi%20Board%20Support).**
+
+Here is an overview over all the supported Raspberry Pi models:
 
 | Pi 5 | Pi 4 | Pi 3   | Pi 2 v1.2 | Pi 2  | Pi 1   | Pi Zero 2 | Pi Zero | CM 4 | CM 3  | CM 1   |
 | ---- | ---- | ------ | --------- | ----- | ------ | --------- | ------- | ---- | ----- | ------ |
@@ -18,7 +22,7 @@ In principle, Rugpi supports all Raspberry Pi models.
 
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
 
-For 32-bit models and to build 32-bit images for 64-bit boards, you need to set the `architecture` for the image to:
+For 32-bit models and to build 32-bit images for 64-bit boards, you need to set the `architecture` for the respective image to:
 ```toml
 architecture = "armhf"
 ```
@@ -44,16 +48,16 @@ To use Rugpi with these boards, the bootloader stored in the EEPROM must be upda
 For Compute Module 4, this requires `usbboot` (see [CM4's documentation for details](https://www.raspberrypi.com/documentation/computers/compute-module.html#flashing-the-bootloader-eeprom-compute-module-4) or check out [this blog post by Jeff Geerling](https://www.jeffgeerling.com/blog/2022/how-update-raspberry-pi-compute-module-4-bootloader-eeprom)).
 For Raspberry Pi 4, you can set the `include_firmware = "pi4"` option of the image to include the bootloader update in the image.
 The bootloader will then be automatically updated when first booting the image.
-Note that after the first boot, the automatic update will be disabled,[^1] i.e., you cannot take the SD card to another Raspberry Pi which does not yet have the update installed.
+Note that after the first boot, the automatic update will be disabled, i.e., you cannot take the SD card to another Raspberry Pi which does not yet have the update installed.
 
 ### Other Boards
 
-For other boards than Pi 5, Pi 4, and CM 4, you must enable the U-Boot [boot flow](../internals/boot-flows.md) for the image:
+For other boards than Pi 5, Pi 4, Pi 400, and CM 4, you must enable the U-Boot [boot flow](../internals/boot-flows.md) for the image:
 
 ```toml
 boot_flow = "u-boot"
 ```
 
-**⚠️ The U-Boot boot flow is experimental and does not allow updating the firmware.**
+**⚠️ The U-Boot boot flow is experimental and does not allow updating the Raspberry Pi bootloader/firmware.**
 
 [^1]: To prevent the EEPROM from being updated on each boot.
