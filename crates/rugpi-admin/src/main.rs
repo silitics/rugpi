@@ -73,15 +73,6 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
         Update,
     }
 
-    #[cfg(debug_assertions)]
-    const DOWNLOAD_DIR: &str = "tmp";
-    #[cfg(debug_assertions)]
-    const IMAGE_FILE: &str = "tmp/image.img";
-    #[cfg(not(debug_assertions))]
-    const DOWNLOAD_DIR: &str = "/var/rugpi/admin/tmp";
-    #[cfg(not(debug_assertions))]
-    const IMAGE_FILE: &str = "/var/rugpi/admin/tmp/image.img";
-
     let mut action = None;
 
     while let Some(mut field) = multipart.next_field().await.unwrap() {
