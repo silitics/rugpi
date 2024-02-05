@@ -1,4 +1,4 @@
-use std::{fs, ops::Deref};
+use std::{fs, ops::Deref, process::Stdio};
 
 use axum::{
     extract::{DefaultBodyLimit, Multipart},
@@ -9,7 +9,7 @@ use axum::{
 use clap::Parser;
 #[cfg(not(debug_assertions))]
 use rugpi_common::partitions::{get_default_partitions, get_hot_partitions};
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, process::Command};
 #[cfg(not(debug_assertions))]
 use xscript::{run, Run};
 
@@ -111,14 +111,16 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
                 }
             }
             "image" => {
-                fs::create_dir_all(DOWNLOAD_DIR).unwrap();
-                let mut image_file =
-                    tokio::io::BufWriter::new(tokio::fs::File::create(IMAGE_FILE).await.unwrap());
+                let mut command = Command::new("rugpi-ctrl")
+                    .args(["update", "install", "--stream", "-"])
+                    .stdin(Stdio::piped())
+                    .spawn()
+                    .unwrap();
+                let mut stdin = command.stdin.take().unwrap();
                 while let Some(chunk) = field.chunk().await.unwrap() {
-                    image_file.write_all(chunk.deref()).await.unwrap();
+                    stdin.write_all(&chunk).await.unwrap();
                 }
-                image_file.flush().await.unwrap();
-                drop(image_file);
+                command.wait().await.unwrap();
             }
             _ => {
                 panic!("invalid field name `{name}`");
@@ -152,13 +154,7 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
             .await
             .unwrap();
         }
-        Action::Update => {
-            tokio::task::spawn_blocking(|| {
-                run!(["rugpi-ctrl", "update", "install", IMAGE_FILE]).unwrap()
-            })
-            .await
-            .unwrap();
-        }
+        Action::Update => { /* do nothing */ }
     }
     render_index_html().await
 }
