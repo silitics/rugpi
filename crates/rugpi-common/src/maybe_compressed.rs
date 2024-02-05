@@ -110,7 +110,7 @@ impl<R: Read> PeekReader<R> {
         self.fill_buffer(size)?;
         let chunk = &self.buffer[self.peeked..(self.peeked + size).min(self.buffer.len())];
         self.peeked += chunk.len();
-        Ok(&chunk)
+        Ok(chunk)
     }
 }
 

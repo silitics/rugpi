@@ -42,7 +42,7 @@ impl<R: Read> ImgStream<R> {
             extended: None,
         };
         this.read_next_sector()?;
-        if &this.buffer[SECTOR_SIZE - 2..SECTOR_SIZE] != &[0x55, 0xAA] {
+        if this.buffer[SECTOR_SIZE - 2..SECTOR_SIZE] != [0x55, 0xAA] {
             return Err(ImgStreamError::Invalid("invalid magic bytes in MBR"));
         }
         for entry in parse_partition_table(&this.buffer[..SECTOR_SIZE]) {
