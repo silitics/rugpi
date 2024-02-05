@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.1
+
+- Transparent decompression of XZ-compressed images.
+- Switch to streaming updates in Rugpi Admin.
+
 ## Version 0.6.0
 
 - Introduction of layers.
