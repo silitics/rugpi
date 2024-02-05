@@ -76,6 +76,18 @@ function check_firmware() {
     fi
 }
 
+function check_not_firmware() {
+    if [ -f "${CONFIG_DIR}/recovery.bin" ] \
+        || [ -f "${CONFIG_DIR}/pieeprom.upd" ] \
+        || [ -f "${CONFIG_DIR}/pieeprom.sig" ]
+    then
+        echo "Firmware found. Error."
+        return 1
+    else
+        echo "No firmware. Ok."
+    fi
+}
+
 function check_u_boot() {
     if [ -f "${CONFIG_DIR}/config.txt" ] \
         && [ -f "${CONFIG_DIR}/boot.scr" ] \
@@ -101,6 +113,7 @@ umount_image
 mount_image "build/tryboot-without-firmware.img"
 echo "Checking 'tryboot-without-firmware.img'"
 check_tryboot
+check_not_firmware
 [ ! -f "${CONFIG_DIR}/pieeprom.upd" ]
 umount_image
 
@@ -110,6 +123,7 @@ ls -l "${CONFIG_DIR}"
 [ -f "${CONFIG_DIR}/u-boot-arm64.bin" ]
 check_u_boot
 check_boot
+check_not_firmware
 umount_image
 
 mount_image "build/u-boot-armhf.img"
@@ -121,4 +135,5 @@ ls -l "${CONFIG_DIR}"
 [ -f "${CONFIG_DIR}/u-boot-armhf-zerow.bin" ]
 check_u_boot
 check_boot
+check_not_firmware
 umount_image
