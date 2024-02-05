@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::Parser;
-use rugpi_common::{img_stream::ImgStream, Anyhow};
+use rugpi_common::{img_stream::ImgStream, maybe_compressed::MaybeCompressed, Anyhow};
 
 /// Extract partitions from an image stream.
 #[derive(Debug, Parser)]
@@ -23,7 +23,7 @@ fn main() -> Anyhow<()> {
     } else {
         Box::new(fs::File::open(args.image)?)
     };
-    let mut stream = ImgStream::new(reader)?;
+    let mut stream = ImgStream::new(MaybeCompressed::new(reader)?)?;
     let mut partition_idx = 0;
     while let Some(mut partition) = stream.next_partition()? {
         println!("{partition_idx}  {}", partition.entry());

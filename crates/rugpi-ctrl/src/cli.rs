@@ -16,6 +16,7 @@ use rugpi_common::{
     },
     img_stream::ImgStream,
     loop_dev::LoopDevice,
+    maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
         devices::SD_CARD, get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions,
@@ -220,7 +221,7 @@ fn install_update_stream(image: &String) -> Anyhow<()> {
     println!("Copying partitions...");
     let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
     let system_label = format!("system-{}", spare_partitions.as_str());
-    let mut img_stream = ImgStream::new(reader)?;
+    let mut img_stream = ImgStream::new(MaybeCompressed::new(reader)?)?;
     let mut partition_idx = 0;
     while let Some(mut partition) = img_stream.next_partition()? {
         let partition_name = match partition_idx {
