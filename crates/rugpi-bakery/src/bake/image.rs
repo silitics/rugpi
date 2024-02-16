@@ -23,6 +23,9 @@ use crate::{
 pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let size = calculate_image_size(src)?;
     fs::remove_file(image).ok();
+    if let Some(parent) = image.parent() {
+        fs::create_dir_all(parent).ok();
+    }
     info!("creating image (size: {} bytes)", size);
     run!(["fallocate", "-l", "{size}", image])?;
     sfdisk_apply_layout(image, sfdisk_image_layout())?;
