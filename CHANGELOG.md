@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.2
+
+- Create directories when baking images.
+- Ignore `.DS_Store` directories/files.
+
 ## Version 0.6.1
 
 - Transparent decompression of XZ-compressed images.
