@@ -146,7 +146,8 @@ new_idx_type! {
     pub LayerIdx
 }
 
-/// Indicates whether the given path should be ignored when scanning for recipes and layers.
+/// Indicates whether the given path should be ignored when scanning for recipes and
+/// layers.
 fn should_ignore_path(path: &Path) -> bool {
     let Some(file_name) = path.file_name() else {
         return false;
