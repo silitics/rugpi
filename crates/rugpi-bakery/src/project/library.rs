@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, ops::Deref, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs, ops::Deref, path::Path, str::FromStr, sync::Arc};
 
 use rugpi_common::Anyhow;
 
@@ -38,6 +38,10 @@ impl Library {
                     if recipes_dir.is_dir() {
                         for entry in fs::read_dir(repository.source.dir.join("recipes"))? {
                             let entry = entry?;
+                            let path = entry.path();
+                            if !path.is_dir() || should_ignore_path(&path) {
+                                continue;
+                            }
                             let recipe = loader.load(&entry.path())?;
                             let recipe_idx = recipes.push(Arc::new(recipe));
                             table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
@@ -61,6 +65,9 @@ impl Library {
                     for entry in fs::read_dir(layers_dir)? {
                         let entry = entry?;
                         let path = entry.path();
+                        if !path.is_file() || should_ignore_path(&path) {
+                            continue;
+                        }
                         let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
                         let mut arch = None;
                         if let Some((layer_name, arch_str)) = name.split_once('.') {
@@ -137,4 +144,12 @@ new_idx_type! {
 new_idx_type! {
     /// Uniquely identifies a layer in [`Library`].
     pub LayerIdx
+}
+
+/// Indicates whether the given path should be ignored when scanning for recipes and layers.
+fn should_ignore_path(path: &Path) -> bool {
+    let Some(file_name) = path.file_name() else {
+        return false;
+    };
+    matches!(&*file_name.to_string_lossy(), ".DS_Store")
 }
