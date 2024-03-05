@@ -39,11 +39,7 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
     let root_dir_path = root_dir.path();
     {
         let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
-        let mut boot_dir = root_dir_path.join("boot");
-        let boot_firmware_dir = boot_dir.join("firmware");
-        if boot_firmware_dir.exists() {
-            boot_dir = boot_firmware_dir;
-        }
+        let boot_dir = root_dir_path.join("boot");
         fs::create_dir_all(&boot_dir)?;
         let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
         let config_dir = tempdir()?;

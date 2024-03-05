@@ -14,8 +14,7 @@ use url::Url;
 
 use crate::utils::prelude::*;
 
-pub fn download(url: &str) -> Anyhow<PathBuf> {
-    let url = url.parse::<Url>()?;
+pub fn download(url: &Url) -> Anyhow<PathBuf> {
     let Some(file_name) = url.path_segments().and_then(|segments| segments.last()) else {
         anyhow::bail!("unable to obtain file name from URL");
     };
