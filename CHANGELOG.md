@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.3
+
+- Allow local `.tar` files to be used as a layer.
+- Patch `/etc/fstab` instead of overwriting it.
+
 ## Version 0.6.2
 
 - Create directories when baking images.
