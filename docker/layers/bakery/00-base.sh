@@ -7,12 +7,13 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get -y update
 
 apt-get -y install \
+    btrfs-progs \
     curl \
     dosfstools \
-    btrfs-progs \
     fdisk \
     file \
     git \
+    python3 \
     wget \
     xz-utils \
     zip \
