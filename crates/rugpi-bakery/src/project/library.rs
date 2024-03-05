@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, ops::Deref, path::Path, str::FromStr, sync::Arc};
+use std::{collections::HashMap, ffi::OsStr, fs, ops::Deref, path::Path, str::FromStr, sync::Arc};
 
 use rugpi_common::Anyhow;
 
@@ -66,6 +66,9 @@ impl Library {
                         let entry = entry?;
                         let path = entry.path();
                         if !path.is_file() || should_ignore_path(&path) {
+                            continue;
+                        }
+                        if path.extension() != Some(OsStr::new("toml")) {
                             continue;
                         }
                         let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
