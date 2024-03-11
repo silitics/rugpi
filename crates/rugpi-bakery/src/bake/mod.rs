@@ -111,6 +111,14 @@ fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> 
         }
         image_path = decompressed_image_path;
     }
+    if image_path.extension() == Some("gz".as_ref()) {
+        let decompressed_image_path = image_path.with_extension("");
+        if !decompressed_image_path.is_file() {
+            info!("decompressing GZ image");
+            run!(["gzip", "-d", "-k", image_path])?;
+        }
+        image_path = decompressed_image_path;
+    }
     if let Some(parent) = layer_path.parent() {
         if !parent.exists() {
             fs::create_dir_all(parent)?;
