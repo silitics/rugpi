@@ -23,7 +23,8 @@ allow = [
     "Unicode-DFS-2016",
     "MPL-2.0",
     "ISC",
-    "OpenSSL"
+    "OpenSSL",
+    "0BSD",
 ]
 copyleft = "deny"
 allow-osi-fsf-free = "neither"
