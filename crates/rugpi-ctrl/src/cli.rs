@@ -143,8 +143,27 @@ pub fn main() -> Anyhow<()> {
                 reboot(*spare)?;
             }
         },
+        Command::Unstable(command) => match command {
+            UnstableCommand::Tryboot => reboot_syscall(true),
+        },
     }
     Ok(())
+}
+
+/// Directly issue a reboot system call.
+///
+/// This is required for triggering `tryboot` where the `reboot` binary does not
+/// support passing arguments to the system call, e.g., on Alpine Linux.
+fn reboot_syscall(spare: bool) {
+    unsafe {
+        let _ = linux_syscall::syscall!(
+            linux_syscall::SYS_reboot,
+            0xfee1dead as isize,
+            0x28121969 as isize,
+            0xa1b2c3d4 as isize,
+            if spare { "tryboot 0" } else { "" } as *const str as *const ()
+        );
+    };
 }
 
 pub fn reboot(spare: bool) -> Anyhow<()> {
@@ -299,6 +318,9 @@ pub enum Command {
     /// Manage the system.
     #[clap(subcommand)]
     System(SystemCommand),
+    /// Unstable experimental commands.
+    #[clap(subcommand)]
+    Unstable(UnstableCommand),
 }
 
 #[derive(Debug, Parser)]
@@ -345,4 +367,10 @@ pub enum SystemCommand {
         #[clap(long)]
         spare: bool,
     },
+}
+
+#[derive(Debug, Parser)]
+pub enum UnstableCommand {
+    /// Directly reboot with tryboot using a syscall.
+    Tryboot,
 }
