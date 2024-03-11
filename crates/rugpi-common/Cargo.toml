@@ -14,6 +14,7 @@ crc32fast = "1.3.2"
 indoc = "2.0.3"
 serde.workspace = true
 thiserror = "1.0.50"
+toml = "0.8.10"
 xscript.workspace = true
 xz2 = "0.1.7"
 

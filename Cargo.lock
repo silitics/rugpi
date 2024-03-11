@@ -1045,6 +1045,7 @@ dependencies = [
  "indoc",
  "serde",
  "thiserror",
+ "toml 0.8.10",
  "xscript 0.3.0",
  "xz2",
 ]

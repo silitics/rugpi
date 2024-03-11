@@ -4,6 +4,7 @@ use std::{fs, path::Path};
 
 use rugpi_common::{
     boot::{uboot::UBootEnv, BootFlow},
+    ctrl_config::load_config,
     loop_dev::LoopDevice,
     mount::Mounted,
     partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout, sfdisk_image_layout},
@@ -22,6 +23,7 @@ use crate::{
 
 pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let size = calculate_image_size(src)?;
+    let system_size = calculate_system_size(src)?;
     fs::remove_file(image).ok();
     if let Some(parent) = image.parent() {
         fs::create_dir_all(parent).ok();
@@ -53,6 +55,14 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
         };
 
         run!(["tar", "-x", "-f", src, "-C", root_dir_path])?;
+
+        info!("checking filesystem size");
+        let config = load_config(&root_dir_path.join("etc/rugpi/ctrl.toml"))?;
+        // This is an over approximation.
+        if config.system_size_bytes()? < system_size {
+            bail!("system size configured in `ctrl.toml` not large enough")
+        }
+
         info!("patching boot configuration");
         patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
         info!("patching `config.txt`");
@@ -83,6 +93,14 @@ struct BakeCtx<'p> {
     #[allow(unused)]
     mounted_root: Mounted,
     mounted_config: Mounted,
+}
+
+fn calculate_system_size(archive: &Path) -> Anyhow<u64> {
+    let archive_bytes = fs::metadata(archive)?.len();
+    let total_bytes = archive_bytes;
+    let total_blocks = (total_bytes / 4096) + 1;
+    let actual_blocks = (1.2 * (total_blocks as f64)) as u64;
+    Ok(actual_blocks * 4096)
 }
 
 fn calculate_image_size(archive: &Path) -> Anyhow<u64> {

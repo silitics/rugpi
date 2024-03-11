@@ -2,6 +2,7 @@ use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 
 use anyhow::{bail, ensure};
 use rugpi_common::{
+    ctrl_config::{load_config, Config, Overlay},
     partitions::{
         devices::{SD_CARD, SD_PART_BOOT_A, SD_PART_CONFIG, SD_PART_DATA},
         get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
@@ -11,10 +12,7 @@ use rugpi_common::{
 };
 use xscript::{run, Run};
 
-use crate::{
-    config::{Config, Overlay},
-    state::{load_state_config, Persist, STATE_CONFIG_DIR},
-};
+use crate::state::{load_state_config, Persist, STATE_CONFIG_DIR};
 
 pub fn main() -> Anyhow<()> {
     ensure!(is_init_process(), "process must be the init process");
@@ -55,7 +53,7 @@ const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
 fn init() -> Anyhow<()> {
     println!(include_str!("../assets/BANNER.txt"));
-    let config = load_config()?;
+    let config = load_config(config_path())?;
 
     // 1️⃣ Mount essential filesystems.
     mount_essential_filesystems()?;
@@ -129,15 +127,6 @@ const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
 
 pub fn config_path() -> &'static Path {
     Path::new(CTRL_CONFIG_PATH)
-}
-
-/// Loads the Rugpi Ctrl configuration.
-fn load_config() -> Anyhow<Config> {
-    if config_path().exists() {
-        Ok(toml::from_str(&fs::read_to_string(config_path())?)?)
-    } else {
-        Ok(Config::default())
-    }
 }
 
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.

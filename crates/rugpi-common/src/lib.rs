@@ -5,6 +5,7 @@ use std::{fs, io, path::Path};
 use crate::boot::uboot::UBootEnv;
 
 pub mod boot;
+pub mod ctrl_config;
 pub mod img_stream;
 pub mod loop_dev;
 pub mod maybe_compressed;
