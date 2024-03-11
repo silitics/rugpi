@@ -158,9 +158,9 @@ fn reboot_syscall(spare: bool) {
     unsafe {
         let _ = linux_syscall::syscall!(
             linux_syscall::SYS_reboot,
-            0xfee1dead as isize,
-            0x28121969 as isize,
-            0xa1b2c3d4 as isize,
+            0xfee1dead as u64 as isize,
+            0x28121969 as u64 as isize,
+            0xa1b2c3d4 as u64 as isize,
             if spare { "tryboot 0" } else { "" } as *const str as *const ()
         );
     };
