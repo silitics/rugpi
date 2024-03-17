@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
                     "-t",
                     "ghcr.io/silitics/rugpi-bakery:dev",
                     "-f",
-                    "docker/Dockerfile.rugpi-bakery",
+                    "bakery/Dockerfile",
                     "."
                 ]
                 .with_stdout(Out::Inherit)

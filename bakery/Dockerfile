@@ -5,7 +5,7 @@
 #########################################################################################
 FROM debian:latest as build-env
 
-COPY docker/layers/build-env/00-base.sh /tmp/rugpi-docker/00-base.sh
+COPY bakery/layers/build-env/00-base.sh /tmp/rugpi-docker/00-base.sh
 RUN /tmp/rugpi-docker/00-base.sh
 
 # Install Rust toolchain.
@@ -14,13 +14,13 @@ ENV RUSTUP_HOME="/usr/local/rustup" \
     PATH="/usr/local/cargo/bin:${PATH}" \
     RUST_VERSION="1.76.0"
 
-COPY docker/layers/build-env/10-rust.sh /tmp/rugpi-docker/10-rust.sh
+COPY bakery/layers/build-env/10-rust.sh /tmp/rugpi-docker/10-rust.sh
 RUN /tmp/rugpi-docker/10-rust.sh
 
 # Install libraries and configure for cross compilation.
 ENV PKG_CONFIG_SYSROOT_DIR="/"
 
-COPY docker/layers/build-env/20-libs.sh /tmp/rugpi-docker/20-libs.sh
+COPY bakery/layers/build-env/20-libs.sh /tmp/rugpi-docker/20-libs.sh
 RUN /tmp/rugpi-docker/20-libs.sh
 
 ENV RUGPI_BUILD_ENV="true"
@@ -48,11 +48,11 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM build-env AS builder 
 
 COPY --from=planner /project/recipe.json recipe.json
-COPY docker/layers/builder/00-prepare.sh /tmp/rugpi-docker/00-prepare.sh
+COPY bakery/layers/builder/00-prepare.sh /tmp/rugpi-docker/00-prepare.sh
 RUN /tmp/rugpi-docker/00-prepare.sh
 
 COPY . .
-COPY docker/layers/builder/10-build.sh /tmp/rugpi-docker/10-build.sh
+COPY bakery/layers/builder/10-build.sh /tmp/rugpi-docker/10-build.sh
 RUN /tmp/rugpi-docker/10-build.sh
 
 
@@ -63,7 +63,7 @@ RUN /tmp/rugpi-docker/10-build.sh
 #########################################################################################
 FROM debian:latest AS bakery
 
-COPY docker/layers/bakery/00-base.sh /tmp/rugpi-docker/00-base.sh
+COPY bakery/layers/bakery/00-base.sh /tmp/rugpi-docker/00-base.sh
 RUN /tmp/rugpi-docker/00-base.sh
 
 RUN mkdir -p /usr/share/rugpi \
@@ -73,10 +73,10 @@ RUN mkdir -p /usr/share/rugpi \
     && mv rpi-eeprom-master rpi-eeprom \
     && rm -f rpi-eeprom-master.zip
 
-COPY repositories /usr/share/rugpi/repositories
+COPY bakery/repositories /usr/share/rugpi/repositories
 COPY boot /usr/share/rugpi/boot
 
-COPY docker/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh
+COPY bakery/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh
 RUN /tmp/rugpi-docker/10-setup.sh
 
 RUN mkdir -p /usr/share/rugpi/binaries/{arm64,armhf}
