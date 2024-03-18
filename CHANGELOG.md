@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.6.4
+
+- Allow `gz` compressed tarballs as base layer.
+- Check root filesystem size when building an image.
+- Ignore any files in the `layers` directory not ending with `.toml`.
+
 ## Version 0.6.3
 
 - Allow local `.tar` files to be used as a layer.
