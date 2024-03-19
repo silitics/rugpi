@@ -19,8 +19,8 @@ use rugpi_common::{
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
-        devices::SD_CARD, get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions,
-        mkfs_ext4, mkfs_vfat, PartitionSet,
+        get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions, mkfs_ext4,
+        mkfs_vfat, PartitionSet, Partitions,
     },
     patch_boot, Anyhow, DropGuard,
 };
@@ -31,6 +31,7 @@ use crate::overlay::overlay_dir;
 
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
+    let partitions = Partitions::load()?;
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {
@@ -60,7 +61,7 @@ pub fn main() -> Anyhow<()> {
                 keep_overlay,
                 stream,
             } => {
-                let hot_partitions = get_hot_partitions()?;
+                let hot_partitions = get_hot_partitions(&partitions)?;
                 let default_partitions = get_default_partitions()?;
                 let spare_partitions = default_partitions.flipped();
                 if hot_partitions != default_partitions {
@@ -72,9 +73,9 @@ pub fn main() -> Anyhow<()> {
                 }
 
                 if *stream {
-                    install_update_stream(image)?;
+                    install_update_stream(&partitions, image)?;
                 } else {
-                    install_update_cp(image)?;
+                    install_update_cp(&partitions, image)?;
                 }
 
                 if !*no_reboot {
@@ -86,7 +87,8 @@ pub fn main() -> Anyhow<()> {
             SystemCommand::Info => {
                 let boot_flow = get_boot_flow().context("loading boot flow")?;
                 println!("Boot Flow: {}", boot_flow.as_str());
-                let hot_partitions = get_hot_partitions().context("loading hot partitions")?;
+                let hot_partitions =
+                    get_hot_partitions(&partitions).context("loading hot partitions")?;
                 let default_partitions =
                     get_default_partitions().context("loading default partitions")?;
                 println!("Hot: {}", hot_partitions.as_str());
@@ -96,7 +98,7 @@ pub fn main() -> Anyhow<()> {
             }
             SystemCommand::Commit => {
                 let boot_flow = get_boot_flow()?;
-                let hot_partitions = get_hot_partitions()?;
+                let hot_partitions = get_hot_partitions(&partitions)?;
                 let default_partitions = get_default_partitions()?;
                 if hot_partitions != default_partitions {
                     run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
@@ -194,15 +196,15 @@ pub fn reboot(spare: bool) -> Anyhow<()> {
     Ok(())
 }
 
-fn install_update_cp(image: &String) -> Anyhow<()> {
+fn install_update_cp(partitions: &Partitions, image: &String) -> Anyhow<()> {
     let default_partitions = get_default_partitions()?;
     let spare_partitions = default_partitions.flipped();
     let loop_device = LoopDevice::attach(image)?;
     println!("Formatting partitions...");
     let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
     let system_label = format!("system-{}", spare_partitions.as_str());
-    mkfs_vfat(spare_partitions.boot_dev(), boot_label)?;
-    mkfs_ext4(spare_partitions.system_dev(), system_label)?;
+    mkfs_vfat(spare_partitions.boot_dev(partitions), boot_label)?;
+    mkfs_ext4(spare_partitions.system_dev(partitions), system_label)?;
     let temp_dir_image = tempdir()?;
     let temp_dir_image = temp_dir_image.path();
     let temp_dir_spare = tempdir()?;
@@ -210,16 +212,17 @@ fn install_update_cp(image: &String) -> Anyhow<()> {
     // 1️⃣ Copy `/`.
     {
         let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
-        let _mounted_spare = Mounted::mount(spare_partitions.system_dev(), temp_dir_spare)?;
+        let _mounted_spare =
+            Mounted::mount(spare_partitions.system_dev(partitions), temp_dir_spare)?;
         run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
     }
     // 2️⃣ Copy `/boot`.
     {
         let _mounted_image = Mounted::mount(loop_device.partition(2), temp_dir_image)?;
-        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
+        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(partitions), temp_dir_spare)?;
         run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
         // Patch cmdline.txt.
-        let disk_id = get_disk_id(SD_CARD)?;
+        let disk_id = get_disk_id(&partitions.parent_dev)?;
         let root = match spare_partitions {
             PartitionSet::A => format!("PARTUUID={disk_id}-05"),
             PartitionSet::B => format!("PARTUUID={disk_id}-06"),
@@ -229,7 +232,7 @@ fn install_update_cp(image: &String) -> Anyhow<()> {
     Ok(())
 }
 
-fn install_update_stream(image: &String) -> Anyhow<()> {
+fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> {
     let default_partitions = get_default_partitions()?;
     let spare_partitions = default_partitions.flipped();
     let reader: Box<dyn io::Read> = if image == "-" {
@@ -260,16 +263,24 @@ fn install_update_stream(image: &String) -> Anyhow<()> {
             1 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(spare_partitions.boot_dev())?,
+                    &mut fs::File::create(spare_partitions.boot_dev(partitions))?,
                 )?;
-                run!(["fatlabel", spare_partitions.boot_dev(), &boot_label])?;
+                run!([
+                    "fatlabel",
+                    spare_partitions.boot_dev(partitions),
+                    &boot_label
+                ])?;
             }
             3 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(spare_partitions.system_dev())?,
+                    &mut fs::File::create(spare_partitions.system_dev(partitions))?,
                 )?;
-                run!(["e2label", spare_partitions.system_dev(), &system_label])?;
+                run!([
+                    "e2label",
+                    spare_partitions.system_dev(partitions),
+                    &system_label
+                ])?;
             }
             _ => { /* Nothing to do! */ }
         }
@@ -282,8 +293,8 @@ fn install_update_stream(image: &String) -> Anyhow<()> {
 
     // Path `/boot`.
     {
-        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(), temp_dir_spare)?;
-        let disk_id = get_disk_id(SD_CARD)?;
+        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(partitions), temp_dir_spare)?;
+        let disk_id = get_disk_id(&partitions.parent_dev)?;
         let root = match spare_partitions {
             PartitionSet::A => format!("PARTUUID={disk_id}-05"),
             PartitionSet::B => format!("PARTUUID={disk_id}-06"),

@@ -4,9 +4,8 @@ use anyhow::{bail, ensure};
 use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay},
     partitions::{
-        devices::{SD_CARD, SD_PART_BOOT_A, SD_PART_CONFIG, SD_PART_DATA},
         get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
-        sfdisk_system_layout,
+        sfdisk_system_layout, Partitions, MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM,
     },
     patch_boot, Anyhow,
 };
@@ -58,21 +57,23 @@ fn init() -> Anyhow<()> {
     // 1️⃣ Mount essential filesystems.
     mount_essential_filesystems()?;
 
+    let partitions = Partitions::load()?;
+
     // 2️⃣ Initialize partitions during the first boot.
-    if !is_block_dev(SD_PART_DATA) {
-        initialize_partitions(&config)?;
+    if !is_block_dev(&partitions.data) {
+        initialize_partitions(&partitions, &config)?;
     }
 
     // 3️⃣ Check and mount the data partition.
-    run!([FSCK, "-y", SD_PART_DATA])?;
+    run!([FSCK, "-y", &partitions.data])?;
     fs::create_dir_all(MOUNT_POINT_DATA).ok();
-    run!([MOUNT, "-o", "noatime", SD_PART_DATA, MOUNT_POINT_DATA])?;
+    run!([MOUNT, "-o", "noatime", &partitions.data, MOUNT_POINT_DATA])?;
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
     run!([MOUNT, "--bind", "/", MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
-    run!([MOUNT, "-o", "ro", SD_PART_CONFIG, MOUNT_POINT_CONFIG])?;
+    run!([MOUNT, "-o", "ro", &partitions.config, MOUNT_POINT_CONFIG])?;
 
     // 6️⃣ Setup state in `/run/rugpi/state`.
     let state_profile = Path::new(DEFAULT_STATE_DIR);
@@ -85,7 +86,7 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "--bind", &state_profile, STATE_DIR])?;
 
     // 7️⃣ Setup the root filesystem overlay.
-    setup_root_overlay(&config, state_profile)?;
+    setup_root_overlay(&partitions, &config, state_profile)?;
 
     // 8️⃣ Setup the bind mounts for the persistent state.
     setup_persistent_state(state_profile)?;
@@ -96,10 +97,6 @@ fn init() -> Anyhow<()> {
 
     Ok(())
 }
-
-const MOUNT_POINT_SYSTEM: &str = "/run/rugpi/mounts/system";
-const MOUNT_POINT_DATA: &str = "/run/rugpi/mounts/data";
-const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
 
 const STATE_DIR: &str = "/run/rugpi/state";
 
@@ -131,28 +128,30 @@ pub fn config_path() -> &'static Path {
 
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
 fn mount_essential_filesystems() -> Anyhow<()> {
-    run!([MOUNT, "-t", "proc", "proc", "/proc"])?;
-    run!([MOUNT, "-t", "sysfs", "sys", "/sys"])?;
-    run!([MOUNT, "-t", "tmpfs", "tmp", "/run"])?;
+    // We ignore any errors. Errors likely mean that the filesystems have already been
+    // mounted.
+    run!([MOUNT, "-t", "proc", "proc", "/proc"]).ok();
+    run!([MOUNT, "-t", "sysfs", "sys", "/sys"]).ok();
+    run!([MOUNT, "-t", "tmpfs", "tmp", "/run"]).ok();
     Ok(())
 }
 
 /// Initializes the partitions and expands the partition table during the first boot.
-fn initialize_partitions(config: &Config) -> Anyhow<()> {
+fn initialize_partitions(partitions: &Partitions, config: &Config) -> Anyhow<()> {
     eprintln!("Creating system partitions... DO NOT TURN OFF!");
     let system_size = config.system_size();
 
     // 1️⃣ Apply the system layout to the SD card and reread the partition table.
-    sfdisk_apply_layout(SD_CARD, sfdisk_system_layout(system_size))?;
+    sfdisk_apply_layout(&partitions.parent_dev, sfdisk_system_layout(system_size))?;
 
     // 2️⃣ Patch the `cmdline.txt` with the new disk id.
-    let disk_id = get_disk_id(SD_CARD)?;
-    run!([MOUNT, SD_PART_BOOT_A, "/boot"])?;
+    let disk_id = get_disk_id(&partitions.parent_dev)?;
+    run!([MOUNT, &partitions.boot_a, "/boot"])?;
     patch_boot("/boot", format!("PARTUUID={disk_id}-05"))?;
     run!([UMOUNT, "/boot"])?;
 
     // 3️⃣ Create a file system on the data partition.
-    mkfs_ext4(SD_PART_DATA, "data")?;
+    mkfs_ext4(&partitions.data, "data")?;
 
     // 4️⃣ Make sure everything is written to disk.
     run!([SYNC])?;
@@ -161,14 +160,18 @@ fn initialize_partitions(config: &Config) -> Anyhow<()> {
 }
 
 /// Sets up the overlay.
-fn setup_root_overlay(config: &Config, state_profile: &Path) -> Anyhow<()> {
+fn setup_root_overlay(
+    partitions: &Partitions,
+    config: &Config,
+    state_profile: &Path,
+) -> Anyhow<()> {
     let overlay_state = state_profile.join("overlay");
     let force_persist = state_profile.join(".rugpi/force-persist-overlay").exists();
     if !force_persist && !matches!(config.overlay, Overlay::Persist) {
         fs::remove_dir_all(&overlay_state).ok();
     }
 
-    let hot_partitions = get_hot_partitions()?;
+    let hot_partitions = get_hot_partitions(partitions)?;
     let hot_overlay_state = overlay_state.join(hot_partitions.as_str());
     fs::create_dir_all(&hot_overlay_state).ok();
 
@@ -192,7 +195,7 @@ fn setup_root_overlay(config: &Config, state_profile: &Path) -> Anyhow<()> {
         MOUNT,
         "-o",
         "ro",
-        hot_partitions.boot_dev(),
+        hot_partitions.boot_dev(partitions),
         overlay_root_dir().join("boot")
     ])?;
     Ok(())

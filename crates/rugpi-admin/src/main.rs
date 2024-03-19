@@ -38,8 +38,11 @@ async fn main() {
 
 #[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
+    use rugpi_common::partitions::Partitions;
+
     tokio::task::spawn_blocking(|| {
-        let hot_partitions = get_hot_partitions().unwrap();
+        let partitions = Partitions::load().unwrap();
+        let hot_partitions = get_hot_partitions(&partitions).unwrap();
         let default_partitions = get_default_partitions().unwrap();
         Html(
             include_str!("../assets/index.html")

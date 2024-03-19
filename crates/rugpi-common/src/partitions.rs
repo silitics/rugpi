@@ -8,26 +8,58 @@ use std::{
 use anyhow::{anyhow, bail};
 use xscript::{read_str, run, Run};
 
-use self::devices::{SD_PART_SYSTEM_A, SD_PART_SYSTEM_B};
 use crate::{
     boot::{uboot::UBootEnv, BootFlow},
     Anyhow,
 };
 
-pub mod devices {
-    macro_rules! sd_card_dev_const {
-        ($name:ident, $part:literal) => {
-            pub const $name: &str = concat!("/dev/mmcblk0", $part);
-        };
-    }
+pub const MOUNT_POINT_SYSTEM: &str = "/run/rugpi/mounts/system";
+pub const MOUNT_POINT_DATA: &str = "/run/rugpi/mounts/data";
+pub const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
 
-    sd_card_dev_const!(SD_CARD, "");
-    sd_card_dev_const!(SD_PART_CONFIG, "p1");
-    sd_card_dev_const!(SD_PART_BOOT_A, "p2");
-    sd_card_dev_const!(SD_PART_BOOT_B, "p3");
-    sd_card_dev_const!(SD_PART_SYSTEM_A, "p5");
-    sd_card_dev_const!(SD_PART_SYSTEM_B, "p6");
-    sd_card_dev_const!(SD_PART_DATA, "p7");
+/// The partitions used by Rugpi.
+pub struct Partitions {
+    pub parent_dev: PathBuf,
+    pub config: PathBuf,
+    pub boot_a: PathBuf,
+    pub boot_b: PathBuf,
+    pub system_a: PathBuf,
+    pub system_b: PathBuf,
+    pub data: PathBuf,
+}
+
+/// The `findmnt` executable.
+const LSBLK: &str = "/usr/bin/lsblk";
+
+impl Partitions {
+    pub fn load() -> Anyhow<Self> {
+        let system_dev = if Path::new(MOUNT_POINT_SYSTEM).exists() {
+            find_dev(MOUNT_POINT_SYSTEM)?
+        } else {
+            find_dev("/")?
+        };
+        if !is_block_dev(&system_dev) {
+            bail!("system device {system_dev:?} is not a block device");
+        }
+        let parent_dev_name = read_str!([LSBLK, "-no", "PKNAME", system_dev])?;
+        let parent_dev_path = PathBuf::from(format!("/dev/{parent_dev_name}"));
+        if !is_block_dev(&parent_dev_path) {
+            bail!("system device parent {parent_dev_path:?} is not a block device");
+        }
+        let mut partition_dev_name = parent_dev_name.clone();
+        if parent_dev_name.ends_with(|c: char| c.is_ascii_digit()) {
+            partition_dev_name.push('p');
+        }
+        Ok(Self {
+            parent_dev: parent_dev_path,
+            config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
+            boot_a: PathBuf::from(format!("/dev/{partition_dev_name}2")),
+            boot_b: PathBuf::from(format!("/dev/{partition_dev_name}3")),
+            system_a: PathBuf::from(format!("/dev/{partition_dev_name}5")),
+            system_b: PathBuf::from(format!("/dev/{partition_dev_name}6")),
+            data: PathBuf::from(format!("/dev/{partition_dev_name}7")),
+        })
+    }
 }
 
 pub fn is_block_dev(dev: impl AsRef<Path>) -> bool {
@@ -57,12 +89,14 @@ pub fn system_dev() -> Anyhow<&'static Path> {
         .map_err(|error| anyhow!("error retrieving system device: {error}"))
 }
 
-pub fn get_hot_partitions() -> Anyhow<PartitionSet> {
-    let system_dev = &*system_dev()?.to_string_lossy();
-    match system_dev {
-        SD_PART_SYSTEM_A => Ok(PartitionSet::A),
-        SD_PART_SYSTEM_B => Ok(PartitionSet::B),
-        _ => bail!("unable to determine hot partition set, invalid device {system_dev}"),
+pub fn get_hot_partitions(partitions: &Partitions) -> Anyhow<PartitionSet> {
+    let system_dev = system_dev()?;
+    if system_dev == partitions.system_a {
+        Ok(PartitionSet::A)
+    } else if system_dev == partitions.system_b {
+        Ok(PartitionSet::B)
+    } else {
+        bail!("unable to determine hot partition set, invalid device {system_dev:?}")
     }
 }
 
@@ -117,8 +151,8 @@ pub fn get_default_partitions() -> Anyhow<PartitionSet> {
     bail!("Unable to determine default partition set.");
 }
 
-pub fn cold_partition_set() -> Anyhow<PartitionSet> {
-    Ok(get_hot_partitions()?.flipped())
+pub fn cold_partition_set(partitions: &Partitions) -> Anyhow<PartitionSet> {
+    Ok(get_hot_partitions(partitions)?.flipped())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -135,17 +169,17 @@ impl PartitionSet {
         }
     }
 
-    pub fn system_dev(self) -> &'static Path {
+    pub fn system_dev(self, partitions: &Partitions) -> &Path {
         match self {
-            PartitionSet::A => Path::new(devices::SD_PART_SYSTEM_A),
-            PartitionSet::B => Path::new(devices::SD_PART_SYSTEM_B),
+            PartitionSet::A => &partitions.system_a,
+            PartitionSet::B => &partitions.system_b,
         }
     }
 
-    pub fn boot_dev(self) -> &'static Path {
+    pub fn boot_dev(self, partitions: &Partitions) -> &Path {
         match self {
-            PartitionSet::A => Path::new(devices::SD_PART_BOOT_A),
-            PartitionSet::B => Path::new(devices::SD_PART_BOOT_B),
+            PartitionSet::A => &partitions.boot_a,
+            PartitionSet::B => &partitions.boot_b,
         }
     }
 
