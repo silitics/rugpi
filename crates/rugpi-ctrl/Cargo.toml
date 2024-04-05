@@ -11,7 +11,7 @@ homepage.workspace = true
 [dependencies]
 clap.workspace = true
 serde.workspace = true
-nix = "0.26.2"
+nix.workspace = true
 anyhow.workspace = true
 xscript.workspace = true
 indoc = "2.0.2"

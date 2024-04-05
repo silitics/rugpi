@@ -12,6 +12,7 @@ homepage.workspace = true
 anyhow.workspace = true
 crc32fast = "1.3.2"
 indoc = "2.0.3"
+nix.workspace = true
 serde.workspace = true
 thiserror = "1.0.50"
 toml = "0.8.10"
