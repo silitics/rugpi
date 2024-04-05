@@ -13,4 +13,5 @@ homepage = "https://oss.silitics.com/rugpi/"
 anyhow = "1.0.71"
 clap = { version = "4.3", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
+nix = { version = "0.28", features = ["ioctl", "fs", "mount", "process"] }
 xscript = "0.3.0"

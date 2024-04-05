@@ -83,7 +83,13 @@ pub fn find_dev(path: impl AsRef<Path>) -> Anyhow<PathBuf> {
 pub fn system_dev() -> Anyhow<&'static Path> {
     static SYSTEM_DEV: OnceLock<Anyhow<PathBuf>> = OnceLock::new();
     SYSTEM_DEV
-        .get_or_init(|| find_dev("/run/rugpi/mounts/system"))
+        .get_or_init(|| {
+            if Path::new(MOUNT_POINT_SYSTEM).exists() {
+                find_dev(MOUNT_POINT_SYSTEM)
+            } else {
+                find_dev("/")
+            }
+        })
         .as_ref()
         .map(AsRef::as_ref)
         .map_err(|error| anyhow!("error retrieving system device: {error}"))

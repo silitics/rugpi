@@ -1,11 +1,13 @@
 use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 
 use anyhow::{bail, ensure};
+use nix::mount::MntFlags;
 use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay},
     partitions::{
         get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
-        sfdisk_system_layout, Partitions, MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM,
+        sfdisk_system_layout, system_dev, Partitions, MOUNT_POINT_CONFIG, MOUNT_POINT_DATA,
+        MOUNT_POINT_SYSTEM,
     },
     patch_boot, Anyhow,
 };
@@ -70,8 +72,9 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "-o", "noatime", &partitions.data, MOUNT_POINT_DATA])?;
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
+    let system_dev = system_dev()?;
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
-    run!([MOUNT, "--bind", "/", MOUNT_POINT_SYSTEM])?;
+    run!([MOUNT, "-o", "ro", system_dev, MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([MOUNT, "-o", "ro", &partitions.config, MOUNT_POINT_CONFIG])?;
 
@@ -187,7 +190,7 @@ fn setup_root_overlay(
         "overlay",
         "overlay",
         "-o",
-        "noatime,lowerdir=/,upperdir={hot_overlay_state},workdir={OVERLAY_WORK_DIR}",
+        "noatime,lowerdir={MOUNT_POINT_SYSTEM},upperdir={hot_overlay_state},workdir={OVERLAY_WORK_DIR}",
         OVERLAY_ROOT_DIR
     ])?;
     run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
@@ -310,14 +313,20 @@ fn restore_machine_id() -> Anyhow<()> {
     Ok(())
 }
 
-/// The `chroot` executable.
-const CHROOT: &str = "/usr/sbin/chroot";
-
-/// Changes the root directory and hands off to Systemd.
+/// Changes the root directory and hands off to the system init process.
+///
+/// We follow the example from the manpage of the `pivot_root` system call here.
+///
+/// We are not using `chroot` as this lead to problems with Docker.
 fn exec_chroot_init() -> Anyhow<()> {
-    let chroot_prog = &CString::new(CHROOT).unwrap();
-    let new_root = &CString::new(OVERLAY_ROOT_DIR).unwrap();
+    println!("Changing current working directory to overlay root directory.");
+    nix::unistd::chdir(OVERLAY_ROOT_DIR)?;
+    println!("Pivoting root mount point to current working directory.");
+    nix::unistd::pivot_root(".", ".")?;
+    println!("Unmounting the previous root filesystem.");
+    nix::mount::umount2(".", MntFlags::MNT_DETACH)?;
+    println!("Starting system init process.");
     let systemd_init = &CString::new("/sbin/init").unwrap();
-    nix::unistd::execv(chroot_prog, &[chroot_prog, new_root, systemd_init])?;
+    nix::unistd::execv(systemd_init, &[systemd_init])?;
     Ok(())
 }
