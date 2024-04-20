@@ -27,7 +27,10 @@ use rugpi_common::{
 use tempfile::tempdir;
 use xscript::{run, Run};
 
-use crate::overlay::overlay_dir;
+use crate::{
+    overlay::overlay_dir,
+    utils::{clear_flag, reboot, reboot_syscall, set_flag, DEFERRED_SPARE_REBOOT_FLAG},
+};
 
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
@@ -58,9 +61,14 @@ pub fn main() -> Anyhow<()> {
             UpdateCommand::Install {
                 image,
                 no_reboot,
+                reboot: reboot_type,
                 keep_overlay,
                 stream,
             } => {
+                if reboot_type.is_some() && *no_reboot {
+                    bail!("--no-reboot and --reboot are incompatible");
+                }
+
                 let hot_partitions = get_hot_partitions(&partitions)?;
                 let default_partitions = get_default_partitions()?;
                 let spare_partitions = default_partitions.flipped();
@@ -78,8 +86,18 @@ pub fn main() -> Anyhow<()> {
                     install_update_cp(&partitions, image)?;
                 }
 
-                if !*no_reboot {
-                    reboot(true)?;
+                let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
+                    UpdateRebootType::No
+                } else {
+                    UpdateRebootType::Yes
+                });
+
+                match reboot_type {
+                    UpdateRebootType::Yes => reboot(true)?,
+                    UpdateRebootType::No => { /* nothing to do */ }
+                    UpdateRebootType::Deferred => {
+                        set_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
+                    }
                 }
             }
         },
@@ -146,53 +164,13 @@ pub fn main() -> Anyhow<()> {
             }
         },
         Command::Unstable(command) => match command {
-            UnstableCommand::Tryboot => reboot_syscall(true),
+            UnstableCommand::Tryboot => reboot_syscall(true)?,
+            UnstableCommand::SetDeferredSpareReboot { value } => match value {
+                Boolean::True => set_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
+                Boolean::False => clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
+            },
         },
     }
-    Ok(())
-}
-
-/// Directly issue a reboot system call.
-///
-/// This is required for triggering `tryboot` where the `reboot` binary does not
-/// support passing arguments to the system call, e.g., on Alpine Linux.
-fn reboot_syscall(spare: bool) {
-    unsafe {
-        let _ = linux_syscall::syscall!(
-            linux_syscall::SYS_reboot,
-            0xfee1dead_u64 as isize,
-            0x28121969_u64 as isize,
-            0xa1b2c3d4_u64 as isize,
-            if spare { "tryboot 0" } else { "" } as *const str as *const ()
-        );
-    };
-}
-
-pub fn reboot(spare: bool) -> Anyhow<()> {
-    match get_boot_flow()? {
-        BootFlow::Tryboot => {
-            if spare {
-                run!(["reboot", "0 tryboot"])?;
-            } else {
-                run!(["reboot"])?;
-            }
-        }
-        BootFlow::UBoot => {
-            if spare {
-                let mut boot_spare_env = UBootEnv::new();
-                boot_spare_env.set("boot_spare", "1");
-                run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
-                let _remount_guard = DropGuard::new(|| {
-                    run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
-                });
-                // It is safe to directly write to the file here. If the file is corrupt,
-                // the system will simply boot from the default partition set.
-                boot_spare_env.save("/run/rugpi/mounts/config/boot_spare.env")?;
-            }
-            run!(["reboot"])?;
-        }
-    }
-
     Ok(())
 }
 
@@ -364,7 +342,16 @@ pub enum UpdateCommand {
         /// Use the experimental streaming update mechanism.
         #[clap(long)]
         stream: bool,
+        #[clap(long)]
+        reboot: Option<UpdateRebootType>,
     },
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum UpdateRebootType {
+    Yes,
+    No,
+    Deferred,
 }
 
 #[derive(Debug, Parser)]
@@ -384,4 +371,6 @@ pub enum SystemCommand {
 pub enum UnstableCommand {
     /// Directly reboot with tryboot using a syscall.
     Tryboot,
+    /// Set deferred spare reboot flag.
+    SetDeferredSpareReboot { value: Boolean },
 }

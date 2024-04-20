@@ -18,4 +18,3 @@ indoc = "2.0.2"
 toml = "0.7.6"
 rugpi-common = { path = "../rugpi-common" }
 tempfile = "3.8.1"
-linux-syscall = "1.0.0"

@@ -5,15 +5,18 @@ use nix::mount::MntFlags;
 use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay},
     partitions::{
-        get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, sfdisk_apply_layout,
-        sfdisk_system_layout, system_dev, Partitions, MOUNT_POINT_CONFIG, MOUNT_POINT_DATA,
-        MOUNT_POINT_SYSTEM,
+        get_default_partitions, get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4,
+        sfdisk_apply_layout, sfdisk_system_layout, system_dev, Partitions, MOUNT_POINT_CONFIG,
+        MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM,
     },
     patch_boot, Anyhow,
 };
 use xscript::{run, Run};
 
-use crate::state::{load_state_config, Persist, STATE_CONFIG_DIR};
+use crate::{
+    state::{load_state_config, Persist, STATE_CONFIG_DIR},
+    utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG},
+};
 
 pub fn main() -> Anyhow<()> {
     ensure!(is_init_process(), "process must be the init process");
@@ -30,11 +33,6 @@ pub fn main() -> Anyhow<()> {
     eprintln!("waiting for 30 seconds...");
     thread::sleep(Duration::from_secs(30));
     Ok(())
-}
-
-/// Indicates whether the process is the init process.
-pub fn is_init_process() -> bool {
-    std::process::id() == 1
 }
 
 /// The `cp` executable.
@@ -77,6 +75,11 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "-o", "ro", system_dev, MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([MOUNT, "-o", "ro", &partitions.config, MOUNT_POINT_CONFIG])?;
+
+    if let Err(error) = check_deferred_spare_reboot(&partitions) {
+        println!("Warning: Error executing deferred reboot.");
+        println!("{:?}", error);
+    }
 
     // 6️⃣ Setup state in `/run/rugpi/state`.
     let state_profile = Path::new(DEFAULT_STATE_DIR);
@@ -328,5 +331,22 @@ fn exec_chroot_init() -> Anyhow<()> {
     println!("Starting system init process.");
     let systemd_init = &CString::new("/sbin/init").unwrap();
     nix::unistd::execv(systemd_init, &[systemd_init])?;
+    Ok(())
+}
+
+/// Reboot the system to the spare partitions if the deferred spare reboot flag is set.
+fn check_deferred_spare_reboot(partitions: &Partitions) -> Anyhow<()> {
+    if is_flag_set(DEFERRED_SPARE_REBOOT_FLAG) {
+        println!("Executing deferred reboot to spare partitions.");
+        // Remove file and make sure that changes are synced to disk.
+        clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
+        nix::unistd::sync();
+        let default_partitions = get_default_partitions()?;
+        let hot_partitions = get_hot_partitions(partitions)?;
+        if default_partitions == hot_partitions {
+            // Reboot to the spare partitions.
+            reboot(true)?;
+        }
+    }
     Ok(())
 }
