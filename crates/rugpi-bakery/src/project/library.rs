@@ -24,6 +24,7 @@ pub struct Library {
 }
 
 impl Library {
+    #[allow(clippy::assigning_clones)]
     pub fn load(repositories: Arc<ProjectRepositories>) -> Anyhow<Self> {
         let mut recipes = IdxVec::new();
         let tables = IdxVec::<RepositoryIdx, _>::from_vec(

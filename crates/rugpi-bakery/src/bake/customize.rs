@@ -154,7 +154,7 @@ fn recipe_schedule(
 fn apply_recipes(
     project: &Project,
     arch: Architecture,
-    jobs: &Vec<RecipeJob>,
+    jobs: &[RecipeJob],
     root_dir_path: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
