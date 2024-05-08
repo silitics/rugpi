@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.6.6
+
+- Allow for deferred reboots into the spare partition set.
+- Make streaming updates the default .
+
+## Version 0.6.5
+
+- Allow booting from external USB devices.
+- Fix issues with Docker due to the usage of `chroot`.
+
 ## Version 0.6.4
 
 - Allow `gz` compressed tarballs as base layer.
