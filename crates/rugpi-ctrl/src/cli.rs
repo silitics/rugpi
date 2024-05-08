@@ -15,12 +15,11 @@ use rugpi_common::{
         BootFlow,
     },
     img_stream::ImgStream,
-    loop_dev::LoopDevice,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
-        get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions, mkfs_ext4,
-        mkfs_vfat, PartitionSet, Partitions,
+        get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions, PartitionSet,
+        Partitions,
     },
     patch_boot, Anyhow, DropGuard,
 };
@@ -81,10 +80,14 @@ pub fn main() -> Anyhow<()> {
                 }
 
                 if *stream {
-                    install_update_stream(&partitions, image)?;
-                } else {
-                    install_update_cp(&partitions, image)?;
+                    indoc::eprintdoc! {"
+                        **Deprecation Warning:**
+                        The option `--stream` has been deprecated and will be removed in future versions.
+                        Streaming updates are the default now.
+                    "}
                 }
+
+                install_update_stream(&partitions, image)?;
 
                 let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
                     UpdateRebootType::No
@@ -170,42 +173,6 @@ pub fn main() -> Anyhow<()> {
                 Boolean::False => clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
             },
         },
-    }
-    Ok(())
-}
-
-fn install_update_cp(partitions: &Partitions, image: &String) -> Anyhow<()> {
-    let default_partitions = get_default_partitions()?;
-    let spare_partitions = default_partitions.flipped();
-    let loop_device = LoopDevice::attach(image)?;
-    println!("Formatting partitions...");
-    let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
-    let system_label = format!("system-{}", spare_partitions.as_str());
-    mkfs_vfat(spare_partitions.boot_dev(partitions), boot_label)?;
-    mkfs_ext4(spare_partitions.system_dev(partitions), system_label)?;
-    let temp_dir_image = tempdir()?;
-    let temp_dir_image = temp_dir_image.path();
-    let temp_dir_spare = tempdir()?;
-    let temp_dir_spare = temp_dir_spare.path();
-    // 1️⃣ Copy `/`.
-    {
-        let _mounted_image = Mounted::mount(loop_device.partition(5), temp_dir_image)?;
-        let _mounted_spare =
-            Mounted::mount(spare_partitions.system_dev(partitions), temp_dir_spare)?;
-        run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
-    }
-    // 2️⃣ Copy `/boot`.
-    {
-        let _mounted_image = Mounted::mount(loop_device.partition(2), temp_dir_image)?;
-        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(partitions), temp_dir_spare)?;
-        run!(["cp", "-arTp", temp_dir_image, temp_dir_spare])?;
-        // Patch cmdline.txt.
-        let disk_id = get_disk_id(&partitions.parent_dev)?;
-        let root = match spare_partitions {
-            PartitionSet::A => format!("PARTUUID={disk_id}-05"),
-            PartitionSet::B => format!("PARTUUID={disk_id}-06"),
-        };
-        patch_boot(temp_dir_spare, root)?;
     }
     Ok(())
 }
