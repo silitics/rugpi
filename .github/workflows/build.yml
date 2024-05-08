@@ -1,0 +1,236 @@
+name: Build
+
+on:
+  schedule:
+    # This builds the nightly version of Rugpi.
+    - cron: '0 0 * * *'
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: "ghcr.io/silitics/rugpi-bakery"
+
+jobs:
+  build_binaries:
+    name: "Build Binaries (${{ matrix.target }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-unknown-linux-musl
+          - armv7-unknown-linux-musleabihf
+          - arm-unknown-linux-musleabihf
+          - arm-unknown-linux-musleabi
+          - x86_64-unknown-linux-musl
+          - i686-unknown-linux-musl
+          - riscv64gc-unknown-linux-gnu
+    env:
+      CROSS_VERSION: "0.2.5"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Cross
+        run: |
+          wget "https://github.com/cross-rs/cross/releases/download/v${{ env.CROSS_VERSION }}/cross-x86_64-unknown-linux-musl.tar.gz"
+          tar -xvf cross-x86_64-unknown-linux-musl.tar.gz
+      - name: Build Binaries
+        run: |
+          ./cross build --release --target ${{ matrix.target }}
+      - name: Create Artifact
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -cf ../../../${{ matrix.target }}.tar rugpi-*[!d]
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.target }}
+          path: ${{ matrix.target }}.tar
+          if-no-files-found: error
+
+  bakery_metadata:
+    name: Bakery Image Metedata
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.meta.outputs.labels }}
+      json: ${{ steps.meta.outputs.json }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          # Include this once we released version 1.0.0.
+          # type=semver,pattern=v{{major}}
+          tags: |
+            type=schedule,pattern=nightly
+            type=schedule,pattern=nightly-{{date 'YYYYMMDD'}}
+            type=semver,pattern=v{{major}}.{{minor}}.{{patch}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=git-
+          labels: |
+            org.opencontainers.image.title=Rugpi Bakery
+            org.opencontainers.image.vendor=Silitics GmbH
+  
+  build_bakery_images:
+    name: "Build Bakery Image (${{ matrix.arch }})"
+    runs-on: ubuntu-latest
+    needs:
+      - bakery_metadata
+      - build_binaries
+    strategy:
+      matrix:
+        arch:
+          - amd64
+          - arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Download Binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          path: build/binaries
+          merge-multiple: true
+      - name: Extract Binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build/binaries
+          for tar_file in *.tar; do
+            if [ -f "${tar_file}" ]; then
+              target_name="${tar_file%.tar}"
+              mkdir "$target_name"
+              tar -xf "$tar_file" -C "$target_name"
+              rm -f "$tar_file"
+            fi
+          done
+          find .
+      - name: Set up QEMU
+        if: ${{ matrix.arch != 'amd64' }}
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push Image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: bakery/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ needs.bakery_metadata.outputs.labels }}
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            BUILDTIME=${{ fromJSON(needs.bakery_metadata.outputs.json).labels['org.opencontainers.image.created'] }}
+            VERSION=${{ fromJSON(needs.bakery_metadata.outputs.json).labels['org.opencontainers.image.version'] }}
+            REVISION=${{ fromJSON(needs.bakery_metadata.outputs.json).labels['org.opencontainers.image.revision'] }}
+      - name: Export Digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload Digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: bakery-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 2
+
+  build_bakery_image:
+    name: Build and Push Bakery Image
+    runs-on: ubuntu-latest
+    needs:
+      - bakery_metadata
+      - build_bakery_images
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - name: Download Digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bakery-digest-*
+          path: /tmp/digests
+          merge-multiple: true
+      - name: List Digests
+        run: |
+          ls -l /tmp/digests
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Manifest List and Push
+        shell: bash
+        working-directory: /tmp/digests
+        env:
+          # We use an environment variable here because the shell knows how to properly escape JSON.
+          METADATA_JSON: ${{ needs.bakery_metadata.outputs.json }}
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$METADATA_JSON") \
+            --annotation "index:org.opencontainers.image.title=Rugpi Bakery" \
+            --annotation "index:org.opencontainers.image.vendor=Silitics GmbH" \
+            $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
+      - name: Inspect Image
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.bakery_metadata.outputs.version }}
+      - name: Extract Digest
+        id: digest
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.bakery_metadata.outputs.version }} \
+            --format "{{json .Manifest}}" \
+            | jq '.digest' > digest.txt
+          DIGEST=$(cat digest.txt)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+  
+  # attest_bakery_image:
+  #   name: Attest Bakery Image
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - build_bakery_image
+  #   permissions:
+  #     id-token: write
+  #     packages: write
+  #     contents: read
+  #     attestations: write
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Attest Image
+  #       uses: actions/attest-build-provenance@v1
+  #       id: attest
+  #       with:
+  #         subject-name: ${{ env.IMAGE_NAME }}
+  #         subject-digest: ${{ needs.build_bakery_image.outputs.digest }}
+  #         push-to-registry: true

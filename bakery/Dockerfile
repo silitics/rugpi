@@ -63,6 +63,8 @@ RUN /tmp/rugpi-docker/10-build.sh
 #########################################################################################
 FROM debian:latest AS bakery
 
+ARG TARGETPLATFORM
+
 COPY bakery/layers/bakery/00-base.sh /tmp/rugpi-docker/00-base.sh
 RUN /tmp/rugpi-docker/00-base.sh
 
@@ -79,13 +81,17 @@ COPY boot /usr/share/rugpi/boot
 COPY bakery/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh
 RUN /tmp/rugpi-docker/10-setup.sh
 
-RUN mkdir -p /usr/share/rugpi/binaries/{arm64,armhf}
-COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-ctrl /usr/share/rugpi/binaries/arm64/
-COPY --from=builder /project/target/aarch64-unknown-linux-musl/release/rugpi-admin /usr/share/rugpi/binaries/arm64/
-COPY --from=builder /project/target/arm-unknown-linux-musleabihf/release/rugpi-ctrl /usr/share/rugpi/binaries/armhf/
-COPY --from=builder /project/target/arm-unknown-linux-musleabihf/release/rugpi-admin /usr/share/rugpi/binaries/armhf/
+COPY build/binaries /usr/share/rugpi/binaries
 
 WORKDIR /project
 
-COPY --from=builder /project/target/release/rugpi-bakery /usr/local/bin
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+        cp /usr/share/rugpi/binaries/x86_64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        cp /usr/share/rugpi/binaries/aarch64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
+    else  \
+        echo "Unsupported platform ${TARGETPLATFORM}."; \
+        exit 1; \
+    fi
+
 ENTRYPOINT ["/usr/local/bin/rugpi-bakery"]

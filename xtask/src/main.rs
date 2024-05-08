@@ -13,6 +13,7 @@ pub struct Args {
 pub enum Task {
     Doc,
     BuildImage,
+    BuildBinaries { target: Option<String> },
 }
 
 pub fn project_path() -> PathBuf {
@@ -48,6 +49,35 @@ fn main() -> anyhow::Result<()> {
                     .with_stdout(Out::Inherit)
                     .with_stderr(Out::Inherit)
             )?;
+        }
+        Task::BuildBinaries { target } => {
+            let target = target.as_deref().unwrap_or("aarch64-unknown-linux-musl");
+            run!(
+                env,
+                ["cargo", "build", "--release", "--target", target]
+                    .with_stdout(Out::Inherit)
+                    .with_stderr(Out::Inherit)
+            )?;
+            let binaries_dir = project_path().join("build/binaries").join(target);
+            if binaries_dir.exists() {
+                std::fs::remove_dir_all(&binaries_dir)?;
+            }
+            std::fs::create_dir_all(&binaries_dir)?;
+            let target_dir = project_path().join("target").join(target).join("release");
+            for entry in std::fs::read_dir(&target_dir)? {
+                let entry = entry?;
+                let file_type = entry.file_type()?;
+                if !file_type.is_file() {
+                    continue;
+                }
+                let Ok(file_name) = entry.file_name().into_string() else {
+                    continue;
+                };
+                if !file_name.starts_with("rugpi-") || file_name.ends_with(".d") {
+                    continue;
+                }
+                std::fs::hard_link(entry.path(), binaries_dir.join(file_name))?;
+            }
         }
     }
     Ok(())
