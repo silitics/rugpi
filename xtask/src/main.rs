@@ -22,6 +22,14 @@ pub fn project_path() -> PathBuf {
     path
 }
 
+pub fn get_target_dir() -> PathBuf {
+    if let Ok(target_dir) = std::env::var("CARGO_TARGET_DIR") {
+        target_dir.into()
+    } else {
+        project_path().join("target")
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let env = LocalEnv::new(project_path());
@@ -63,7 +71,7 @@ fn main() -> anyhow::Result<()> {
                 std::fs::remove_dir_all(&binaries_dir)?;
             }
             std::fs::create_dir_all(&binaries_dir)?;
-            let target_dir = project_path().join("target").join(target).join("release");
+            let target_dir = get_target_dir().join(target).join("release");
             for entry in std::fs::read_dir(&target_dir)? {
                 let entry = entry?;
                 let file_type = entry.file_type()?;
@@ -76,7 +84,7 @@ fn main() -> anyhow::Result<()> {
                 if !file_name.starts_with("rugpi-") || file_name.ends_with(".d") {
                     continue;
                 }
-                std::fs::hard_link(entry.path(), binaries_dir.join(file_name))?;
+                std::fs::copy(entry.path(), binaries_dir.join(file_name))?;
             }
         }
     }

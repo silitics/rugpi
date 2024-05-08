@@ -1,0 +1,14 @@
+name: rugpi
+
+services:
+  devenv:
+    build:
+      context: ../../
+      dockerfile: xtask/devenv/Dockerfile
+    environment:
+      - CARGO_HOME=/tmp/.cargo
+      - CARGO_TARGET_DIR=/tmp/target
+    volumes:
+      - ../../:/project
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: "sleep infinity"
