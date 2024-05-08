@@ -85,7 +85,22 @@ impl<'p> LayerBakery<'p> {
             let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
             let target = self.project.dir.join(&layer_path).join("system.tar");
             fs::create_dir_all(target.parent().unwrap()).ok();
-            customize::customize(self.project, self.arch, layer, &src, &target, &layer_path)?;
+            customize::customize(
+                self.project,
+                self.arch,
+                layer,
+                Some(&src),
+                &target,
+                &layer_path,
+            )?;
+            Ok(target)
+        } else if config.root {
+            layer_id.push("bare", "true");
+            let layer_id = layer_id.finalize();
+            let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
+            let target = self.project.dir.join(&layer_path).join("system.tar");
+            fs::create_dir_all(target.parent().unwrap()).ok();
+            customize::customize(self.project, self.arch, layer, None, &target, &layer_path)?;
             Ok(target)
         } else {
             bail!("invalid layer configuration")

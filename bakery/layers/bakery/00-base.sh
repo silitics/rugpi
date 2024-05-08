@@ -13,6 +13,8 @@ apt-get -y install \
     fdisk \
     file \
     git \
+    gpg \
+    mmdebstrap \
     python3 \
     wget \
     xz-utils \

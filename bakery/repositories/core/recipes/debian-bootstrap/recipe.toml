@@ -1,0 +1,5 @@
+description = "bootstrap Debian from scratch"
+priority = 10_000_000
+
+[parameters]
+suite = { default = "stable" }

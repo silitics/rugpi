@@ -23,6 +23,8 @@ pub struct LayerConfig {
     /// An URL to fetch the layer from.
     pub url: Option<String>,
     pub parent: Option<String>,
+    #[serde(default)]
+    pub root: bool,
     /// The recipes to include.
     #[serde(default)]
     pub recipes: HashSet<RecipeName>,

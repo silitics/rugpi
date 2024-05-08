@@ -31,7 +31,7 @@ pub fn customize(
     project: &Project,
     arch: Architecture,
     layer: &Layer,
-    src: &Path,
+    src: Option<&Path>,
     target: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
@@ -47,8 +47,10 @@ pub fn customize(
         .map(|job| job.recipe.modified)
         .max()
         .unwrap()
-        .max(layer.modified)
-        .max(mtime(src)?);
+        .max(layer.modified);
+    if let Some(src) = src {
+        last_modified = last_modified.max(mtime(src)?);
+    }
     let mut force_run = false;
     let used_files = project.dir.join(layer_path.join("rebuild-if-changed.txt"));
     if used_files.exists() {
@@ -67,8 +69,12 @@ pub fn customize(
     // Prepare system chroot.
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();
-    info!("extracting system files");
-    run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
+    if let Some(src) = src {
+        info!("extracting system files");
+        run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
+    } else {
+        std::fs::create_dir_all(&root_dir_path)?;
+    }
     apply_recipes(project, arch, &jobs, root_dir_path, layer_path)?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", root_dir_path, "."])?;
@@ -158,20 +164,37 @@ fn apply_recipes(
     root_dir_path: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
-    let _mounted_dev = Mounted::bind("/dev", root_dir_path.join("dev"))?;
-    let _mounted_dev_pts = Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?;
-    let _mounted_sys = Mounted::bind("/sys", root_dir_path.join("sys"))?;
-    let _mounted_proc = Mounted::mount_fs("proc", "proc", root_dir_path.join("proc"))?;
-    let _mounted_run = Mounted::mount_fs("tmpfs", "tmpfs", root_dir_path.join("run"))?;
-    let _mounted_tmp = Mounted::mount_fs("tmpfs", "tmpfs", root_dir_path.join("tmp"))?;
+    let mut mount_stack = Vec::new();
 
-    let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
-    fs::create_dir_all(&bakery_recipe_path)?;
+    fn mount_all(project: &Project, root_dir_path: &Path, stack: &mut Vec<Mounted>) -> Anyhow<()> {
+        stack.push(Mounted::bind("/dev", root_dir_path.join("dev"))?);
+        stack.push(Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?);
+        stack.push(Mounted::bind("/sys", root_dir_path.join("sys"))?);
+        stack.push(Mounted::mount_fs(
+            "proc",
+            "proc",
+            root_dir_path.join("proc"),
+        )?);
+        stack.push(Mounted::mount_fs(
+            "tmpfs",
+            "tmpfs",
+            root_dir_path.join("run"),
+        )?);
+        stack.push(Mounted::mount_fs(
+            "tmpfs",
+            "tmpfs",
+            root_dir_path.join("tmp"),
+        )?);
+
+        let project_dir = root_dir_path.join("run/rugpi/bakery/project");
+        fs::create_dir_all(&project_dir)?;
+
+        stack.push(Mounted::bind(&project.dir, &project_dir)?);
+
+        Ok(())
+    }
 
     let project_dir = root_dir_path.join("run/rugpi/bakery/project");
-    fs::create_dir_all(&project_dir)?;
-
-    let _mounted_project = Mounted::bind(&project.dir, &project_dir)?;
 
     for (idx, job) in jobs.iter().enumerate() {
         let recipe = &job.recipe;
@@ -186,12 +209,14 @@ fn apply_recipes(
                 .unwrap_or(recipe.name.deref()),
             &job.parameters,
         );
-        let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
 
         for step in &recipe.steps {
             info!("    - {}", step.filename);
             match &step.kind {
                 StepKind::Packages { packages } => {
+                    if mount_stack.is_empty() {
+                        mount_all(project, root_dir_path, &mut mount_stack)?;
+                    }
                     let mut cmd = cmd!("chroot", root_dir_path, "apt-get", "install", "-y");
                     cmd.extend_args(packages);
                     ParentEnv.run(cmd.with_vars(vars! {
@@ -199,6 +224,12 @@ fn apply_recipes(
                     }))?;
                 }
                 StepKind::Install => {
+                    if mount_stack.is_empty() {
+                        mount_all(project, root_dir_path, &mut mount_stack)?;
+                    }
+                    let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
+                    fs::create_dir_all(&bakery_recipe_path)?;
+                    let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
@@ -233,5 +264,10 @@ fn apply_recipes(
             }
         }
     }
+
+    while let Some(top) = mount_stack.pop() {
+        drop(top);
+    }
+
     Ok(())
 }
