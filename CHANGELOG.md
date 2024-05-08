@@ -3,7 +3,7 @@
 ## Version 0.6.6
 
 - Allow for deferred reboots into the spare partition set.
-- Make streaming updates the default .
+- Make streaming updates the default.
 
 ## Version 0.6.5
 
