@@ -17,6 +17,7 @@ pub struct ImageConfig {
     /// Indicates which boot flow to use for the image.
     #[serde(default)]
     pub boot_flow: BootFlow,
+    pub size: Option<String>,
     pub layout: Option<ImageLayout>,
 }
 

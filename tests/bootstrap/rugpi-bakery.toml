@@ -10,6 +10,7 @@ layer = "generic-boot"
 architecture = "amd64"
 include_firmware = "none"
 boot_flow = "none"
+size = "32G"
 
 [images.generic.layout]
 kind = "gpt"

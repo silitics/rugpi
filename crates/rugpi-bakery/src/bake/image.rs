@@ -32,7 +32,12 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
         fs::create_dir_all(parent).ok();
     }
     info!("creating image (size: {} bytes)", size);
-    run!(["fallocate", "-l", "{size}", image])?;
+    if let Some(size) = &image_config.size {
+        println!("Allocate image of size {size}.");
+        run!(["fallocate", "-l", "{size}", image])?;
+    } else {
+        run!(["fallocate", "-l", "{size}", image])?;
+    }
     let layout = image_config.layout.clone().unwrap_or_else(pi_image_layout);
     sfdisk_apply_layout(image, layout.sfdisk_render())?;
     let disk_id = get_disk_id(image)?;

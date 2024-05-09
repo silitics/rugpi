@@ -22,7 +22,7 @@ cat >"${RUGPI_ROOT_DIR}/boot/efi/loader/entries/rugpi-a.conf" <<EOF
 title Rugpi System A
 linux /rugpi/a/vmlinuz
 initrd /rugpi/a/initrd.img
-options root=/dev/sda2 rw
+options root=/dev/sda2 ro init=/usr/bin/rugpi-ctrl
 EOF
 
 mkdir -p "${RUGPI_ROOT_DIR}/boot/efi/rugpi/a"
