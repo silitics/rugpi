@@ -21,3 +21,6 @@ xz2 = "0.1.7"
 
 [dev-dependencies]
 clap.workspace = true
+
+[lints]
+workspace = true

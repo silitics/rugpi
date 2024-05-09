@@ -11,3 +11,6 @@ repository.workspace = true
 anyhow = "1.0.71"
 clap = { version = "4.3.10", features = ["derive"] }
 xscript = "0.2.0"
+
+[lints]
+workspace = true

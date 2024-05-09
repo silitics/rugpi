@@ -154,6 +154,9 @@ fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
                 )?;
             }
         }
+        Architecture::Amd64 => {
+            eprintln!("No bootloader support.");
+        }
     }
 
     std::fs::copy(

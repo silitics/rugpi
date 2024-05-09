@@ -15,3 +15,6 @@ clap = { version = "4.3", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 nix = { version = "0.28", features = ["ioctl", "fs", "mount", "process"] }
 xscript = "0.3.0"
+
+[workspace.lints.clippy]
+needless_borrows_for_generic_args = "allow"

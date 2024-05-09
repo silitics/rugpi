@@ -49,6 +49,7 @@ pub enum Architecture {
     #[default]
     Arm64,
     Armhf,
+    Amd64,
 }
 
 #[derive(Debug, Error)]
@@ -62,6 +63,7 @@ impl FromStr for Architecture {
         match s {
             "arm64" => Ok(Self::Arm64),
             "armhf" => Ok(Self::Armhf),
+            "amd64" => Ok(Self::Amd64),
             _ => Err(InvalidArchitectureError),
         }
     }
@@ -72,6 +74,7 @@ impl Architecture {
         match self {
             Architecture::Arm64 => "arm64",
             Architecture::Armhf => "armhf",
+            Architecture::Amd64 => "amd64",
         }
     }
 }
