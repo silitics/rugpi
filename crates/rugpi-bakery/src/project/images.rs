@@ -22,6 +22,8 @@ pub struct ImageConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageLayout {
+    #[serde(default)]
+    pub kind: ImageLayoutKind,
     pub partitions: Vec<ImagePartition>,
 }
 
@@ -51,8 +53,13 @@ impl ImageLayout {
 
         let partitions = partitions.join("\n");
 
+        let kind = match self.kind {
+            ImageLayoutKind::Mbr => "dos",
+            ImageLayoutKind::Gpt => "gpt",
+        };
+
         indoc::formatdoc! { r#"
-            label: dos
+            label: {kind}
             unit: sectors
             grain: 4M
             
@@ -108,6 +115,14 @@ impl ImagePartition {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageLayoutKind {
+    #[default]
+    Mbr,
+    Gpt,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Filesystem {
@@ -117,6 +132,7 @@ pub enum Filesystem {
 
 pub fn pi_image_layout() -> ImageLayout {
     ImageLayout {
+        kind: ImageLayoutKind::Mbr,
         partitions: vec![
             ImagePartition::new()
                 .with_size("256M")

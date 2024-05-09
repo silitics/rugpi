@@ -247,10 +247,12 @@ const PARTPROBE: &str = "/usr/sbin/partprobe";
 /// Returns the disk id of the provided image or device.
 pub fn get_disk_id(path: impl AsRef<Path>) -> Anyhow<String> {
     fn _disk_id(path: &Path) -> Anyhow<String> {
-        Ok(read_str!([SFDISK, "--disk-id", path])?
-            .strip_prefix("0x")
-            .ok_or_else(|| anyhow!("`sfdisk` returned invalid disk id"))?
-            .to_owned())
+        let disk_id = read_str!([SFDISK, "--disk-id", path])?;
+        if let Some(dos_id) = disk_id.strip_prefix("0x") {
+            Ok(dos_id.to_owned())
+        } else {
+            Ok(disk_id)
+        }
     }
     _disk_id(path.as_ref())
 }

@@ -2,13 +2,27 @@
 rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v0.6" }
 
 [images.tryboot]
-layer = "customized"
+layer = "raspberrypi"
 include_firmware = "none"
 
-[images.amd64]
-layer = "amd64"
+[images.generic]
+layer = "generic-boot"
 architecture = "amd64"
 include_firmware = "none"
+boot_flow = "none"
 
-[[images.amd64.layout.partitions]]
+[images.generic.layout]
+kind = "gpt"
+
+[[images.generic.layout.partitions]]
+filesystem = "fat32"
+size = "512M"
+label = "efi"
+kind = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+path = "boot/efi"
+
+[[images.generic.layout.partitions]]
 filesystem = "ext4"
+label = "system"
+kind = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+path = ""

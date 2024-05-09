@@ -1,0 +1,2 @@
+description = "setup system"
+dependencies = ["core/apt-update"]
