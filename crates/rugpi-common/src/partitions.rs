@@ -153,6 +153,7 @@ pub fn get_default_partitions() -> Anyhow<PartitionSet> {
                 return Ok(PartitionSet::B);
             }
         }
+        BootFlow::None => todo!(),
     }
     bail!("Unable to determine default partition set.");
 }

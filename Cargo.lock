@@ -1017,6 +1017,7 @@ dependencies = [
  "colored",
  "hex",
  "indicatif",
+ "indoc",
  "nix 0.27.1",
  "reqwest",
  "rugpi-common",
@@ -1043,6 +1044,7 @@ dependencies = [
  "serde",
  "thiserror",
  "toml 0.8.12",
+ "tracing",
  "xscript 0.3.0",
  "xz2",
 ]

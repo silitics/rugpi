@@ -1,13 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
+use tracing::info;
 use xscript::{run, Run};
 
 use crate::Anyhow;
-
-/// The `mount` executable.
-const MOUNT: &str = "/usr/bin/mount";
-/// The `umount` executable.
-const UMOUNT: &str = "/usr/bin/umount";
 
 pub struct Mounted {
     path: PathBuf,
@@ -16,7 +15,11 @@ pub struct Mounted {
 impl Mounted {
     pub fn mount(dev: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, dev.as_ref(), dst])?;
+        let dev = dev.as_ref();
+        info!("Mounting {dev:?} to {dst:?}.");
+        // FIXME: The `mount` command works without specifying the filesystem type,
+        // which is not the case for `nix::mount::mount`.
+        run!(["/usr/bin/mount", dev, dst])?;
         Ok(Mounted { path: dst.into() })
     }
 
@@ -30,19 +33,66 @@ impl Mounted {
         dst: impl AsRef<Path>,
     ) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, "-t", fstype.as_ref(), src.as_ref(), dst])?;
+        let src = src.as_ref();
+        let fstype = fstype.as_ref();
+        info!("Mounting {src:?} with {fstype:?} to {dst:?}.");
+        nix::mount::mount(
+            Some(src),
+            dst,
+            Some(fstype),
+            nix::mount::MsFlags::empty(),
+            None as Option<&OsStr>,
+        )?;
         Ok(Mounted { path: dst.into() })
     }
 
     pub fn bind(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
         let dst = dst.as_ref();
-        run!([MOUNT, "--bind", src.as_ref(), dst])?;
+        let src = src.as_ref();
+        info!("Mounting {src:?} to {dst:?}.");
+        nix::mount::mount(
+            Some(src),
+            dst,
+            None as Option<&OsStr>,
+            nix::mount::MsFlags::MS_BIND,
+            None as Option<&OsStr>,
+        )?;
         Ok(Mounted { path: dst.into() })
     }
 }
 
 impl Drop for Mounted {
     fn drop(&mut self) {
-        run!([UMOUNT, &self.path]).ok();
+        if let Err(error) = nix::mount::umount(&self.path) {
+            eprintln!("Error unmounting {:?}: {:?}", self.path, error)
+        }
+    }
+}
+
+pub struct MountStack(Vec<Mounted>);
+
+impl MountStack {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn push(&mut self, mounted: Mounted) {
+        self.0.push(mounted);
+    }
+
+    pub fn unmount_all(&mut self) {
+        while let Some(top) = self.0.pop() {
+            drop(top);
+        }
+    }
+}
+
+impl Drop for MountStack {
+    fn drop(&mut self) {
+        self.unmount_all()
     }
 }

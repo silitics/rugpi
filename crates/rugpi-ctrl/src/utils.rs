@@ -38,6 +38,7 @@ pub fn reboot(spare: bool) -> Anyhow<()> {
             }
             reboot(false)?;
         }
+        BootFlow::None => todo!(),
     }
 
     Ok(())

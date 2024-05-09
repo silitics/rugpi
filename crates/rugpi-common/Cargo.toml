@@ -18,6 +18,7 @@ thiserror = "1.0.50"
 toml = "0.8.10"
 xscript.workspace = true
 xz2 = "0.1.7"
+tracing.workspace = true
 
 [dev-dependencies]
 clap.workspace = true

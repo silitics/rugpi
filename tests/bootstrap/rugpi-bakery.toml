@@ -4,3 +4,11 @@ rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v
 [images.tryboot]
 layer = "customized"
 include_firmware = "none"
+
+[images.amd64]
+layer = "amd64"
+architecture = "amd64"
+include_firmware = "none"
+
+[[images.amd64.layout.partitions]]
+filesystem = "ext4"

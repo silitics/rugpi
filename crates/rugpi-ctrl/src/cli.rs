@@ -157,6 +157,7 @@ pub fn main() -> Anyhow<()> {
                                 "/run/rugpi/mounts/config/bootpart.default.env",
                             )?;
                         }
+                        BootFlow::None => todo!(),
                     }
                 } else {
                     println!("Hot partition is already the default!");

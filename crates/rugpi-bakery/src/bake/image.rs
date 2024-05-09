@@ -1,13 +1,16 @@
 //! Creates an image.
 
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use rugpi_common::{
     boot::{uboot::UBootEnv, BootFlow},
     ctrl_config::load_config,
     loop_dev::LoopDevice,
-    mount::Mounted,
-    partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout, sfdisk_image_layout},
+    mount::{MountStack, Mounted},
+    partitions::{get_disk_id, mkfs_ext4, mkfs_vfat, sfdisk_apply_layout},
     patch_boot, patch_config, Anyhow,
 };
 use tempfile::tempdir;
@@ -16,7 +19,7 @@ use xscript::{run, Run};
 use crate::{
     project::{
         config::{Architecture, IncludeFirmware},
-        images::ImageConfig,
+        images::{self, pi_image_layout, ImageConfig},
     },
     utils::prelude::*,
 };
@@ -30,29 +33,53 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
     }
     info!("creating image (size: {} bytes)", size);
     run!(["fallocate", "-l", "{size}", image])?;
-    sfdisk_apply_layout(image, sfdisk_image_layout())?;
+    let layout = image_config.layout.clone().unwrap_or_else(pi_image_layout);
+    sfdisk_apply_layout(image, layout.sfdisk_render())?;
     let disk_id = get_disk_id(image)?;
     let loop_device = LoopDevice::attach(image)?;
     info!("creating filesystems");
-    mkfs_vfat(loop_device.partition(1), "CONFIG")?;
-    mkfs_vfat(loop_device.partition(2), "BOOT-A")?;
-    mkfs_ext4(loop_device.partition(5), "system-a")?;
+    for (idx, partition) in layout.partitions.iter().enumerate() {
+        let part = idx + 1;
+        let Some(fs) = partition.filesystem else {
+            continue;
+        };
+        match fs {
+            images::Filesystem::Ext4 => {
+                mkfs_ext4(
+                    loop_device.partition(part),
+                    partition.label.as_deref().unwrap(),
+                )?;
+            }
+            images::Filesystem::Fat32 => {
+                mkfs_vfat(
+                    loop_device.partition(part),
+                    &partition.label.as_deref().unwrap().to_uppercase(),
+                )?;
+            }
+        }
+    }
     let root_dir = tempdir()?;
     let root_dir_path = root_dir.path();
     {
-        let mounted_root = Mounted::mount(loop_device.partition(5), root_dir_path)?;
-        let boot_dir = root_dir_path.join("boot");
-        fs::create_dir_all(&boot_dir)?;
-        let mounted_boot = Mounted::mount(loop_device.partition(2), &boot_dir)?;
-        let config_dir = tempdir()?;
-        let config_dir_path = config_dir.path();
-        let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
-        let ctx = BakeCtx {
-            config: image_config,
-            mounted_boot,
-            mounted_root,
-            mounted_config,
-        };
+        let mut system_partitions = layout
+            .partitions
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, partition)| partition.path.as_deref().map(|path| (path, idx + 1)))
+            .collect::<Vec<_>>();
+        system_partitions.sort();
+
+        let mut mount_stack = MountStack::new();
+
+        for (path, part) in &system_partitions {
+            let full_path = if path.is_empty() {
+                root_dir_path.to_owned()
+            } else {
+                root_dir_path.join(path)
+            };
+            fs::create_dir_all(&full_path).ok();
+            mount_stack.push(Mounted::mount(loop_device.partition(*part), &full_path)?);
+        }
 
         run!(["tar", "-x", "-f", src, "-C", root_dir_path])?;
 
@@ -63,25 +90,37 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
             bail!("system size configured in `ctrl.toml` not large enough")
         }
 
-        info!("patching boot configuration");
-        patch_boot(ctx.mounted_boot.path(), format!("PARTUUID={disk_id}-05"))?;
-        info!("patching `config.txt`");
-        patch_config(boot_dir.join("config.txt"))?;
+        if !matches!(image_config.boot_flow, BootFlow::None) {
+            let config_dir = tempdir()?;
+            let config_dir_path = config_dir.path();
+            let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
+            let ctx = BakeCtx {
+                config: image_config,
+                boot_path: root_dir_path.join("boot"),
+                mounted_config,
+            };
 
-        match image_config.boot_flow {
-            BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
-            BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
-        }
+            info!("patching boot configuration");
+            patch_boot(&ctx.boot_path, format!("PARTUUID={disk_id}-05"))?;
+            info!("patching `config.txt`");
+            patch_config(ctx.boot_path.join("config.txt"))?;
 
-        std::fs::copy(
-            "/usr/share/rugpi/boot/u-boot/bin/second.scr",
-            ctx.mounted_boot.path().join("second.scr"),
-        )?;
+            match image_config.boot_flow {
+                BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
+                BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
+                BootFlow::None => unreachable!(),
+            }
 
-        match image_config.include_firmware {
-            IncludeFirmware::None => { /* Do not include any firmware. */ }
-            IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
-            IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
+            std::fs::copy(
+                "/usr/share/rugpi/boot/u-boot/bin/second.scr",
+                ctx.boot_path.join("second.scr"),
+            )?;
+
+            match image_config.include_firmware {
+                IncludeFirmware::None => { /* Do not include any firmware. */ }
+                IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
+                IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
+            }
         }
     }
     Ok(())
@@ -89,9 +128,7 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
 
 struct BakeCtx<'p> {
     config: &'p ImageConfig,
-    mounted_boot: Mounted,
-    #[allow(unused)]
-    mounted_root: Mounted,
+    boot_path: PathBuf,
     mounted_config: Mounted,
 }
 
@@ -122,12 +159,7 @@ fn setup_tryboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
 }
 
 fn setup_uboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
-    run!([
-        "cp",
-        "-rTp",
-        ctx.mounted_boot.path(),
-        ctx.mounted_config.path()
-    ])?;
+    run!(["cp", "-rTp", &ctx.boot_path, ctx.mounted_config.path()])?;
     std::fs::remove_file(ctx.mounted_config.path().join("kernel8.img"))?;
     match ctx.config.architecture {
         Architecture::Arm64 => {

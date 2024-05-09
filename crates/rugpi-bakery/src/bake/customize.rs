@@ -8,7 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use rugpi_common::mount::Mounted;
+use rugpi_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
@@ -157,16 +157,6 @@ fn recipe_schedule(
     Ok(recipes)
 }
 
-struct MountStack(Vec<Mounted>);
-
-impl Drop for MountStack {
-    fn drop(&mut self) {
-        while let Some(top) = self.0.pop() {
-            drop(top);
-        }
-    }
-}
-
 fn apply_recipes(
     project: &Project,
     arch: Architecture,
@@ -174,9 +164,9 @@ fn apply_recipes(
     root_dir_path: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
-    let mut mount_stack = MountStack(Vec::new());
+    let mut mount_stack = MountStack::new();
 
-    fn mount_all(project: &Project, root_dir_path: &Path, stack: &mut Vec<Mounted>) -> Anyhow<()> {
+    fn mount_all(project: &Project, root_dir_path: &Path, stack: &mut MountStack) -> Anyhow<()> {
         stack.push(Mounted::bind("/dev", root_dir_path.join("dev"))?);
         stack.push(Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?);
         stack.push(Mounted::bind("/sys", root_dir_path.join("sys"))?);
@@ -224,8 +214,8 @@ fn apply_recipes(
             info!("    - {}", step.filename);
             match &step.kind {
                 StepKind::Packages { packages } => {
-                    if mount_stack.0.is_empty() {
-                        mount_all(project, root_dir_path, &mut mount_stack.0)?;
+                    if mount_stack.is_empty() {
+                        mount_all(project, root_dir_path, &mut mount_stack)?;
                     }
                     let mut cmd = cmd!("chroot", root_dir_path, "apt-get", "install", "-y");
                     cmd.extend_args(packages);
@@ -234,8 +224,8 @@ fn apply_recipes(
                     }))?;
                 }
                 StepKind::Install => {
-                    if mount_stack.0.is_empty() {
-                        mount_all(project, root_dir_path, &mut mount_stack.0)?;
+                    if mount_stack.is_empty() {
+                        mount_all(project, root_dir_path, &mut mount_stack)?;
                     }
                     let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
                     fs::create_dir_all(&bakery_recipe_path)?;

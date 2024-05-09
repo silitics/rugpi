@@ -13,6 +13,8 @@ pub enum BootFlow {
     /// Use U-Boot for booting and partition switching.
     #[serde(rename = "u-boot")]
     UBoot,
+    #[serde(rename = "none")]
+    None,
 }
 
 impl BootFlow {
@@ -21,6 +23,7 @@ impl BootFlow {
         match self {
             BootFlow::Tryboot => "tryboot",
             BootFlow::UBoot => "u-boot",
+            BootFlow::None => "none",
         }
     }
 }
