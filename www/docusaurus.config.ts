@@ -11,7 +11,7 @@ const config: Config = {
   onBrokenMarkdownLinks: "warn",
 
   // We do not care about old browsers not supporting SVG.
-  favicon: "img/logo.svg",
+  favicon: "/img/logo.svg",
 
   organizationName: "silitics",
   projectName: "rugpi",
@@ -27,6 +27,7 @@ const config: Config = {
       ({
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
+          lastVersion: '0.6',
           editUrl: "https://github.com/silitics/rugpi/tree/main/www/",
         },
         blog: {
@@ -73,6 +74,12 @@ const config: Config = {
             label: "Docs",
           },
           { to: "/blog", label: "Blog", position: "left" },
+          {
+            type: 'docsVersionDropdown',
+            position: 'right',
+            // dropdownItemsAfter: [{to: '/versions', label: 'All versions'}],
+            dropdownActiveClassDisabled: true,
+          },
           {
             href: "https://github.com/silitics/rugpi",
             position: "right",
