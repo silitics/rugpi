@@ -6,11 +6,12 @@ use crate::boot::uboot::UBootEnv;
 
 pub mod boot;
 pub mod ctrl_config;
-pub mod img_stream;
+pub mod disk;
 pub mod loop_dev;
 pub mod maybe_compressed;
 pub mod mount;
 pub mod partitions;
+pub mod utils;
 
 /// The [`anyhow`] result type.
 pub type Anyhow<T> = anyhow::Result<T>;

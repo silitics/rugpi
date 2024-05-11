@@ -3,13 +3,14 @@ use std::{fs, path::Path};
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
-use crate::Anyhow;
+use crate::{disk::repart::PartitionSchema, Anyhow};
 
 /// Structure of the Rugpi Ctrl configuration file.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Config {
     /// The size of the system partition(s).
     pub system_size: Option<String>,
+    pub system_schema: Option<PartitionSchema>,
     /// Indicates what to do with the overlay.
     #[serde(default)]
     pub overlay: Overlay,

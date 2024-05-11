@@ -14,7 +14,7 @@ use rugpi_common::{
         uboot::UBootEnv,
         BootFlow,
     },
-    img_stream::ImgStream,
+    disk::stream::ImgStream,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{

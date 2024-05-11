@@ -1,4 +1,4 @@
-//! Infrastructure for reading partitions from a streamed image.
+//! Utilities for reading streamed images.
 
 use std::{
     collections::VecDeque,
@@ -92,7 +92,7 @@ impl<R: Read> ImgStream<R> {
     }
 
     /// Return next partition to be read.
-    pub fn next_partition(&mut self) -> Result<Option<Partition<'_, R>>, ImgStreamError> {
+    pub fn next_partition(&mut self) -> Result<Option<PartitionStream<'_, R>>, ImgStreamError> {
         loop {
             let Some(entry) = self.pending.pop_front() else {
                 return Ok(None);
@@ -120,7 +120,7 @@ impl<R: Read> ImgStream<R> {
                     self.pending.push_back(second);
                 }
             } else {
-                break Ok(Some(Partition {
+                break Ok(Some(PartitionStream {
                     stream: self,
                     remaining: entry.size_bytes(),
                     entry,
@@ -131,7 +131,7 @@ impl<R: Read> ImgStream<R> {
 }
 
 /// Reader for a partition.
-pub struct Partition<'stream, R> {
+pub struct PartitionStream<'stream, R> {
     /// The underlying image stream.
     stream: &'stream mut ImgStream<R>,
     /// The number of remaining bytes of the partition.
@@ -140,7 +140,7 @@ pub struct Partition<'stream, R> {
     entry: PartitionEntry,
 }
 
-impl<'stream, R> Partition<'stream, R> {
+impl<'stream, R> PartitionStream<'stream, R> {
     /// The entry of the partition.
     pub fn entry(&self) -> &PartitionEntry {
         &self.entry
@@ -152,7 +152,7 @@ impl<'stream, R> Partition<'stream, R> {
     }
 }
 
-impl<'stream, R: Read> Read for Partition<'stream, R> {
+impl<'stream, R: Read> Read for PartitionStream<'stream, R> {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         if self.remaining < buf.len() as u64 {
             if self.remaining == 0 {

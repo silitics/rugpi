@@ -1,0 +1,28 @@
+{
+    "type": "mbr",
+    "partitions": [
+        {
+            "name": "CONFIG",
+            "type": "0c",
+            "size": "256M"
+        },
+        {
+            "name": "BOOT-A",
+            "type": "0c",
+            "size": "128M"
+        },
+        {
+            "name": "BOOT-B",
+            "type": "0c",
+            "size": "128M"
+        },
+        {
+            "name": "extended",
+            "type": "05"
+        },
+        {
+            "name": "system-a",
+            "type": "83"
+        }
+    ]
+}
