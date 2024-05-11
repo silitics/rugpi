@@ -1,4 +1,5 @@
 //! Macros for dealing with limitations of constant functions.
+#[allow(unused_macros)]
 
 /// Constant unwrapping of options.
 macro_rules! const_unwrap_option {
