@@ -28,15 +28,8 @@ impl Guid {
         Self { bytes }
     }
 
-    pub const fn from_hex_str(hex_str: &str) -> Self {
-        match Self::try_from_hex_str(hex_str) {
-            Ok(guid) => guid,
-            Err(_) => panic!("provided string is not a valid GUID"),
-        }
-    }
-
     /// Create a GUID from the standard string encoding.
-    pub const fn try_from_hex_str(hex_str: &str) -> Result<Self, InvalidGuid> {
+    pub const fn from_hex_str(hex_str: &str) -> Result<Self, InvalidGuid> {
         let hex_bytes = hex_str.as_bytes();
         if hex_bytes.len() != GUID_STRING_LENGTH {
             return Err(InvalidGuid::InvalidLength {
@@ -90,7 +83,7 @@ impl std::str::FromStr for Guid {
     type Err = InvalidGuid;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Guid::try_from_hex_str(s)
+        Guid::from_hex_str(s)
     }
 }
 
@@ -109,7 +102,7 @@ impl<'de> serde::Deserialize<'de> for Guid {
         D: serde::Deserializer<'de>,
     {
         let string = String::deserialize(deserializer)?;
-        Guid::try_from_hex_str(&string).map_err(|_| {
+        Guid::from_hex_str(&string).map_err(|_| {
             <D::Error as serde::de::Error>::invalid_value(
                 serde::de::Unexpected::Str(&string),
                 &"a size",
@@ -121,14 +114,16 @@ impl<'de> serde::Deserialize<'de> for Guid {
 /// GPT partition types.
 pub mod gpt_types {
     use super::Guid;
-    use crate::disk::PartitionType;
+    use crate::{disk::PartitionType, utils::const_helpers::const_unwrap_result};
 
     /// EFI GPT partition type.
-    pub const EFI: PartitionType =
-        PartitionType::Gpt(Guid::from_hex_str("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"));
+    pub const EFI: PartitionType = PartitionType::Gpt(const_unwrap_result!(Guid::from_hex_str(
+        "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+    )));
     /// Linux GPT partition type.
-    pub const LINUX: PartitionType =
-        PartitionType::Gpt(Guid::from_hex_str("0FC63DAF-8483-4772-8E79-3D69D8477DE4"));
+    pub const LINUX: PartitionType = PartitionType::Gpt(const_unwrap_result!(Guid::from_hex_str(
+        "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+    )));
 }
 
 /// GUID string representation.
@@ -177,8 +172,11 @@ pub mod tests {
     #[test]
     pub fn test_guid_roundtrip() {
         const EFI: &str = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B";
-        assert_eq!(Guid::from_hex_str(EFI).to_hex_str().deref(), EFI);
+        assert_eq!(Guid::from_hex_str(EFI).unwrap().to_hex_str().deref(), EFI);
         const LINUX: &str = "0FC63DAF-8483-4772-8E79-3D69D8477DE4";
-        assert_eq!(Guid::from_hex_str(LINUX).to_hex_str().deref(), LINUX);
+        assert_eq!(
+            Guid::from_hex_str(LINUX).unwrap().to_hex_str().deref(),
+            LINUX
+        );
     }
 }

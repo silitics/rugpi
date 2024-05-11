@@ -202,14 +202,12 @@ impl<'de> serde::Deserialize<'de> for PartitionType {
     {
         let string = String::deserialize(deserializer)?;
         if string.len() == GUID_STRING_LENGTH {
-            Ok(Self::Gpt(Guid::try_from_hex_str(&string).map_err(
-                |_| {
-                    <D::Error as serde::de::Error>::invalid_value(
-                        serde::de::Unexpected::Str(&string),
-                        &"a partition type",
-                    )
-                },
-            )?))
+            Ok(Self::Gpt(Guid::from_hex_str(&string).map_err(|_| {
+                <D::Error as serde::de::Error>::invalid_value(
+                    serde::de::Unexpected::Str(&string),
+                    &"a partition type",
+                )
+            })?))
         } else {
             Ok(Self::Mbr(u8::from_str_radix(&string, 16).map_err(
                 |_| {

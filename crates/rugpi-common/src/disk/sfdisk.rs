@@ -65,7 +65,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
             let ty = match id {
                 DiskId::Mbr(_) => PartitionType::Mbr(u8::from_str_radix(&partition.ty, 16)?),
                 DiskId::Gpt(_) => {
-                    PartitionType::Gpt(Guid::try_from_hex_str(&partition.ty).map_err(|_| {
+                    PartitionType::Gpt(Guid::from_hex_str(&partition.ty).map_err(|_| {
                         anyhow!(
                             "invalid GPT partition type {:?} returned from `sfdisk`",
                             partition.ty
@@ -76,7 +76,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
             let gpt_id = partition
                 .uuid
                 .map(|guid| {
-                    Guid::try_from_hex_str(&guid).map_err(|_| {
+                    Guid::from_hex_str(&guid).map_err(|_| {
                         anyhow!("invalid partition GUID {:?} returned from `sfdisk`", guid)
                     })
                 })

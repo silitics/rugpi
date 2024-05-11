@@ -1,5 +1,29 @@
 //! Macros for dealing with limitations of constant functions.
 
+/// Constant unwrapping of options.
+macro_rules! const_unwrap_option {
+    ($value:expr) => {
+        match $value {
+            Some(value) => value,
+            None => panic!("value is None"),
+        }
+    };
+}
+
+pub(crate) use const_unwrap_option;
+
+/// Constant unwrapping of results
+macro_rules! const_unwrap_result {
+    ($value:expr) => {
+        match $value {
+            Ok(value) => value,
+            Err(_) => panic!("value is an error"),
+        }
+    };
+}
+
+pub(crate) use const_unwrap_result;
+
 /// Constant version of the `?` operator.
 macro_rules! const_try {
     ($expr:expr) => {
