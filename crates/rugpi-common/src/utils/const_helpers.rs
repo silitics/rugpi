@@ -11,6 +11,7 @@ macro_rules! const_unwrap_option {
     };
 }
 
+#[allow(unused_imports)]
 pub(crate) use const_unwrap_option;
 
 /// Constant unwrapping of results
