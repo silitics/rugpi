@@ -6,7 +6,7 @@ layer = "raspberrypi"
 include_firmware = "none"
 
 [images.generic]
-layer = "generic-boot"
+layer = "update-rugpi"  #a7870fde4dd0624c6f667ee1d5d9d6b8cbbdf5ff
 architecture = "amd64"
 include_firmware = "none"
 boot_flow = "none"
@@ -24,6 +24,7 @@ path = "boot/efi"
 
 [[images.generic.layout.partitions]]
 filesystem = "ext4"
+size = "3G"
 label = "system"
 kind = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
 path = ""

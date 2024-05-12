@@ -1,0 +1,5 @@
+parent = "generic-boot"
+
+recipes = [
+    "core/rugpi-ctrl",
+]

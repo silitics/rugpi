@@ -9,3 +9,5 @@ deb http://security.debian.org/debian-security bookworm-security main contrib no
 EOF
 
 apt-get update -y
+
+install -D -m 644 "${RECIPE_DIR}/files/ctrl.toml" -t /etc/rugpi

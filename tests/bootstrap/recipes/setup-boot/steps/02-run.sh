@@ -8,7 +8,9 @@ apt-get update -y
 apt-get install -y systemd-boot:amd64
 
 mkdir -p "${RUGPI_ROOT_DIR}/boot/efi/EFI/BOOT"
+
 cp /usr/lib/systemd/boot/efi/systemd-bootx64.efi "${RUGPI_ROOT_DIR}/boot/efi/EFI/BOOT/BOOTX64.EFI"
+# cp /usr/lib/systemd/boot/efi/systemd-bootaa64.efi "${RUGPI_ROOT_DIR}/boot/efi/EFI/BOOT/BOOTAA64.EFI"
 
 mkdir -p "${RUGPI_ROOT_DIR}/boot/efi/loader/entries"
 cat >"${RUGPI_ROOT_DIR}/boot/efi/loader/loader.conf" <<EOF
