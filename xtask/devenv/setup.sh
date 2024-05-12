@@ -18,6 +18,10 @@ apt-get -y install \
     python3 \
     python3-pip \
     wget \
+    fdisk \
+    dosfstools \
+    udev \
+    parted \
     zsh
 
 wget -O /etc/zsh/zshrc https://git.grml.org/f/grml-etc-core/etc/zsh/zshrc
