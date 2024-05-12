@@ -15,8 +15,7 @@ pub struct ImageConfig {
     #[serde(default)]
     pub architecture: Architecture,
     /// Indicates which boot flow to use for the image.
-    #[serde(default)]
-    pub boot_flow: BootFlow,
+    pub boot_flow: Option<BootFlow>,
     pub size: Option<String>,
     pub layout: Option<ImageLayout>,
 }
