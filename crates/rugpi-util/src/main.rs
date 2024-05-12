@@ -6,8 +6,10 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use rugpi_common::{
-    disk::{repart, stream::ImgStream, PartitionTable},
+    boot::grub::grub_envblk_decode,
+    disk::{blkpg::update_kernel_partitions, repart, stream::ImgStream, PartitionTable},
     maybe_compressed::MaybeCompressed,
+    partitions::is_block_dev,
     Anyhow,
 };
 
@@ -23,6 +25,9 @@ pub enum DiskCmd {
     Repart {
         image: PathBuf,
         schema: PathBuf,
+    },
+    ReadGrubEnv {
+        env_file: PathBuf,
     },
 }
 
@@ -60,8 +65,20 @@ fn main() -> Anyhow<()> {
         DiskCmd::Repart { image, schema } => {
             let old_table = PartitionTable::read(&image)?;
             let schema = serde_json::from_str(&std::fs::read_to_string(schema)?)?;
-            let new_table = repart::repart(&old_table, &schema)?;
-            new_table.write(&image)?;
+            if let Some(new_table) = repart::repart(&old_table, &schema)? {
+                new_table.write(&image)?;
+                if is_block_dev(&image) {
+                    update_kernel_partitions(&image, &old_table, &new_table)?;
+                }
+            } else {
+                println!("Table has not been changed.");
+            }
+        }
+        DiskCmd::ReadGrubEnv { env_file } => {
+            let data = std::fs::read_to_string(env_file)?;
+            let env_blk = grub_envblk_decode(&data);
+
+            println!("{env_blk:?}");
         }
     }
 

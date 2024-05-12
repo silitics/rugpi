@@ -10,7 +10,7 @@ use crate::{disk::repart::PartitionSchema, Anyhow};
 pub struct Config {
     /// The size of the system partition(s).
     pub system_size: Option<String>,
-    pub system_schema: Option<PartitionSchema>,
+    pub partition_schema: Option<PartitionSchema>,
     /// Indicates what to do with the overlay.
     #[serde(default)]
     pub overlay: Overlay,

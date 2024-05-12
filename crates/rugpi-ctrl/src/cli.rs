@@ -209,11 +209,11 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
             1 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(spare_partitions.boot_dev(partitions))?,
+                    &mut fs::File::create(spare_partitions.boot_dev(partitions).unwrap())?,
                 )?;
                 run!([
                     "fatlabel",
-                    spare_partitions.boot_dev(partitions),
+                    spare_partitions.boot_dev(partitions).unwrap(),
                     &boot_label
                 ])?;
             }
@@ -239,7 +239,10 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
 
     // Path `/boot`.
     {
-        let _mounted_spare = Mounted::mount(spare_partitions.boot_dev(partitions), temp_dir_spare)?;
+        let _mounted_spare = Mounted::mount(
+            spare_partitions.boot_dev(partitions).unwrap(),
+            temp_dir_spare,
+        )?;
         let disk_id = get_disk_id(&partitions.parent_dev)?;
         let root = match spare_partitions {
             PartitionSet::A => format!("PARTUUID={disk_id}-05"),

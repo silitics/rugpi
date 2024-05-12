@@ -4,6 +4,11 @@ use anyhow::{bail, ensure};
 use nix::mount::MntFlags;
 use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay},
+    disk::{
+        blkpg::update_kernel_partitions,
+        repart::{repart, PartitionSchema},
+        PartitionTable,
+    },
     partitions::{
         get_default_partitions, get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4,
         sfdisk_apply_layout, sfdisk_system_layout, system_dev, Partitions, MOUNT_POINT_CONFIG,
@@ -54,15 +59,24 @@ fn init() -> Anyhow<()> {
     println!(include_str!("../assets/BANNER.txt"));
     let config = load_config(config_path())?;
 
-    // 1️⃣ Mount essential filesystems.
+    // Mount essential filesystems.
     mount_essential_filesystems()?;
 
-    let partitions = Partitions::load()?;
+    let mut partitions = Partitions::load()?;
+
+    // Ensure that the disks's partitions match the defined partition schema.
+    if let Some(schema) = &config.partition_schema {
+        // If an update ships a schema that is incompatible with the existing schema,
+        // then it is fine to reboot here and switch to the old version.
+        repartition_disk(&partitions.parent_dev, schema)?;
+    }
 
     // 2️⃣ Initialize partitions during the first boot.
-    if !is_block_dev(&partitions.data) {
+    if !is_block_dev(&partitions.data) && config.partition_schema.is_none() {
         initialize_partitions(&partitions, &config)?;
     }
+
+    partitions = Partitions::load()?;
 
     // 3️⃣ Check and mount the data partition.
     run!([FSCK, "-y", &partitions.data])?;
@@ -150,9 +164,11 @@ fn initialize_partitions(partitions: &Partitions, config: &Config) -> Anyhow<()>
     // 1️⃣ Apply the system layout to the SD card and reread the partition table.
     sfdisk_apply_layout(&partitions.parent_dev, sfdisk_system_layout(system_size))?;
 
+    let partitions = Partitions::load()?;
+
     // 2️⃣ Patch the `cmdline.txt` with the new disk id.
     let disk_id = get_disk_id(&partitions.parent_dev)?;
-    run!([MOUNT, &partitions.boot_a, "/boot"])?;
+    run!([MOUNT, &partitions.boot_a.unwrap(), "/boot"])?;
     patch_boot("/boot", format!("PARTUUID={disk_id}-05"))?;
     run!([UMOUNT, "/boot"])?;
 
@@ -162,6 +178,21 @@ fn initialize_partitions(partitions: &Partitions, config: &Config) -> Anyhow<()>
     // 4️⃣ Make sure everything is written to disk.
     run!([SYNC])?;
 
+    Ok(())
+}
+
+/// Initializes the partitions and expands the partition table during the first boot.
+fn repartition_disk(dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
+    let old_table = PartitionTable::read(dev)?;
+    if let Some(new_table) = repart(&old_table, schema)? {
+        // Write new partition table to disk.
+        new_table.write(dev)?;
+        run!([SYNC])?;
+        // Inform the kernel about new partitions.
+        update_kernel_partitions(dev, &old_table, &new_table)?;
+        let partitions = Partitions::load()?;
+        mkfs_ext4(&partitions.data, "data")?;
+    }
     Ok(())
 }
 
@@ -197,13 +228,9 @@ fn setup_root_overlay(
         OVERLAY_ROOT_DIR
     ])?;
     run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
-    run!([
-        MOUNT,
-        "-o",
-        "ro",
-        hot_partitions.boot_dev(partitions),
-        overlay_root_dir().join("boot")
-    ])?;
+    if let Some(boot_dev) = hot_partitions.boot_dev(partitions) {
+        run!([MOUNT, "-o", "ro", boot_dev, overlay_root_dir().join("boot")])?;
+    }
     Ok(())
 }
 

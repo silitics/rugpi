@@ -15,6 +15,7 @@ use crate::{
 };
 
 pub mod blkdev;
+pub mod blkpg;
 pub mod gpt;
 pub mod mbr;
 pub mod repart;

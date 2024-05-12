@@ -10,6 +10,7 @@ use xscript::{read_str, run, Run};
 
 use crate::{
     boot::{uboot::UBootEnv, BootFlow},
+    disk::PartitionTable,
     Anyhow,
 };
 
@@ -21,8 +22,8 @@ pub const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
 pub struct Partitions {
     pub parent_dev: PathBuf,
     pub config: PathBuf,
-    pub boot_a: PathBuf,
-    pub boot_b: PathBuf,
+    pub boot_a: Option<PathBuf>,
+    pub boot_b: Option<PathBuf>,
     pub system_a: PathBuf,
     pub system_b: PathBuf,
     pub data: PathBuf,
@@ -50,15 +51,29 @@ impl Partitions {
         if parent_dev_name.ends_with(|c: char| c.is_ascii_digit()) {
             partition_dev_name.push('p');
         }
-        Ok(Self {
-            parent_dev: parent_dev_path,
-            config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
-            boot_a: PathBuf::from(format!("/dev/{partition_dev_name}2")),
-            boot_b: PathBuf::from(format!("/dev/{partition_dev_name}3")),
-            system_a: PathBuf::from(format!("/dev/{partition_dev_name}5")),
-            system_b: PathBuf::from(format!("/dev/{partition_dev_name}6")),
-            data: PathBuf::from(format!("/dev/{partition_dev_name}7")),
-        })
+        let table = PartitionTable::read(&parent_dev_path)?;
+        println!("Found {} partition.", table.partitions.len());
+        if table.partitions.len() == 4 {
+            Ok(Self {
+                parent_dev: parent_dev_path,
+                config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
+                boot_a: None,
+                boot_b: None,
+                system_a: PathBuf::from(format!("/dev/{partition_dev_name}2")),
+                system_b: PathBuf::from(format!("/dev/{partition_dev_name}3")),
+                data: PathBuf::from(format!("/dev/{partition_dev_name}4")),
+            })
+        } else {
+            Ok(Self {
+                parent_dev: parent_dev_path,
+                config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
+                boot_a: Some(PathBuf::from(format!("/dev/{partition_dev_name}2"))),
+                boot_b: Some(PathBuf::from(format!("/dev/{partition_dev_name}3"))),
+                system_a: PathBuf::from(format!("/dev/{partition_dev_name}5")),
+                system_b: PathBuf::from(format!("/dev/{partition_dev_name}6")),
+                data: PathBuf::from(format!("/dev/{partition_dev_name}7")),
+            })
+        }
     }
 }
 
@@ -183,10 +198,10 @@ impl PartitionSet {
         }
     }
 
-    pub fn boot_dev(self, partitions: &Partitions) -> &Path {
+    pub fn boot_dev(self, partitions: &Partitions) -> Option<&Path> {
         match self {
-            PartitionSet::A => &partitions.boot_a,
-            PartitionSet::B => &partitions.boot_b,
+            PartitionSet::A => partitions.boot_a.as_deref(),
+            PartitionSet::B => partitions.boot_b.as_deref(),
         }
     }
 

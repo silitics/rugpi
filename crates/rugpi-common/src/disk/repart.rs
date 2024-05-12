@@ -32,7 +32,7 @@ pub struct SchemaPartition {
 ///
 /// Currently, the algorithm is very simple and matches up partitions based on their
 /// index in the schema and partition table.
-pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<PartitionTable> {
+pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Option<PartitionTable>> {
     if table.ty() != schema.ty {
         bail!(
             "partition table types do not match ({} != {})",
@@ -49,6 +49,7 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Partit
     let mut next_start = table.first_usable_block().ceil_align_to(align);
     let mut last_free = table.last_usable_block().floor_align_to(align);
     let mut in_extended = false;
+    let mut has_changed = false;
     for (idx, partition) in schema.partitions.iter().enumerate() {
         println!(
             "Partition: {}, Next Start: {next_start}, Last Free: {last_free}",
@@ -91,8 +92,12 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Partit
         let size = size.unwrap_or(available).min(available);
         println!("  Available: {available}, Size: {size}");
         if let Some(new) = new_table.partitions.get_mut(idx) {
+            if new.size != size {
+                has_changed = true;
+            }
             new.size = size;
         } else {
+            has_changed = true;
             new_table.partitions.push(Partition {
                 number: (idx + 1) as u8,
                 start: next_start,
@@ -109,5 +114,9 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Partit
             next_start = next_start + size;
         }
     }
-    Ok(new_table)
+    if has_changed {
+        Ok(Some(new_table))
+    } else {
+        Ok(None)
+    }
 }
