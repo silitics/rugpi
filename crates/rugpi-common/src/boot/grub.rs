@@ -69,8 +69,7 @@ pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, In
         assert!(!name.contains('\n'));
         encoded.push_str(name);
         encoded.push('=');
-        let mut chars = value.chars();
-        while let Some(c) = chars.next() {
+        for c in value.chars() {
             match c {
                 '\\' => encoded.push_str("\\\\"),
                 '\n' => encoded.push_str("\\n"),

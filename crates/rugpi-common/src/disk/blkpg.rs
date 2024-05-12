@@ -111,5 +111,6 @@ struct BlkpgIoctlArg {
 }
 
 const BLKPG_ADD_PARTITION: c_int = 1;
+#[allow(dead_code)]
 const BLKPG_DEL_PARTITION: c_int = 2;
 const BLKPG_RESIZE_PARTITION: c_int = 3;
