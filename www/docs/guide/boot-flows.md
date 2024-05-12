@@ -85,11 +85,11 @@ For further details, we refer to the reference [boot scripts](https://github.com
 
 ### Grub
 
-⚙️ `boot_flow="grub"`
+⚙️ `boot_flow="grub-efi"`
 
 ```
-MBR =============================== Image
-     1: config    EXT4   256M
+GPT =============================== Image
+     1: config    FAT32  256M
      2: boot-a    EXT4   128M  (*)
      3: boot-b    EXT4   128M
      5: system-a               (*)
@@ -99,6 +99,8 @@ MBR =============================== Image
 ```
 
 Follows a similar approach to U-Boot, using Grub boot scripts and environment blocks.
+
+The `grub-efi` boot flow uses the EFI variant of Grub.
 
 ### Systemd Boot
 
