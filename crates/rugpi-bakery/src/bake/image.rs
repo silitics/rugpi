@@ -127,10 +127,11 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
                 ctx.boot_path.join("grub/second.grub.cfg"),
             )?;
 
-            match image_config.include_firmware {
-                IncludeFirmware::None => { /* Do not include any firmware. */ }
-                IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
-                IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
+            if let Some(include_firmware) = &image_config.include_firmware {
+                match include_firmware {
+                    IncludeFirmware::Pi4 => include_pi4_firmware(ctx.mounted_config.path())?,
+                    IncludeFirmware::Pi5 => include_pi5_firmware(ctx.mounted_config.path())?,
+                }
             }
         }
     }

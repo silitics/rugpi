@@ -1,5 +1,10 @@
 # Changelog
 
+Upcoming Breaking Changes:
+
+- The `boot_flow` option is now optional defaulting to no boot flow. To get the old behavior, `boot_flow = "tryboot"` must be explicitly specified.
+- The `include_firmware` option is now optional defaulting to no firmware inclusion. To get the odl behavior, `include_firmware = "pi4"` must be specified. Setting the option to `"none"` will now result in an error.
+
 ## Version 0.6.6
 
 - Allow for deferred reboots into the spare partition set.

@@ -9,8 +9,7 @@ pub struct ImageConfig {
     /// The layer to use for the image.
     pub layer: String,
     /// Indicates whether to include firmware files in the image.
-    #[serde(default)]
-    pub include_firmware: IncludeFirmware,
+    pub include_firmware: Option<IncludeFirmware>,
     /// The target architecture to build an image for.
     #[serde(default)]
     pub architecture: Architecture,
