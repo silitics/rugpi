@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     io::{self, Read},
     path::{Path, PathBuf},
@@ -6,7 +7,7 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use rugpi_common::{
-    boot::grub::grub_envblk_decode,
+    boot::grub::{grub_envblk_decode, grub_envblk_encode},
     disk::{blkpg::update_kernel_partitions, repart, stream::ImgStream, PartitionTable},
     maybe_compressed::MaybeCompressed,
     partitions::is_block_dev,
@@ -26,7 +27,11 @@ pub enum DiskCmd {
         image: PathBuf,
         schema: PathBuf,
     },
-    ReadGrubEnv {
+    DecodeGrubEnv {
+        env_file: PathBuf,
+    },
+    EncodeGrubEnv {
+        json_file: PathBuf,
         env_file: PathBuf,
     },
 }
@@ -74,11 +79,20 @@ fn main() -> Anyhow<()> {
                 println!("Table has not been changed.");
             }
         }
-        DiskCmd::ReadGrubEnv { env_file } => {
+        DiskCmd::DecodeGrubEnv { env_file } => {
             let data = std::fs::read_to_string(env_file)?;
             let env_blk = grub_envblk_decode(&data);
 
             println!("{env_blk:?}");
+        }
+        DiskCmd::EncodeGrubEnv {
+            json_file,
+            env_file,
+        } => {
+            let data = serde_json::from_str::<HashMap<String, String>>(&std::fs::read_to_string(
+                json_file,
+            )?)?;
+            std::fs::write(env_file, grub_envblk_encode(&data)?)?;
         }
     }
 

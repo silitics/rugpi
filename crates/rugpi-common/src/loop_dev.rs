@@ -25,6 +25,10 @@ impl LoopDevice {
         path.push(&format!("p{}", part));
         path.into()
     }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl Drop for LoopDevice {

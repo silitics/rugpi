@@ -1,8 +1,15 @@
 //! Utilities for the Grub boot flow.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Write};
 
+use anyhow::bail;
 use thiserror::Error;
+
+use crate::{
+    partitions::{make_config_writeable, PartitionSet},
+    paths::config_partition_path,
+    Anyhow,
+};
 
 /// Signature of Grub environment blocks.
 const ENVBLK_SIGNATURE: &str = "# GRUB Environment Block\n";
@@ -60,6 +67,9 @@ pub enum InvalidEnvblk {
     InvalidEscaped,
 }
 
+const RUGPI_BOOTPART: &str = "rugpi_bootpart";
+const RUGPI_BOOT_SPARE: &str = "rugpi_boot_spare";
+
 /// Encode a Grub environment block.
 pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, InvalidEnvblk> {
     let mut encoded = String::with_capacity(ENVBLK_SIZE);
@@ -85,6 +95,54 @@ pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, In
         encoded.push('#');
     }
     Ok(encoded)
+}
+
+pub fn read_default_partitions() -> Anyhow<PartitionSet> {
+    let bootpart_env = grub_envblk_decode(&std::fs::read_to_string(&config_partition_path(
+        "rugpi/bootpart.default.grubenv",
+    ))?)?;
+    let Some(bootpart) = bootpart_env.get(RUGPI_BOOTPART) else {
+        bail!("Invalid bootpart environment.");
+    };
+    if bootpart == "2" {
+        Ok(PartitionSet::A)
+    } else if bootpart == "3" {
+        Ok(PartitionSet::B)
+    } else {
+        bail!("Invalid default `bootpart`.");
+    }
+}
+
+pub fn commit(hot_partitions: PartitionSet) -> Anyhow<()> {
+    let bootpart_new_path = config_partition_path("rugpi/bootpart.default.grubenv.nev");
+    let mut default_envblk = HashMap::new();
+    match hot_partitions {
+        PartitionSet::A => default_envblk.insert(RUGPI_BOOTPART.to_owned(), "2".to_owned()),
+        PartitionSet::B => default_envblk.insert(RUGPI_BOOTPART.to_owned(), "3".to_owned()),
+    };
+    let _writable_config = make_config_writeable();
+    let mut bootpart_new = File::create(&bootpart_new_path)?;
+    bootpart_new.write_all(grub_envblk_encode(&default_envblk)?.as_bytes())?;
+    bootpart_new.flush()?;
+    bootpart_new.sync_all()?;
+    std::fs::rename(
+        bootpart_new_path,
+        config_partition_path("rugpi/bootpart.default.grubenv"),
+    )?;
+    Ok(())
+}
+
+pub fn set_spare_flag() -> Anyhow<()> {
+    let mut envblk = HashMap::new();
+    envblk.insert(RUGPI_BOOT_SPARE.to_owned(), "true".to_owned());
+    let _writable_config = make_config_writeable()?;
+    // It is safe to directly write to the file here. If the file is corrupt,
+    // the system will simply boot from the default partition set.
+    std::fs::write(
+        config_partition_path("rugpi/boot_spare.grubenv"),
+        grub_envblk_encode(&envblk)?,
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]

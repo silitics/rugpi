@@ -1,5 +1,4 @@
 use std::{
-    fs,
     os::unix::prelude::FileTypeExt,
     path::{Path, PathBuf},
     sync::OnceLock,
@@ -9,14 +8,15 @@ use anyhow::{anyhow, bail};
 use xscript::{read_str, run, Run};
 
 use crate::{
-    boot::{uboot::UBootEnv, BootFlow},
+    boot::{
+        detect_boot_flow, grub, tryboot,
+        uboot::{self},
+        BootFlow,
+    },
     disk::PartitionTable,
+    paths::MOUNT_POINT_SYSTEM,
     Anyhow,
 };
-
-pub const MOUNT_POINT_SYSTEM: &str = "/run/rugpi/mounts/system";
-pub const MOUNT_POINT_DATA: &str = "/run/rugpi/mounts/data";
-pub const MOUNT_POINT_CONFIG: &str = "/run/rugpi/mounts/config";
 
 /// The partitions used by Rugpi.
 pub struct Partitions {
@@ -52,7 +52,6 @@ impl Partitions {
             partition_dev_name.push('p');
         }
         let table = PartitionTable::read(&parent_dev_path)?;
-        println!("Found {} partition.", table.partitions.len());
         if table.partitions.len() == 4 {
             Ok(Self {
                 parent_dev: parent_dev_path,
@@ -63,7 +62,7 @@ impl Partitions {
                 system_b: PathBuf::from(format!("/dev/{partition_dev_name}3")),
                 data: PathBuf::from(format!("/dev/{partition_dev_name}4")),
             })
-        } else {
+        } else if table.is_mbr() {
             Ok(Self {
                 parent_dev: parent_dev_path,
                 config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
@@ -72,6 +71,16 @@ impl Partitions {
                 system_a: PathBuf::from(format!("/dev/{partition_dev_name}5")),
                 system_b: PathBuf::from(format!("/dev/{partition_dev_name}6")),
                 data: PathBuf::from(format!("/dev/{partition_dev_name}7")),
+            })
+        } else {
+            Ok(Self {
+                parent_dev: parent_dev_path,
+                config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
+                boot_a: Some(PathBuf::from(format!("/dev/{partition_dev_name}2"))),
+                boot_b: Some(PathBuf::from(format!("/dev/{partition_dev_name}3"))),
+                system_a: PathBuf::from(format!("/dev/{partition_dev_name}4")),
+                system_b: PathBuf::from(format!("/dev/{partition_dev_name}5")),
+                data: PathBuf::from(format!("/dev/{partition_dev_name}6")),
             })
         }
     }
@@ -121,56 +130,12 @@ pub fn get_hot_partitions(partitions: &Partitions) -> Anyhow<PartitionSet> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum AutobootSection {
-    Unknown,
-    All,
-    Tryboot,
-}
-
-pub fn get_boot_flow() -> Anyhow<BootFlow> {
-    if Path::new("/run/rugpi/mounts/config/autoboot.txt").exists() {
-        Ok(BootFlow::Tryboot)
-    } else if Path::new("/run/rugpi/mounts/config/boot.scr").exists() {
-        Ok(BootFlow::UBoot)
-    } else {
-        bail!("Unable to determine boot flow.");
+pub fn read_default_partitions() -> Anyhow<PartitionSet> {
+    match detect_boot_flow()? {
+        BootFlow::Tryboot => tryboot::read_default_partitions(),
+        BootFlow::UBoot => uboot::read_default_partitions(),
+        BootFlow::GrubEfi => grub::read_default_partitions(),
     }
-}
-
-pub fn get_default_partitions() -> Anyhow<PartitionSet> {
-    match get_boot_flow()? {
-        BootFlow::Tryboot => {
-            let autoboot_txt = fs::read_to_string("/run/rugpi/mounts/config/autoboot.txt")?;
-            let mut section = AutobootSection::Unknown;
-            for line in autoboot_txt.lines() {
-                if line.starts_with("[all]") {
-                    section = AutobootSection::All;
-                } else if line.starts_with("[tryboot]") {
-                    section = AutobootSection::Tryboot;
-                } else if line.starts_with('[') {
-                    section = AutobootSection::Unknown;
-                } else if line.starts_with("boot_partition=2") && section == AutobootSection::All {
-                    return Ok(PartitionSet::A);
-                } else if line.starts_with("boot_partition=3") && section == AutobootSection::All {
-                    return Ok(PartitionSet::B);
-                }
-            }
-        }
-        BootFlow::UBoot => {
-            let bootpart_env = UBootEnv::load("/run/rugpi/mounts/config/bootpart.default.env")?;
-            let Some(bootpart) = bootpart_env.get("bootpart") else {
-                bail!("Invalid bootpart environment.");
-            };
-            if bootpart == "2" {
-                return Ok(PartitionSet::A);
-            } else if bootpart == "3" {
-                return Ok(PartitionSet::B);
-            }
-        }
-        BootFlow::None => todo!(),
-    }
-    bail!("Unable to determine default partition set.");
 }
 
 pub fn cold_partition_set(partitions: &Partitions) -> Anyhow<PartitionSet> {
@@ -299,4 +264,17 @@ pub fn mkfs_vfat(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
 pub fn mkfs_ext4(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
     run!([MKFS_ETX4, "-F", "-L", label.as_ref(), dev.as_ref()])?;
     Ok(())
+}
+
+pub struct WritableConfig(());
+
+impl Drop for WritableConfig {
+    fn drop(&mut self) {
+        run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
+    }
+}
+
+pub fn make_config_writeable() -> Anyhow<WritableConfig> {
+    run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
+    Ok(WritableConfig(()))
 }

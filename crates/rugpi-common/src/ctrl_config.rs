@@ -37,7 +37,8 @@ pub enum Overlay {
 }
 
 /// Loads the Rugpi Ctrl configuration.
-pub fn load_config(path: &Path) -> Anyhow<Config> {
+pub fn load_config(path: impl AsRef<Path>) -> Anyhow<Config> {
+    let path = path.as_ref();
     if path.exists() {
         Ok(toml::from_str(&fs::read_to_string(path)?)?)
     } else {

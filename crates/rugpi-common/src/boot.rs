@@ -1,4 +1,7 @@
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
+
+use crate::{paths::config_partition_path, Anyhow};
 
 pub mod grub;
 pub mod tryboot;
@@ -14,8 +17,9 @@ pub enum BootFlow {
     /// Use U-Boot for booting and partition switching.
     #[serde(rename = "u-boot")]
     UBoot,
-    #[serde(rename = "none")]
-    None,
+    /// Use Grub (EFI) for booting and partition switching.
+    #[serde(rename = "grub-efi")]
+    GrubEfi,
 }
 
 impl BootFlow {
@@ -24,7 +28,22 @@ impl BootFlow {
         match self {
             BootFlow::Tryboot => "tryboot",
             BootFlow::UBoot => "u-boot",
-            BootFlow::None => "none",
+            BootFlow::GrubEfi => "grub-efi",
         }
+    }
+}
+
+/// Dynamically detects the boot flow at runtime.
+pub fn detect_boot_flow() -> Anyhow<BootFlow> {
+    if config_partition_path("autoboot.txt").exists() {
+        Ok(BootFlow::Tryboot)
+    } else if config_partition_path("bootpart.default.env").exists() {
+        Ok(BootFlow::UBoot)
+    } else if config_partition_path("rugpi/bootpart.default.grubenv").exists()
+        && config_partition_path("EFI").is_dir()
+    {
+        Ok(BootFlow::GrubEfi)
+    } else {
+        bail!("unable to detect boot flow");
     }
 }

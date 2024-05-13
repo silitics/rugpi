@@ -10,11 +10,12 @@ use rugpi_common::{
         PartitionTable,
     },
     partitions::{
-        get_default_partitions, get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4,
-        sfdisk_apply_layout, sfdisk_system_layout, system_dev, Partitions, MOUNT_POINT_CONFIG,
-        MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM,
+        get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, read_default_partitions,
+        sfdisk_apply_layout, sfdisk_system_layout, system_dev, Partitions,
     },
-    patch_boot, Anyhow,
+    patch_boot,
+    paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
+    Anyhow,
 };
 use xscript::{run, Run};
 
@@ -57,7 +58,7 @@ const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
 fn init() -> Anyhow<()> {
     println!(include_str!("../assets/BANNER.txt"));
-    let config = load_config(config_path())?;
+    let config = load_config(CTRL_CONFIG_PATH)?;
 
     // Mount essential filesystems.
     mount_essential_filesystems()?;
@@ -141,10 +142,6 @@ pub fn overlay_work_dir() -> &'static Path {
 }
 
 const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
-
-pub fn config_path() -> &'static Path {
-    Path::new(CTRL_CONFIG_PATH)
-}
 
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
 fn mount_essential_filesystems() -> Anyhow<()> {
@@ -368,7 +365,7 @@ fn check_deferred_spare_reboot(partitions: &Partitions) -> Anyhow<()> {
         // Remove file and make sure that changes are synced to disk.
         clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
         nix::unistd::sync();
-        let default_partitions = get_default_partitions()?;
+        let default_partitions = read_default_partitions()?;
         let hot_partitions = get_hot_partitions(partitions)?;
         if default_partitions == hot_partitions {
             // Reboot to the spare partitions.

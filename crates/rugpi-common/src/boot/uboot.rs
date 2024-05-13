@@ -1,7 +1,14 @@
-use std::{collections::HashMap, io, path::Path};
+use std::{collections::HashMap, fs::File, io, path::Path};
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::{
+    partitions::{make_config_writeable, PartitionSet},
+    paths::config_partition_path,
+    Anyhow,
+};
 
 /// A U-Boot environment.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -106,6 +113,47 @@ pub enum UBootEnvLoadError {
 /// Compute the CRC32 checksum of the given data.
 fn crc32(data: &[u8]) -> [u8; 4] {
     crc32fast::hash(data).to_le_bytes()
+}
+
+pub fn read_default_partitions() -> Anyhow<PartitionSet> {
+    let bootpart_env = UBootEnv::load(config_partition_path("bootpart.default.env"))?;
+    let Some(bootpart) = bootpart_env.get("bootpart") else {
+        bail!("Invalid bootpart environment.");
+    };
+    if bootpart == "2" {
+        Ok(PartitionSet::A)
+    } else if bootpart == "3" {
+        Ok(PartitionSet::B)
+    } else {
+        bail!("Invalid default `bootpart`.");
+    }
+}
+
+pub fn commit(hot_partitions: PartitionSet) -> Anyhow<()> {
+    let _writable_config = make_config_writeable()?;
+    let mut bootpart_env = UBootEnv::new();
+    match hot_partitions {
+        PartitionSet::A => bootpart_env.set("bootpart", "2"),
+        PartitionSet::B => bootpart_env.set("bootpart", "3"),
+    }
+    bootpart_env.save("/run/rugpi/mounts/config/bootpart.default.env.new")?;
+    let autoboot_new_file = File::open("/run/rugpi/mounts/config/bootpart.default.env.new")?;
+    autoboot_new_file.sync_all()?;
+    std::fs::rename(
+        "/run/rugpi/mounts/config/bootpart.default.env.new",
+        "/run/rugpi/mounts/config/bootpart.default.env",
+    )?;
+    Ok(())
+}
+
+pub fn set_spare_flag() -> Anyhow<()> {
+    let mut boot_spare_env = UBootEnv::new();
+    boot_spare_env.set("boot_spare", "1");
+    let _writable_config = make_config_writeable()?;
+    // It is safe to directly write to the file here. If the file is corrupt,
+    // the system will simply boot from the default partition set.
+    boot_spare_env.save("/run/rugpi/mounts/config/boot_spare.env")?;
+    Ok(())
 }
 
 #[cfg(test)]

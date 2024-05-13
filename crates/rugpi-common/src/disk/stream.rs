@@ -8,6 +8,8 @@ use std::{
 
 use thiserror::Error;
 
+use super::{gpt::Guid, PartitionType};
+
 /// Standard sector size is 512 bytes.
 const SECTOR_SIZE: usize = 512;
 /// Standard sector size of 512 bytes as [`u64`].
@@ -55,6 +57,44 @@ impl<R: Read> ImgStream<R> {
                 this.extended = Some(entry.clone());
             }
             this.pending.push_back(entry);
+        }
+        // If there is just one partition
+        if this.pending.len() == 1 && this.pending[0].is_gpt_protective_mbr() {
+            this.pending.clear();
+            this.read_next_sector()?;
+            if !this.buffer.starts_with(b"EFI PART") {
+                return Err(ImgStreamError::Invalid("invalid GPT signature"));
+            }
+            let num_partitions = u32::from_le_bytes(this.buffer[80..80 + 4].try_into().unwrap());
+            if num_partitions > 128 {
+                return Err(ImgStreamError::Invalid("too many GPT partitions"));
+            }
+            let entry_size = u32::from_le_bytes(this.buffer[84..84 + 4].try_into().unwrap());
+            if entry_size != 128 {
+                return Err(ImgStreamError::Invalid("invalid GPT entry size"));
+            }
+            let num_sectors = num_partitions.div_ceil(4);
+            let mut entries = Vec::new();
+            for _ in 0..num_sectors {
+                this.read_next_sector()?;
+                for idx in 0..4 {
+                    let entry = &this.buffer[idx * 128..(idx + 1) * 128];
+                    let ty = PartitionType::Gpt(Guid::from_bytes(entry[..16].try_into().unwrap()));
+                    if ty.is_free() {
+                        continue;
+                    }
+                    let start = u64::from_le_bytes(entry[32..32 + 8].try_into().unwrap());
+                    let end = u64::from_le_bytes(entry[40..40 + 8].try_into().unwrap());
+                    entries.push(PartitionEntry {
+                        ty,
+                        start,
+                        size: end - start,
+                    });
+                }
+            }
+            println!("{entries:#?}");
+            entries.sort_by_key(|entry| entry.start);
+            this.pending = entries.into();
         }
         Ok(this)
     }
@@ -201,7 +241,7 @@ fn parse_partition_table(record: &[u8]) -> impl '_ + Iterator<Item = PartitionEn
             let entry_start = PARTITION_ENTRIES_OFFSET + entry_idx * PARTITION_ENTRY_SIZE;
             let entry_end = entry_start + PARTITION_ENTRY_SIZE;
             let entry_bytes = &record[entry_start..entry_end];
-            PartitionEntry::from_bytes(entry_bytes)
+            PartitionEntry::from_bytes_mbr(entry_bytes)
         })
         .filter(|entry| !entry.is_free())
 }
@@ -210,11 +250,11 @@ fn parse_partition_table(record: &[u8]) -> impl '_ + Iterator<Item = PartitionEn
 #[derive(Debug, Clone)]
 pub struct PartitionEntry {
     /// The kind of the partition.
-    kind: u8,
+    ty: PartitionType,
     /// The start sector.
-    start: u32,
+    start: u64,
     /// The size of the partition in sectors.
-    size: u32,
+    size: u64,
 }
 
 impl PartitionEntry {
@@ -223,22 +263,26 @@ impl PartitionEntry {
     /// # Panics
     ///
     /// Panics in case the given slice does not consist of exactly 16 bytes.
-    fn from_bytes(entry: &[u8]) -> Self {
+    fn from_bytes_mbr(entry: &[u8]) -> Self {
         assert_eq!(
             entry.len(),
             PARTITION_ENTRY_SIZE,
             "size of partition entry must be 16 bytes"
         );
-        let kind = entry[4];
+        let ty = entry[4];
         let start = u32::from_le_bytes(entry[8..12].try_into().unwrap());
         let size = u32::from_le_bytes(entry[12..16].try_into().unwrap());
-        Self { kind, start, size }
+        Self {
+            ty: PartitionType::Mbr(ty),
+            start: start.into(),
+            size: size.into(),
+        }
     }
 
     /// Indicates whether the partition entry is free.
     fn is_free(&self) -> bool {
         // Free entries in the partition table have their type set to 0x00.
-        self.kind == 0x00
+        self.ty.is_free()
     }
 
     /// Indicates whether the partition entry points to an EBR.
@@ -246,30 +290,35 @@ impl PartitionEntry {
         // Technically, 0x05 would use CHS addressing, but modern tools provide
         // LBA addressing anyway and converting is non-trivial, hence, we will
         // just rely on LBA addressing everywhere.
-        self.kind == 0x05 || self.kind == 0x0F
+        self.ty.is_extended()
+    }
+
+    /// Indicates whether the partition entry is a protective MBR entry.
+    fn is_gpt_protective_mbr(&self) -> bool {
+        matches!(self.ty, PartitionType::Mbr(0xEE) | PartitionType::Mbr(0xEF))
     }
 
     /// The type of the partition.
-    pub fn kind(&self) -> u8 {
-        self.kind
+    pub fn ty(&self) -> &PartitionType {
+        &self.ty
     }
 
     /// The size of the partition in bytes.
     pub fn size_bytes(&self) -> u64 {
-        (self.size as u64) * (SECTOR_SIZE as u64)
+        self.size * SECTOR_SIZE_U64
     }
 
     /// The start of the partition in bytes.
     pub fn start_bytes(&self) -> u64 {
-        (self.start as u64) * (SECTOR_SIZE as u64)
+        self.start * SECTOR_SIZE_U64
     }
 }
 
 impl Display for PartitionEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "kind: {:#04x}, start: {}, size: {}",
-            self.kind, self.start, self.size
+            "type: {}, start: {}, size: {}",
+            self.ty, self.start, self.size
         ))
     }
 }

@@ -10,21 +10,20 @@ use anyhow::{bail, Context};
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
     boot::{
-        tryboot::{AUTOBOOT_A, AUTOBOOT_B},
-        uboot::UBootEnv,
+        detect_boot_flow, grub,
+        tryboot::{self},
+        uboot::{self},
         BootFlow,
     },
     disk::stream::ImgStream,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
-        get_boot_flow, get_default_partitions, get_disk_id, get_hot_partitions, PartitionSet,
-        Partitions,
+        get_disk_id, get_hot_partitions, read_default_partitions, PartitionSet, Partitions,
     },
-    patch_boot, Anyhow, DropGuard,
+    patch_boot, Anyhow,
 };
 use tempfile::tempdir;
-use xscript::{run, Run};
 
 use crate::{
     overlay::overlay_dir,
@@ -69,7 +68,7 @@ pub fn main() -> Anyhow<()> {
                 }
 
                 let hot_partitions = get_hot_partitions(&partitions)?;
-                let default_partitions = get_default_partitions()?;
+                let default_partitions = read_default_partitions()?;
                 let spare_partitions = default_partitions.flipped();
                 if hot_partitions != default_partitions {
                     bail!("Hot partitions are not the default!");
@@ -106,58 +105,26 @@ pub fn main() -> Anyhow<()> {
         },
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
-                let boot_flow = get_boot_flow().context("loading boot flow")?;
+                let boot_flow = detect_boot_flow().context("loading boot flow")?;
                 println!("Boot Flow: {}", boot_flow.as_str());
                 let hot_partitions =
                     get_hot_partitions(&partitions).context("loading hot partitions")?;
                 let default_partitions =
-                    get_default_partitions().context("loading default partitions")?;
+                    read_default_partitions().context("loading default partitions")?;
                 println!("Hot: {}", hot_partitions.as_str());
                 println!("Cold: {}", hot_partitions.flipped().as_str());
                 println!("Default: {}", default_partitions.as_str());
                 println!("Spare: {}", default_partitions.flipped().as_str());
             }
             SystemCommand::Commit => {
-                let boot_flow = get_boot_flow()?;
+                let boot_flow = detect_boot_flow()?;
                 let hot_partitions = get_hot_partitions(&partitions)?;
-                let default_partitions = get_default_partitions()?;
+                let default_partitions = read_default_partitions()?;
                 if hot_partitions != default_partitions {
-                    run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
-                    let _remount_guard = DropGuard::new(|| {
-                        run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
-                    });
                     match boot_flow {
-                        BootFlow::Tryboot => {
-                            let autoboot_txt = match hot_partitions {
-                                PartitionSet::A => AUTOBOOT_A,
-                                PartitionSet::B => AUTOBOOT_B,
-                            };
-                            fs::write("/run/rugpi/mounts/config/autoboot.txt.new", autoboot_txt)?;
-                            let autoboot_new_file =
-                                File::open("/run/rugpi/mounts/config/autoboot.txt.new")?;
-                            autoboot_new_file.sync_all()?;
-                            fs::rename(
-                                "/run/rugpi/mounts/config/autoboot.txt.new",
-                                "/run/rugpi/mounts/config/autoboot.txt",
-                            )?;
-                        }
-                        BootFlow::UBoot => {
-                            let mut bootpart_env = UBootEnv::new();
-                            match hot_partitions {
-                                PartitionSet::A => bootpart_env.set("bootpart", "2"),
-                                PartitionSet::B => bootpart_env.set("bootpart", "3"),
-                            }
-                            bootpart_env
-                                .save("/run/rugpi/mounts/config/bootpart.default.env.new")?;
-                            let autoboot_new_file =
-                                File::open("/run/rugpi/mounts/config/bootpart.default.env.new")?;
-                            autoboot_new_file.sync_all()?;
-                            fs::rename(
-                                "/run/rugpi/mounts/config/bootpart.default.env.new",
-                                "/run/rugpi/mounts/config/bootpart.default.env",
-                            )?;
-                        }
-                        BootFlow::None => todo!(),
+                        BootFlow::Tryboot => tryboot::commit(hot_partitions)?,
+                        BootFlow::UBoot => uboot::commit(hot_partitions)?,
+                        BootFlow::GrubEfi => grub::commit(hot_partitions)?,
                     }
                 } else {
                     println!("Hot partition is already the default!");
@@ -179,7 +146,7 @@ pub fn main() -> Anyhow<()> {
 }
 
 fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> {
-    let default_partitions = get_default_partitions()?;
+    let default_partitions = read_default_partitions()?;
     let spare_partitions = default_partitions.flipped();
     let reader: Box<dyn io::Read> = if image == "-" {
         Box::new(io::stdin())
@@ -187,8 +154,8 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
         Box::new(File::open(image)?)
     };
     println!("Copying partitions...");
-    let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
-    let system_label = format!("system-{}", spare_partitions.as_str());
+    // let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
+    // let system_label = format!("system-{}", spare_partitions.as_str());
     let mut img_stream = ImgStream::new(MaybeCompressed::new(reader)?)?;
     let mut partition_idx = 0;
     while let Some(mut partition) = img_stream.next_partition()? {
@@ -211,22 +178,22 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
                     &mut partition,
                     &mut fs::File::create(spare_partitions.boot_dev(partitions).unwrap())?,
                 )?;
-                run!([
-                    "fatlabel",
-                    spare_partitions.boot_dev(partitions).unwrap(),
-                    &boot_label
-                ])?;
+                // run!([
+                //     "fatlabel",
+                //     spare_partitions.boot_dev(partitions).unwrap(),
+                //     &boot_label
+                // ])?;
             }
             3 => {
                 io::copy(
                     &mut partition,
                     &mut fs::File::create(spare_partitions.system_dev(partitions))?,
                 )?;
-                run!([
-                    "e2label",
-                    spare_partitions.system_dev(partitions),
-                    &system_label
-                ])?;
+                // run!([
+                //     "e2label",
+                //     spare_partitions.system_dev(partitions),
+                //     &system_label
+                // ])?;
             }
             _ => { /* Nothing to do! */ }
         }
@@ -238,7 +205,8 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
     let temp_dir_spare = temp_dir_spare.path();
 
     // Path `/boot`.
-    {
+    let boot_flow = detect_boot_flow()?;
+    if matches!(boot_flow, BootFlow::Tryboot | BootFlow::UBoot) {
         let _mounted_spare = Mounted::mount(
             spare_partitions.boot_dev(partitions).unwrap(),
             temp_dir_spare,

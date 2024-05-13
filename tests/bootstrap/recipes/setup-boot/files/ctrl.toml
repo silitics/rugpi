@@ -4,7 +4,17 @@ type = "gpt"
 [[partition_schema.partitions]]
 name = "EFI"
 type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
-size = "512M"
+size = "256M"
+
+[[partition_schema.partitions]]
+name = "boot-a"
+type = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+size = "128M"
+
+[[partition_schema.partitions]]
+name = "boot-b"
+type = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+size = "128M"
 
 [[partition_schema.partitions]]
 name = "system-a"

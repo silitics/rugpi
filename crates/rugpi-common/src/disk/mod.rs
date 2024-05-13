@@ -188,6 +188,13 @@ pub enum PartitionType {
 }
 
 impl PartitionType {
+    pub fn is_free(&self) -> bool {
+        match self {
+            PartitionType::Mbr(ty) => *ty == 0x00,
+            PartitionType::Gpt(guid) => guid.is_zero(),
+        }
+    }
+
     pub fn is_extended(&self) -> bool {
         match self {
             PartitionType::Mbr(id) => matches!(id, 0x05 | 0x0F),

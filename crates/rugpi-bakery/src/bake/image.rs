@@ -95,7 +95,7 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
             bail!("system size configured in `ctrl.toml` not large enough")
         }
 
-        if !matches!(image_config.boot_flow, BootFlow::None) {
+        if let Some(boot_flow) = image_config.boot_flow {
             let config_dir = tempdir()?;
             let config_dir_path = config_dir.path();
             let mounted_config = Mounted::mount(loop_device.partition(1), config_dir_path)?;
@@ -103,22 +103,28 @@ pub fn make_image(image_config: &ImageConfig, src: &Path, image: &Path) -> Anyho
                 config: image_config,
                 boot_path: root_dir_path.join("boot"),
                 mounted_config,
+                loop_device: loop_device.path(),
             };
+            if matches!(boot_flow, BootFlow::Tryboot | BootFlow::UBoot) {
+                info!("patching boot configuration");
+                patch_boot(&ctx.boot_path, format!("PARTUUID={disk_id}-05"))?;
+                info!("patching `config.txt`");
+                patch_config(ctx.boot_path.join("config.txt"))?;
+            }
 
-            info!("patching boot configuration");
-            patch_boot(&ctx.boot_path, format!("PARTUUID={disk_id}-05"))?;
-            info!("patching `config.txt`");
-            patch_config(ctx.boot_path.join("config.txt"))?;
-
-            match image_config.boot_flow {
+            match boot_flow {
                 BootFlow::Tryboot => setup_tryboot_boot_flow(&ctx)?,
                 BootFlow::UBoot => setup_uboot_boot_flow(&ctx)?,
-                BootFlow::None => unreachable!(),
+                BootFlow::GrubEfi => setup_grub_boot_flow(&ctx)?,
             }
 
             std::fs::copy(
                 "/usr/share/rugpi/boot/u-boot/bin/second.scr",
                 ctx.boot_path.join("second.scr"),
+            )?;
+            std::fs::copy(
+                "/usr/share/rugpi/boot/grub/second.grub.cfg",
+                ctx.boot_path.join("grub/second.grub.cfg"),
             )?;
 
             match image_config.include_firmware {
@@ -135,6 +141,8 @@ struct BakeCtx<'p> {
     config: &'p ImageConfig,
     boot_path: PathBuf,
     mounted_config: Mounted,
+    #[allow(dead_code)]
+    loop_device: &'p Path,
 }
 
 fn calculate_system_size(archive: &Path) -> Anyhow<u64> {
@@ -151,6 +159,44 @@ fn calculate_image_size(archive: &Path) -> Anyhow<u64> {
     let total_blocks = (total_bytes / 4096) + 1;
     let actual_blocks = (1.2 * (total_blocks as f64)) as u64;
     Ok(actual_blocks * 4096)
+}
+
+fn setup_grub_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {
+    std::fs::create_dir_all(ctx.mounted_config.path().join("EFI/BOOT")).ok();
+    std::fs::create_dir_all(ctx.mounted_config.path().join("EFI/BOOT")).ok();
+    std::fs::copy(
+        "/usr/share/rugpi/boot/grub/first.grub.cfg",
+        ctx.mounted_config.path().join("EFI/BOOT/grub.cfg"),
+    )?;
+    std::fs::create_dir_all(ctx.mounted_config.path().join("rugpi")).ok();
+    std::fs::copy(
+        "/usr/share/rugpi/boot/grub/bootpart.default.grubenv",
+        ctx.mounted_config
+            .path()
+            .join("rugpi/bootpart.default.grubenv"),
+    )?;
+    std::fs::copy(
+        "/usr/share/rugpi/boot/grub/boot_spare.grubenv",
+        ctx.mounted_config.path().join("rugpi/boot_spare.grubenv"),
+    )?;
+    match ctx.config.architecture {
+        Architecture::Arm64 => {
+            std::fs::copy(
+                "/usr/lib/grub/arm64-efi/monolithic/grubaa64.efi",
+                ctx.mounted_config.path().join("EFI/BOOT/BOOTAA64.efi"),
+            )?;
+        }
+        Architecture::Armhf => {
+            bail!("unable to install Grub for `armhf`");
+        }
+        Architecture::Amd64 => {
+            std::fs::copy(
+                "/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi",
+                ctx.mounted_config.path().join("EFI/BOOT/BOOTX64.efi"),
+            )?;
+        }
+    }
+    Ok(())
 }
 
 fn setup_tryboot_boot_flow(ctx: &BakeCtx) -> Anyhow<()> {

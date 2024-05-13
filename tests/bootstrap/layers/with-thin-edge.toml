@@ -1,0 +1,24 @@
+parent = "generic-boot"
+
+recipes = [
+    "core/apt-update",
+    "core/apt-cleanup",
+    "core/rugpi-ctrl",
+    "tedge-hacks",
+
+    # Copied from tedge defaults.
+    "tedge-rugpi-core/persist-data",
+    "tedge-rugpi-core/persist-network-manager",
+    "tedge-rugpi-core/persist-overlay",
+    "tedge-rugpi-core/tedge-bootstrap",
+    "tedge-rugpi-core/tedge-firmware-update",
+    "tedge-rugpi-core/x-avahi-daemon",
+    "tedge-rugpi-core/set-wifi",
+    "tedge-rugpi-core/mosquitto",
+]
+
+[parameters."core/apt-cleanup"]
+autoremove = true
+
+[parameters."core/rugpi-ctrl"]
+rugpi_admin = true  # Enable Rugpi Admin.

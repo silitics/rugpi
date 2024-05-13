@@ -11,6 +11,7 @@ pub mod loop_dev;
 pub mod maybe_compressed;
 pub mod mount;
 pub mod partitions;
+pub mod paths;
 pub mod utils;
 
 /// The [`anyhow`] result type.

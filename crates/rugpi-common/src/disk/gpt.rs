@@ -23,6 +23,10 @@ pub struct Guid {
 }
 
 impl Guid {
+    pub fn is_zero(&self) -> bool {
+        self.bytes == [0; 16]
+    }
+
     /// Create a GUID from the given bytes.
     pub const fn from_bytes(bytes: [u8; 16]) -> Self {
         Self { bytes }

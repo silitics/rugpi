@@ -1,9 +1,8 @@
 use std::{fs, path::Path};
 
 use rugpi_common::{
-    boot::{uboot::UBootEnv, BootFlow},
-    partitions::get_boot_flow,
-    Anyhow, DropGuard,
+    boot::{detect_boot_flow, grub, uboot, BootFlow},
+    Anyhow,
 };
 use xscript::{run, Run};
 
@@ -22,23 +21,20 @@ pub fn reboot(spare: bool) -> Anyhow<()> {
     } else {
         reboot_init_system
     };
-    match get_boot_flow()? {
+    match detect_boot_flow()? {
         BootFlow::Tryboot => reboot(spare)?,
         BootFlow::UBoot => {
             if spare {
-                let mut boot_spare_env = UBootEnv::new();
-                boot_spare_env.set("boot_spare", "1");
-                run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
-                let _remount_guard = DropGuard::new(|| {
-                    run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
-                });
-                // It is safe to directly write to the file here. If the file is corrupt,
-                // the system will simply boot from the default partition set.
-                boot_spare_env.save("/run/rugpi/mounts/config/boot_spare.env")?;
+                uboot::set_spare_flag()?;
             }
             reboot(false)?;
         }
-        BootFlow::None => todo!(),
+        BootFlow::GrubEfi => {
+            if spare {
+                grub::set_spare_flag()?;
+            }
+            reboot(false)?;
+        }
     }
 
     Ok(())
