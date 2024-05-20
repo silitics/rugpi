@@ -37,6 +37,8 @@
     "editenv",
     "eeprom",
     "ENVBLK",
+    "ENXIO",
+    "errno",
     "execv",
     "fallocate",
     "fdisk",
@@ -52,6 +54,7 @@
     "linux",
     "losetup",
     "lowerdir",
+    "lseek",
     "mmcblk",
     "noatime",
     "noninteractive",
@@ -61,6 +64,7 @@
     "PARTUUID",
     "pieeprom",
     "postgresql",
+    "Qcow",
     "rbind",
     "repart",
     "repr",
@@ -87,6 +91,7 @@
     "vfat",
     "workdir",
     "xscript",
-    "Yubi"
+    "Yubi",
+    "zerow"
   ]
 }
