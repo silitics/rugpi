@@ -28,7 +28,7 @@ use xscript::{run, Run};
 use crate::{
     project::{
         config::{Architecture, IncludeFirmware},
-        images::{self, ImageConfig, ImageLayout},
+        images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
     },
     utils::prelude::*,
 };
@@ -99,6 +99,10 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
     let work_dir = tempdir()?;
     let work_dir = work_dir.path();
 
+    if let Some(parent) = image.parent() {
+        fs::create_dir_all(parent).ok();
+    }
+
     // Initialize system root directory from provided TAR file.
     info!("Extracting root filesystem.");
     let root_dir = work_dir.join("system");
@@ -155,9 +159,9 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         .clone()
         .or_else(|| {
             config.boot_flow.map(|boot_flow| match boot_flow {
-                BootFlow::Tryboot => todo!(),
-                BootFlow::UBoot => todo!(),
-                BootFlow::GrubEfi => todo!(),
+                BootFlow::Tryboot => pi_image_layout(),
+                BootFlow::UBoot => pi_image_layout(),
+                BootFlow::GrubEfi => grub_efi_image_layout(),
             })
         })
         .ok_or_else(|| anyhow!("image layout needs to be specified"))?;

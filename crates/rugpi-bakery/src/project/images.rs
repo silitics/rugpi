@@ -1,4 +1,7 @@
-use rugpi_common::{boot::BootFlow, disk::PartitionType};
+use rugpi_common::{
+    boot::BootFlow,
+    disk::{gpt::gpt_types, PartitionType},
+};
 use serde::{Deserialize, Serialize};
 
 use super::config::{Architecture, IncludeFirmware};
@@ -106,25 +109,46 @@ pub fn pi_image_layout() -> ImageLayout {
                 .with_size("256M")
                 .with_ty(PartitionType::Mbr(0x0c))
                 .with_filesystem(Filesystem::Fat32)
-                .with_label("config"),
+                .with_root("config"),
             ImagePartition::new()
                 .with_size("128M")
                 .with_ty(PartitionType::Mbr(0x0c))
                 .with_filesystem(Filesystem::Fat32)
-                .with_label("boot-a")
                 .with_root("boot"),
             ImagePartition::new()
                 .with_size("128M")
                 .with_ty(PartitionType::Mbr(0x0c))
-                .with_filesystem(Filesystem::Fat32)
-                .with_label("boot-b"),
-            ImagePartition::new()
-                .with_ty(PartitionType::Mbr(0x05))
-                .with_label("extended"),
+                .with_filesystem(Filesystem::Fat32),
+            ImagePartition::new().with_ty(PartitionType::Mbr(0x05)),
             ImagePartition::new()
                 .with_ty(PartitionType::Mbr(0x83))
                 .with_filesystem(Filesystem::Ext4)
                 .with_label("system-a")
+                .with_root("system"),
+        ],
+    }
+}
+
+pub fn grub_efi_image_layout() -> ImageLayout {
+    ImageLayout {
+        ty: ImageLayoutKind::Gpt,
+        partitions: vec![
+            ImagePartition::new()
+                .with_size("256M")
+                .with_ty(gpt_types::EFI)
+                .with_filesystem(Filesystem::Fat32)
+                .with_root("config"),
+            ImagePartition::new()
+                .with_size("128M")
+                .with_ty(gpt_types::LINUX)
+                .with_filesystem(Filesystem::Ext4)
+                .with_root("boot"),
+            ImagePartition::new()
+                .with_size("128M")
+                .with_ty(gpt_types::LINUX),
+            ImagePartition::new()
+                .with_ty(gpt_types::LINUX)
+                .with_filesystem(Filesystem::Ext4)
                 .with_root("system"),
         ],
     }
