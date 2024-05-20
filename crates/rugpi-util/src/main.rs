@@ -13,6 +13,7 @@ use rugpi_common::{
     partitions::is_block_dev,
     Anyhow,
 };
+use xscript::{run, Run};
 
 #[derive(Debug, Subcommand)]
 pub enum DiskCmd {
@@ -22,6 +23,14 @@ pub enum DiskCmd {
         image: PathBuf,
         /// Partitions to extract.
         partitions: Option<Vec<usize>>,
+    },
+    ExtractExt4 {
+        image: PathBuf,
+        dst: PathBuf,
+    },
+    ExtractFat32 {
+        image: PathBuf,
+        dst: PathBuf,
     },
     Repart {
         image: PathBuf,
@@ -93,6 +102,16 @@ fn main() -> Anyhow<()> {
                 json_file,
             )?)?;
             std::fs::write(env_file, grub_envblk_encode(&data)?)?;
+        }
+        DiskCmd::ExtractExt4 { image, dst } => {
+            let image = image.canonicalize()?;
+            fs::create_dir_all(&dst).ok();
+            run!(["/usr/sbin/debugfs", "-R", "rdump / .", image].with_cwd(&dst))?;
+        }
+        DiskCmd::ExtractFat32 { image, dst } => {
+            let image = image.canonicalize()?;
+            fs::create_dir_all(&dst).ok();
+            run!(["/usr/bin/mcopy", "-i", image, "-snop", "::", dst])?;
         }
     }
 
