@@ -44,7 +44,7 @@ pub fn update_kernel_partitions(
             }
         } else {
             if partition.ty.is_extended() {
-                size = new_table.blocks_to_bytes(NumBlocks::from_value(1));
+                size = new_table.blocks_to_bytes(NumBlocks::from_raw(1));
             }
             println!("Add Partition: {} {} {}", partition.number, start, size);
             if let Err(error) = blkpg_command(
@@ -93,8 +93,8 @@ struct BlkpgPartition {
 impl BlkpgPartition {
     pub fn new(start: NumBytes, size: NumBytes, number: u8) -> Self {
         Self {
-            start: start.into_value() as c_longlong,
-            length: size.into_value() as c_longlong,
+            start: start.into_raw() as c_longlong,
+            length: size.into_raw() as c_longlong,
             pno: number as c_int,
             devname: [0; BLKPG_DEVNAMELTH],
             volname: [0; BLKPG_VOLNAMELTH],

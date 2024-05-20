@@ -44,7 +44,7 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Option
         PartitionTableType::Gpt => gpt_types::LINUX,
         PartitionTableType::Mbr => mbr_types::LINUX,
     };
-    let align = NumBlocks::from_value(2048);
+    let align = NumBlocks::from_raw(2048);
     let mut new_table = table.clone();
     let mut next_start = table.first_usable_block().ceil_align_to(align);
     let mut last_free = table.last_usable_block().floor_align_to(align);
@@ -56,7 +56,7 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Option
             idx + 1
         );
         if in_extended {
-            next_start = (next_start + NumBlocks::from_value(63)).ceil_align_to(align);
+            next_start = (next_start + NumBlocks::from_raw(63)).ceil_align_to(align);
         }
         let old = table.partitions.get(idx);
         let old_next = table.partitions.get(idx + 1);
@@ -111,7 +111,7 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Option
             last_free = next_start + size;
             in_extended = true;
         } else {
-            next_start = next_start + size;
+            next_start += size;
         }
     }
     if has_changed {

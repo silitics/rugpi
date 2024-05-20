@@ -11,6 +11,10 @@ impl MbrId {
     pub const fn new(id: u32) -> Self {
         Self { id }
     }
+
+    pub const fn into_raw(self) -> u32 {
+        self.id
+    }
 }
 
 impl std::fmt::Display for MbrId {
@@ -33,6 +37,8 @@ pub mod mbr_types {
     pub const EXTENDED_CHS: PartitionType = PartitionType::Mbr(0x05);
     /// Extended partition with LBA addressing.
     pub const EXTENDED_LBA: PartitionType = PartitionType::Mbr(0x0F);
+
+    pub const EXTENDED: PartitionType = EXTENDED_CHS;
 
     /// FAT32 partition with LBA addressing.
     pub const FAT32_LBA: PartitionType = PartitionType::Mbr(0x0C);

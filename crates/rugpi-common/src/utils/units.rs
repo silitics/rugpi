@@ -21,7 +21,7 @@ pub struct Quantity<N, U> {
 
 impl<N, U> Quantity<N, U> {
     /// Construct the quantity from the given value.
-    pub const fn from_value(raw: N) -> Self {
+    pub const fn from_raw(raw: N) -> Self {
         Self {
             value: raw,
             unit: PhantomData,
@@ -29,7 +29,7 @@ impl<N, U> Quantity<N, U> {
     }
 
     /// Convert the quantity to the raw value.
-    pub const fn into_value(self) -> N
+    pub const fn into_raw(self) -> N
     where
         N: Copy,
     {
@@ -39,7 +39,7 @@ impl<N, U> Quantity<N, U> {
 
 impl<N, U> From<N> for Quantity<N, U> {
     fn from(value: N) -> Self {
-        Self::from_value(value)
+        Self::from_raw(value)
     }
 }
 
@@ -70,7 +70,13 @@ impl<N: Copy + std::ops::Add<N, Output = N>, U> std::ops::Add for Quantity<N, U>
     type Output = Quantity<N, U>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Quantity::from_value(self.value + rhs.value)
+        Quantity::from_raw(self.value + rhs.value)
+    }
+}
+
+impl<N: Copy + std::ops::Add<N, Output = N>, U> std::ops::AddAssign for Quantity<N, U> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.value = self.value + rhs.value;
     }
 }
 
@@ -78,7 +84,7 @@ impl<N: Copy + std::ops::Sub<N, Output = N>, U> std::ops::Sub for Quantity<N, U>
     type Output = Quantity<N, U>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Quantity::from_value(self.value - rhs.value)
+        Quantity::from_raw(self.value - rhs.value)
     }
 }
 
@@ -87,6 +93,14 @@ impl<N: Copy + std::ops::Div<N, Output = N>, U> std::ops::Div for Quantity<N, U>
 
     fn div(self, rhs: Self) -> Self::Output {
         self.value / rhs.value
+    }
+}
+
+impl<N: Copy + std::ops::Mul<N, Output = N>, U> std::ops::Mul<N> for Quantity<N, U> {
+    type Output = Quantity<N, U>;
+
+    fn mul(self, rhs: N) -> Self::Output {
+        Self::from_raw(self.value * rhs)
     }
 }
 

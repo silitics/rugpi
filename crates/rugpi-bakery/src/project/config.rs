@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use super::{images::ImageConfig, repositories::Source};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BakeryConfig {
     /// The repositories to use.

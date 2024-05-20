@@ -11,7 +11,7 @@ use crate::utils::{
 };
 
 /// Number of blocks used by a GPT partition table.
-pub const GPT_TABLE_BLOCKS: NumBlocks = NumBlocks::from_value(33);
+pub const GPT_TABLE_BLOCKS: NumBlocks = NumBlocks::from_raw(33);
 
 /// Length of the GUID string encoding.
 pub const GUID_STRING_LENGTH: usize = 36;
@@ -25,6 +25,15 @@ pub struct Guid {
 impl Guid {
     pub fn is_zero(&self) -> bool {
         self.bytes == [0; 16]
+    }
+
+    pub const fn from_random_bytes(mut bytes: [u8; 16]) -> Self {
+        // https://datatracker.ietf.org/doc/html/rfc4122#section-4.4
+        bytes[7] &= 0b0000_1111;
+        bytes[7] |= 0b0100_1111;
+        bytes[8] &= 0b1011_1111;
+        bytes[8] |= 0b1000_0000;
+        Self { bytes }
     }
 
     /// Create a GUID from the given bytes.

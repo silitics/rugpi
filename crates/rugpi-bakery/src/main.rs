@@ -1,13 +1,16 @@
 use std::{
     convert::Infallible,
     ffi::{CStr, CString},
+    fs,
     path::PathBuf,
 };
 
-use bake::LayerBakery;
+use bake::{image::make_image, LayerBakery};
 use clap::Parser;
 use colored::Colorize;
-use project::{config::Architecture, repositories::Source, Project, ProjectLoader};
+use project::{
+    config::Architecture, images::ImageConfig, repositories::Source, Project, ProjectLoader,
+};
 use rugpi_common::Anyhow;
 use utils::logging::init_logging;
 
@@ -39,6 +42,9 @@ pub enum Command {
     Pull,
     /// Update Rugpi Bakery itself.
     Update(UpdateCommand),
+    /// Internal unstable commands.
+    #[clap(subcommand)]
+    Internal(InternalCommand),
 }
 
 /// The `bake` command.
@@ -58,6 +64,16 @@ pub enum BakeCommand {
         arch: Architecture,
         /// The name of the layer to bake.
         layer: String,
+    },
+}
+
+/// The `bake` command.
+#[derive(Debug, Parser)]
+pub enum InternalCommand {
+    MakeImage {
+        config: PathBuf,
+        source: PathBuf,
+        image: PathBuf,
     },
 }
 
@@ -122,6 +138,16 @@ fn main() -> Anyhow<()> {
                 }
             }
         }
+        Command::Internal(cmd) => match cmd {
+            InternalCommand::MakeImage {
+                config,
+                source,
+                image,
+            } => {
+                let config: ImageConfig = toml::from_str(&fs::read_to_string(&config)?)?;
+                make_image(&config, source, image)?;
+            }
+        },
     }
     Ok(())
 }

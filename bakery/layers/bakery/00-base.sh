@@ -15,7 +15,10 @@ apt-get -y install \
     git \
     gpg \
     mmdebstrap \
+    mtools \
+    proot \
     python3 \
+    qemu-utils \
     wget \
     xz-utils \
     zip \

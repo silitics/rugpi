@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -24,7 +25,7 @@ pub mod stream;
 mod sfdisk;
 
 /// Default size of blocks.
-const DEFAULT_BLOCK_SIZE: u64 = 512;
+pub const DEFAULT_BLOCK_SIZE: u64 = 512;
 
 /// Unique identifier of a disk.
 ///
@@ -36,6 +37,16 @@ pub enum DiskId {
     Mbr(mbr::MbrId),
     /// Unique identifier of a GPT disk.
     Gpt(gpt::Guid),
+}
+
+impl DiskId {
+    pub fn random_mbr() -> Self {
+        Self::Mbr(mbr::MbrId::new(rand::thread_rng().gen()))
+    }
+
+    pub fn random_gpt() -> Self {
+        Self::Gpt(gpt::Guid::from_random_bytes(rand::thread_rng().gen()))
+    }
 }
 
 impl std::fmt::Display for DiskId {
@@ -67,7 +78,7 @@ impl PartitionTable {
         Self {
             disk_id: id,
             disk_size: size,
-            block_size: NumBytes::from_value(DEFAULT_BLOCK_SIZE),
+            block_size: NumBytes::from_raw(DEFAULT_BLOCK_SIZE),
             partitions: Vec::new(),
         }
     }
@@ -79,7 +90,7 @@ impl PartitionTable {
 
     /// The size of the disk in bytes.
     pub fn size(&self) -> NumBytes {
-        NumBytes::from_value(self.block_size.into_value() * self.disk_size.into_value())
+        NumBytes::from_raw(self.block_size.into_raw() * self.disk_size.into_raw())
     }
 
     /// The type of the partition table.
@@ -102,12 +113,12 @@ impl PartitionTable {
 
     /// Convert blocks to bytes.
     pub fn blocks_to_bytes(&self, blocks: NumBlocks) -> NumBytes {
-        NumBytes::from_value(blocks.into_value() * self.block_size.into_value())
+        NumBytes::from_raw(blocks.into_raw() * self.block_size.into_raw())
     }
 
     /// Convert bytes to blocks.
     pub fn bytes_to_blocks(&self, bytes: NumBytes) -> NumBlocks {
-        NumBlocks::from_value(bytes.into_value().div_ceil(self.block_size.into_value()))
+        NumBlocks::from_raw(bytes.into_raw().div_ceil(self.block_size.into_raw()))
     }
 
     /// The first usable block.
@@ -144,7 +155,7 @@ impl PartitionTable {
             next_number = partition.number + 1;
             next_free = partition.start + partition.size;
             if partition.ty.is_extended() {
-                next_free = partition.start + NumBlocks::from_value(63);
+                next_free = partition.start + NumBlocks::from_raw(63);
                 last_usable = partition.start + partition.size;
             }
         }
@@ -265,16 +276,18 @@ pub type NumBlocks = Quantity<u64, NumBlocksUnit>;
 
 impl NumBlocks {
     /// One block.
-    pub const ONE: NumBlocks = NumBlocks::from_value(1);
+    pub const ONE: NumBlocks = NumBlocks::from_raw(1);
 
     /// Align the block number rounding downward.
+    #[must_use]
     pub fn floor_align_to(self, align: Self) -> Self {
-        Self::from_value(align.into_value() * (self / align))
+        Self::from_raw(align.into_raw() * (self / align))
     }
 
     /// Align the block number rounding upward.
+    #[must_use]
     pub fn ceil_align_to(self, align: Self) -> Self {
-        Self::from_value(align.into_value() * (self.into_value().div_ceil(align.into_value())))
+        Self::from_raw(align.into_raw() * (self.into_raw().div_ceil(align.into_raw())))
     }
 }
 
@@ -282,7 +295,7 @@ impl NumBlocks {
 pub const fn parse_size(size: &str) -> Result<NumBytes, InvalidSize> {
     let size = size.as_bytes();
     if size.is_empty() {
-        return Ok(NumBytes::from_value(0));
+        return Ok(NumBytes::from_raw(0));
     }
     let mut last = size.len() - 1;
     let factor: u64 = match size[last] {
@@ -310,7 +323,7 @@ pub const fn parse_size(size: &str) -> Result<NumBytes, InvalidSize> {
         }
         pos += 1;
     }
-    Ok(NumBytes::from_value(value * factor))
+    Ok(NumBytes::from_raw(value * factor))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -359,27 +372,27 @@ mod tests {
     pub fn test_parse_size() {
         assert_eq!(
             parse_size("512M").unwrap(),
-            NumBytes::from_value(512 * (1 << 20))
+            NumBytes::from_raw(512 * (1 << 20))
         );
     }
 
     #[test]
     pub fn test_block_alignment() {
         assert_eq!(
-            NumBlocks::from_value(2048).ceil_align_to(NumBlocks::from_value(2048)),
-            NumBlocks::from_value(2048)
+            NumBlocks::from_raw(2048).ceil_align_to(NumBlocks::from_raw(2048)),
+            NumBlocks::from_raw(2048)
         );
         assert_eq!(
-            NumBlocks::from_value(2048).floor_align_to(NumBlocks::from_value(2048)),
-            NumBlocks::from_value(2048)
+            NumBlocks::from_raw(2048).floor_align_to(NumBlocks::from_raw(2048)),
+            NumBlocks::from_raw(2048)
         );
         assert_eq!(
-            NumBlocks::from_value(2049).ceil_align_to(NumBlocks::from_value(2048)),
-            NumBlocks::from_value(4096)
+            NumBlocks::from_raw(2049).ceil_align_to(NumBlocks::from_raw(2048)),
+            NumBlocks::from_raw(4096)
         );
         assert_eq!(
-            NumBlocks::from_value(2049).floor_align_to(NumBlocks::from_value(2048)),
-            NumBlocks::from_value(2048)
+            NumBlocks::from_raw(2049).floor_align_to(NumBlocks::from_raw(2048)),
+            NumBlocks::from_raw(2048)
         )
     }
 }

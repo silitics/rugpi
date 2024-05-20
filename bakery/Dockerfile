@@ -12,6 +12,14 @@ RUN mkdir -p /usr/share/rugpi \
     && mv rpi-eeprom-master rpi-eeprom \
     && rm -f rpi-eeprom-master.zip
 
+RUN mkdir -p /usr/share/rugpi/pi \
+    && cd /usr/share/rugpi/pi \
+    && wget -O rpi-firmware.zip https://github.com/raspberrypi/firmware/archive/refs/heads/stable.zip \
+    && unzip rpi-firmware.zip \
+    && mv firmware-stable/boot firmware \
+    && rm -rf firmware-stable \
+    && rm -f firmware/kernel*.img
+
 COPY bakery/repositories /usr/share/rugpi/repositories
 COPY boot /usr/share/rugpi/boot
 

@@ -24,9 +24,9 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
             .partition_table;
     let metadata = dev.metadata()?;
     let size = if metadata.file_type().is_block_device() {
-        NumBlocks::from_value(block_device_get_size(dev)? / json_table.sector_size)
+        NumBlocks::from_raw(block_device_get_size(dev)? / json_table.sector_size)
     } else {
-        NumBlocks::from_value(metadata.size() / json_table.sector_size)
+        NumBlocks::from_raw(metadata.size() / json_table.sector_size)
     };
     let id = match json_table.label {
         SfdiskJsonLabel::Dos => DiskId::Mbr(
@@ -83,8 +83,8 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
                 .transpose()?;
             Ok(Partition {
                 number,
-                start: NumBlocks::from_value(partition.start),
-                size: NumBlocks::from_value(partition.size),
+                start: NumBlocks::from_raw(partition.start),
+                size: NumBlocks::from_raw(partition.size),
                 ty,
                 name: Some(partition.node),
                 gpt_id,
@@ -95,7 +95,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
     Ok(PartitionTable {
         disk_id: id,
         disk_size: size,
-        block_size: NumBytes::from_value(json_table.sector_size),
+        block_size: NumBytes::from_raw(json_table.sector_size),
         partitions,
     })
 }
@@ -112,8 +112,8 @@ pub(crate) fn sfdisk_write(table: &PartitionTable, dev: &Path) -> Anyhow<()> {
         write!(
             &mut script,
             "start={},size={},type={}",
-            partition.start.into_value(),
-            partition.size.into_value(),
+            partition.start.into_raw(),
+            partition.size.into_raw(),
             partition.ty
         )
         .unwrap();
