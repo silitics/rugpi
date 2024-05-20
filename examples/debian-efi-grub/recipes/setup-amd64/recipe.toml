@@ -1,0 +1,2 @@
+description = "setup system (amd64)"
+dependencies = ["core/apt-update"]

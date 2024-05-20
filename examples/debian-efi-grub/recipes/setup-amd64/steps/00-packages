@@ -1,0 +1,6 @@
+linux-image-amd64
+linux-headers-amd64
+firmware-linux
+firmware-linux-free
+intel-microcode
+amd64-microcode

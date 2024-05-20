@@ -1,0 +1,2 @@
+description = "setup system (arm64)"
+dependencies = ["core/apt-update"]

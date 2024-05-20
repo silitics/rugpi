@@ -1,0 +1,3 @@
+parent = "generic-base"
+
+recipes = ["setup-amd64"]
