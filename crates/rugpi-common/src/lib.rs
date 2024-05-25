@@ -7,6 +7,7 @@ use crate::boot::uboot::UBootEnv;
 pub mod boot;
 pub mod ctrl_config;
 pub mod disk;
+pub mod fsutils;
 pub mod loop_dev;
 pub mod maybe_compressed;
 pub mod mount;

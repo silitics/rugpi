@@ -21,6 +21,7 @@ use crate::{
 
 pub mod customize;
 pub mod image;
+pub mod targets;
 
 pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
     let image_config = project

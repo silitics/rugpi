@@ -2,23 +2,18 @@
 
 use std::{
     fs::{self, File},
-    io::{Read, Write},
-    os::{fd::AsRawFd, unix::fs::MetadataExt},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
 use anyhow::Context;
-use nix::{
-    errno::Errno,
-    libc::off64_t,
-    unistd::{lseek64, Whence},
-};
 use rugpi_common::{
-    boot::{uboot::UBootEnv, BootFlow},
+    boot::BootFlow,
     disk::{
         gpt::gpt_types, mbr::mbr_types, parse_size, DiskId, NumBlocks, Partition, PartitionTable,
         PartitionTableType,
     },
+    fsutils::{allocate_file, copy_recursive, copy_sparse},
     patch_boot, patch_config,
     utils::units::NumBytes,
     Anyhow,
@@ -27,74 +22,18 @@ use tempfile::tempdir;
 use xscript::{run, Run};
 
 use crate::{
+    bake::targets::{
+        generic_grub_efi::initialize_grub,
+        rpi::{include_pi4_firmware, include_pi5_firmware},
+        rpi_tryboot::initialize_tryboot,
+        rpi_uboot::initialize_uboot,
+    },
     project::{
-        config::{Architecture, IncludeFirmware},
+        config::IncludeFirmware,
         images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
     },
     utils::prelude::*,
 };
-
-pub fn allocate_file(path: &Path, size: u64) -> Anyhow<()> {
-    let file = fs::File::create(path)?;
-    nix::fcntl::fallocate(
-        file.as_raw_fd(),
-        nix::fcntl::FallocateFlags::empty(),
-        0,
-        size as i64,
-    )?;
-    // run!(["fallocate", "-l", "{size}", path])?;
-    Ok(())
-}
-
-pub fn copy_sparse(
-    src: &mut File,
-    dst: &mut File,
-    src_offset: u64,
-    dst_offset: u64,
-    size: u64,
-) -> Anyhow<()> {
-    let mut src_offset = off64_t::try_from(src_offset).unwrap();
-    let dst_offset = off64_t::try_from(dst_offset).unwrap();
-    let src_raw_fd = src.as_raw_fd();
-    let dst_raw_fd = dst.as_raw_fd();
-    lseek64(src_raw_fd, src_offset, Whence::SeekSet)?;
-    lseek64(dst_raw_fd, dst_offset, Whence::SeekSet)?;
-    let mut total_remaining = usize::try_from(size).unwrap();
-    let mut buffer = vec![0; 8192];
-    while total_remaining > 0 {
-        // If there is no hole, then `next_hole` points to the end of the file as there
-        // always is an implicit hole at the end of any file.
-        let next_hole = lseek64(src_raw_fd, src_offset, Whence::SeekHole).context("next hole")?;
-        lseek64(src.as_raw_fd(), src_offset, Whence::SeekSet).context("seek set")?;
-        let chunk_size = usize::try_from(next_hole - src_offset).unwrap();
-        let mut chunk_remaining = chunk_size;
-        while chunk_remaining > 0 && total_remaining > 0 {
-            let chunk_read = buffer.len().min(chunk_remaining).min(total_remaining);
-            src.read_exact(&mut buffer[..chunk_read])?;
-            dst.write_all(&buffer[..chunk_read])?;
-            chunk_remaining -= chunk_read;
-            total_remaining -= chunk_read;
-        }
-        if total_remaining > 0 {
-            src_offset = match lseek64(src_raw_fd, next_hole, Whence::SeekData) {
-                Ok(src_offset) => src_offset,
-                Err(Errno::ENXIO) => {
-                    lseek64(
-                        dst_raw_fd,
-                        total_remaining.try_into().unwrap(),
-                        Whence::SeekCur,
-                    )?;
-                    break;
-                }
-                error => error.context("seek data")?,
-            };
-            let hole_size = src_offset - next_hole;
-            lseek64(dst_raw_fd, hole_size, Whence::SeekCur)?;
-            total_remaining -= usize::try_from(hole_size).unwrap();
-        }
-    }
-    Ok(())
-}
 
 pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let work_dir = tempdir()?;
@@ -135,11 +74,11 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
     // Always copy second stage boot scripts independently of the boot flow.
     if config.boot_flow.is_some() {
         info!("Copy second stage boot scripts.");
-        copy(
+        copy_recursive(
             "/usr/share/rugpi/boot/u-boot/bin/second.scr",
             boot_dir.join("second.scr"),
         )?;
-        copy(
+        copy_recursive(
             "/usr/share/rugpi/boot/grub/second.grub.cfg",
             boot_dir.join("second.grub.cfg"),
         )?;
@@ -259,182 +198,6 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             }
         }
     }
-    Ok(())
-}
-
-fn initialize_tryboot(config_dir: &Path, boot_dir: &Path, root_dir: &Path) -> Anyhow<()> {
-    copy(root_dir.join("boot"), &boot_dir)?;
-    run!(["rm", "-rf", root_dir.join("boot")])?;
-    std::fs::create_dir_all(root_dir.join("boot"))?;
-    copy("/usr/share/rugpi/boot/tryboot", &config_dir)?;
-    Ok(())
-}
-
-fn initialize_uboot(
-    config: &ImageConfig,
-    config_dir: &Path,
-    boot_dir: &Path,
-    root_dir: &Path,
-) -> Anyhow<()> {
-    copy(root_dir.join("boot"), &boot_dir)?;
-    run!(["rm", "-rf", root_dir.join("boot")])?;
-    std::fs::create_dir_all(root_dir.join("boot"))?;
-    copy("/usr/share/rugpi/pi/firmware", &config_dir)?;
-    match config.architecture {
-        Architecture::Arm64 => {
-            copy(
-                "/usr/share/rugpi/boot/u-boot/arm64_config.txt",
-                config_dir.join("config.txt"),
-            )?;
-            copy(
-                "/usr/share/rugpi/boot/u-boot/bin/u-boot-arm64.bin",
-                config_dir.join("u-boot-arm64.bin"),
-            )?;
-        }
-        Architecture::Armhf => {
-            copy(
-                "/usr/share/rugpi/boot/u-boot/armhf_config.txt",
-                config_dir.join("config.txt"),
-            )?;
-            for model in ["zerow", "pi1", "pi2", "pi3"] {
-                copy(
-                    format!("/usr/share/rugpi/boot/u-boot/bin/u-boot-armhf-{model}.bin"),
-                    config_dir.join(format!("u-boot-armhf-{model}.bin")),
-                )?;
-            }
-        }
-        _ => {
-            bail!(
-                "no U-Boot support for architecture `{}`",
-                config.architecture.as_str()
-            );
-        }
-    }
-    copy(
-        "/usr/share/rugpi/boot/u-boot/bin/boot.scr",
-        config_dir.join("boot.scr"),
-    )?;
-    std::fs::write(config_dir.join("cmdline.txt"), "")?;
-
-    let mut env = UBootEnv::new();
-    env.set("bootpart", "2");
-    env.save(config_dir.join("bootpart.default.env"))?;
-
-    let mut env = UBootEnv::new();
-    env.set("boot_spare", "0");
-    env.save(config_dir.join("boot_spare.disabled.env"))?;
-    env.save(config_dir.join("boot_spare.env"))?;
-
-    let mut env = UBootEnv::new();
-    env.set("boot_spare", "1");
-    env.save(config_dir.join("boot_spare.enabled.env"))?;
-
-    Ok(())
-}
-
-fn initialize_grub(config: &ImageConfig, config_dir: &Path) -> Anyhow<()> {
-    std::fs::create_dir_all(config_dir.join("EFI/BOOT")).ok();
-    copy(
-        "/usr/share/rugpi/boot/grub/first.grub.cfg",
-        config_dir.join("EFI/BOOT/grub.cfg"),
-    )?;
-    std::fs::create_dir_all(config_dir.join("rugpi")).ok();
-    copy(
-        "/usr/share/rugpi/boot/grub/bootpart.default.grubenv",
-        config_dir.join("rugpi/bootpart.default.grubenv"),
-    )?;
-    copy(
-        "/usr/share/rugpi/boot/grub/boot_spare.grubenv",
-        config_dir.join("rugpi/boot_spare.grubenv"),
-    )?;
-    match config.architecture {
-        Architecture::Arm64 => {
-            copy(
-                "/usr/lib/grub/arm64-efi/monolithic/grubaa64.efi",
-                config_dir.join("EFI/BOOT/BOOTAA64.efi"),
-            )?;
-        }
-        Architecture::Amd64 => {
-            copy(
-                "/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi",
-                config_dir.join("EFI/BOOT/BOOTX64.efi"),
-            )?;
-        }
-        _ => {
-            bail!(
-                "no Grub support for architecture `{}`",
-                config.architecture.as_str()
-            );
-        }
-    }
-    Ok(())
-}
-
-fn include_pi4_firmware(config_dir: &Path) -> Anyhow<()> {
-    run!([
-        "cp",
-        "-f",
-        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/pieeprom-2023-05-11.bin",
-        config_dir.join("pieeprom.upd")
-    ])?;
-    run!([
-        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
-        "-i",
-        config_dir.join("pieeprom.upd"),
-        "-o",
-        config_dir.join("pieeprom.sig")
-    ])?;
-    run!([
-        "cp",
-        "-f",
-        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/vl805-000138c0.bin",
-        config_dir.join("vl805.bin")
-    ])?;
-    run!([
-        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
-        "-i",
-        config_dir.join("vl805.bin"),
-        "-o",
-        config_dir.join("vl805.sig")
-    ])?;
-    run!([
-        "cp",
-        "-f",
-        "/usr/share/rugpi/rpi-eeprom/firmware-2711/stable/recovery.bin",
-        config_dir.join("recovery.bin")
-    ])?;
-    Ok(())
-}
-
-fn include_pi5_firmware(config_dir: &Path) -> Anyhow<()> {
-    run!([
-        "cp",
-        "-f",
-        "/usr/share/rugpi/rpi-eeprom/firmware-2712/stable/pieeprom-2023-10-30.bin",
-        config_dir.join("pieeprom.upd")
-    ])?;
-    run!([
-        "/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest",
-        "-i",
-        config_dir.join("pieeprom.upd"),
-        "-o",
-        config_dir.join("pieeprom.sig")
-    ])?;
-    run!([
-        "cp",
-        "-f",
-        "/usr/share/rugpi/rpi-eeprom/firmware-2712/stable/recovery.bin",
-        config_dir.join("recovery.bin")
-    ])?;
-    Ok(())
-}
-
-fn copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<()> {
-    let dst = dst.as_ref();
-    if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent).ok();
-    };
-    run!(["cp", "-rTp", src.as_ref(), dst])?;
     Ok(())
 }
 
