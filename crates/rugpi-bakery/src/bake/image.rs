@@ -545,7 +545,7 @@ fn compute_fs_size(root: PathBuf) -> Anyhow<NumBlocks> {
     let mut stack = vec![root];
     while let Some(top) = stack.pop() {
         // We do not want to follow symlinks here as we are interested in the size of
-        // the symlink and no the size of the symlink's target.
+        // the symlink and not the size of the symlink's target.
         let metadata = fs::symlink_metadata(&top)?;
         size += NumBytes::from_raw(metadata.size());
         if metadata.is_dir() {
