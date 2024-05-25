@@ -17,6 +17,7 @@ use rugpi_common::{
     boot::{uboot::UBootEnv, BootFlow},
     disk::{
         gpt::gpt_types, mbr::mbr_types, parse_size, DiskId, NumBlocks, Partition, PartitionTable,
+        PartitionTableType,
     },
     patch_boot, patch_config,
     utils::units::NumBytes,
@@ -428,6 +429,15 @@ fn include_pi5_firmware(config_dir: &Path) -> Anyhow<()> {
     Ok(())
 }
 
+fn copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<()> {
+    let dst = dst.as_ref();
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent).ok();
+    };
+    run!(["cp", "-rTp", src.as_ref(), dst])?;
+    Ok(())
+}
+
 /// We are calculating everything with a portable block size of 512 bytes.
 const BLOCK_SIZE: NumBytes = NumBytes::from_raw(512);
 
@@ -439,51 +449,56 @@ fn bytes_to_blocks(bytes: NumBytes) -> NumBlocks {
     NumBlocks::from_raw(bytes.into_raw().div_ceil(BLOCK_SIZE.into_raw()))
 }
 
-fn copy(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<()> {
-    let dst = dst.as_ref();
-    if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent).ok();
-    };
-    run!(["cp", "-rTp", src.as_ref(), dst])?;
-    Ok(())
-}
-
-/// Compute the size of an image.
+/// Compute the partition table for an image based on the provided layout.
 fn compute_partition_table(layout: &ImageLayout, work_dir: &Path) -> Anyhow<PartitionTable> {
+    let table_type = layout.ty;
     let mut partitions = Vec::new();
     let mut next_usable = ALIGNMENT;
+    let mut next_number = 1;
     let mut in_extended = false;
-    for (idx, partition) in layout.partitions.iter().enumerate() {
-        let number = u8::try_from(idx + 1).unwrap();
+    for partition in &layout.partitions {
+        // Partitions are numbered based on their appearance in the layout.
+        let number = next_number;
+        next_number += 1;
+        if table_type.is_mbr() && number > 4 && !in_extended {
+            bail!("invalid number of primary partitions in MBR");
+        }
+        // Leave space for the EBR, if we are creating a logical MBR partition.
         if in_extended {
             next_usable = (next_usable + NumBlocks::ONE).ceil_align_to(ALIGNMENT);
         }
-        let ty = partition.ty.unwrap_or(match layout.ty {
-            images::ImageLayoutKind::Mbr => mbr_types::LINUX,
-            images::ImageLayoutKind::Gpt => gpt_types::LINUX,
+        // By default, we create `LINUX` partitions.
+        let partition_type = partition.ty.unwrap_or(match table_type {
+            PartitionTableType::Mbr => mbr_types::LINUX,
+            PartitionTableType::Gpt => gpt_types::LINUX,
         });
+        if partition_type.table_type() != layout.ty {
+            bail!("partition type `{partition_type}` does not match table type `{table_type}`",)
+        }
+        // The start of the partition is the next usable block.
         let start = next_usable;
-        if ty.is_extended() {
-            if number > 4 || in_extended {
-                bail!("invalid extended partition");
+        if partition_type.is_extended() {
+            if in_extended {
+                bail!("nested extended partitions are not allowed")
             }
             partitions.push(Partition {
                 number,
                 start,
-                // We fix this later once we know the size of the disk.
+                // We fix this later once we know the size of the extended part.
                 size: 0.into(),
-                ty,
+                ty: partition_type,
                 name: partition.label.clone(),
                 gpt_id: None,
             });
-            // This will add space for the EBR for next partition automatically.
             in_extended = true;
+            next_number = 5;
+            // Space for the EBR is automatically added prior to the next partition.
         } else {
             let size = match &partition.size {
                 Some(size) => bytes_to_blocks(parse_size(size)?),
                 None => {
                     let Some(path) = &partition.root else {
-                        bail!("partitions without a fixed size must have a source path");
+                        bail!("partitions without a fixed size must have a root path");
                     };
                     compute_fs_size(work_dir.join(path))?
                 }
@@ -492,50 +507,46 @@ fn compute_partition_table(layout: &ImageLayout, work_dir: &Path) -> Anyhow<Part
                 number,
                 start,
                 size,
-                ty,
+                ty: partition_type,
                 name: partition.label.clone(),
                 gpt_id: None,
             });
             next_usable = (start + size).ceil_align_to(ALIGNMENT);
         }
     }
-    // Fix the size of the extended partition.
-    if in_extended {
-        for partition in partitions.iter_mut() {
-            if partition.ty.is_extended() {
-                partition.size =
-                    (next_usable - partition.start + NumBlocks::ONE).ceil_align_to(ALIGNMENT);
-                break;
-            }
+    // Fix the size of the extended partition, if there is one.
+    for partition in partitions.iter_mut() {
+        if !partition.ty.is_extended() {
+            continue;
         }
+        partition.size = (next_usable - partition.start + NumBlocks::ONE).ceil_align_to(ALIGNMENT);
+        break;
     }
-    let disk_size = match partitions.last() {
+    // Create and validate the partition table.
+    let image_size = match partitions.last() {
         Some(last_partition) => {
             (last_partition.start + last_partition.size).ceil_align_to(ALIGNMENT) + ALIGNMENT
         }
-        None => ALIGNMENT * 10,
+        None => ALIGNMENT * 32,
     };
-    let disk_id = match layout.ty {
-        images::ImageLayoutKind::Mbr => DiskId::random_mbr(),
-        images::ImageLayoutKind::Gpt => DiskId::random_gpt(),
+    let table_id = match table_type {
+        PartitionTableType::Mbr => DiskId::random_mbr(),
+        PartitionTableType::Gpt => DiskId::random_gpt(),
     };
-    let mut table = PartitionTable::new(disk_id, disk_size);
+    let mut table = PartitionTable::new(table_id, image_size);
     table.partitions = partitions;
+    table.validate()?;
     Ok(table)
 }
 
-/// Compute the size of a filesystem.
-fn compute_fs_size(path: PathBuf) -> Anyhow<NumBlocks> {
+/// Compute the required size for a filesystem based on the given root path.
+fn compute_fs_size(root: PathBuf) -> Anyhow<NumBlocks> {
     let mut size = NumBytes::from_raw(0);
-    let mut stack = vec![path];
+    let mut stack = vec![root];
     while let Some(top) = stack.pop() {
-        let metadata = match fs::metadata(&top) {
-            Ok(metadata) => metadata,
-            Err(error) => {
-                error!("error obtaining metadata for {top:?}: {error}");
-                continue;
-            }
-        };
+        // We do not want to follow symlinks here as we are interested in the size of
+        // the symlink and no the size of the symlink's target.
+        let metadata = fs::symlink_metadata(&top)?;
         size += NumBytes::from_raw(metadata.size());
         if metadata.is_dir() {
             for entry in fs::read_dir(&top)? {

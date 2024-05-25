@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use anyhow::bail;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -133,35 +134,66 @@ impl PartitionTable {
 
     /// Write the partition table to a device or image.
     pub fn write(&self, dev: impl AsRef<Path>) -> Anyhow<()> {
+        // Make sure that we never write an invalid partition table.
+        self.validate()?;
         sfdisk::sfdisk_write(self, dev.as_ref())
     }
 
-    /// Check invariants of the partition table.
+    /// Validate the partition table.
     ///
-    /// - Partitions should be sorted by their number.
-    /// - Partitions should be sorted by their first block.
-    /// - Partitions should be within the bounds of the disk.
-    pub fn verify(&self) {
-        let mut next_free = self.first_usable_block();
+    /// This function checks the following criteria:
+    /// - Partitions are sorted based on their number and starting block.
+    /// - Partitions do not overlap except for the extended MBR partition.
+    /// - Partitions are within the usable range of the disk.
+    pub fn validate(&self) -> Anyhow<()> {
         let mut last_usable = self.last_usable_block();
-        let mut next_number = 0;
+        let mut next_free = self.first_usable_block();
+        let mut next_number = 1;
+        let mut in_extended = false;
         for partition in &self.partitions {
+            if in_extended {
+                // We need space for the EBR.
+                next_free += NumBlocks::ONE;
+            }
             if partition.start < next_free {
-                panic!("invalid");
+                bail!(
+                    "invalid starting block of partition ({} < {next_free})",
+                    next_free
+                )
             }
             if partition.number < next_number {
-                panic!("invalid");
+                bail!(
+                    "invalid partition number ({} < {next_number})",
+                    partition.number
+                );
             }
-            next_number = partition.number + 1;
-            next_free = partition.start + partition.size;
+            if in_extended && partition.number != next_number {
+                // Extended partitions must be consecutively numbered.
+                bail!(
+                    "invalid number of extended partition ({} != {next_number})",
+                    partition.number
+                )
+            }
             if partition.ty.is_extended() {
+                if partition.number > 4 {
+                    bail!(
+                        "invalid number of extended partition ({})",
+                        partition.number
+                    )
+                }
+                next_number = 5;
                 next_free = partition.start + NumBlocks::from_raw(63);
                 last_usable = partition.start + partition.size;
+                in_extended = true;
+            } else {
+                next_number = partition.number + 1;
+                next_free = partition.start + partition.size;
             }
         }
         if next_free > last_usable {
-            panic!("invalid");
+            bail!("partitions extend beyond usable range ({next_free} > {last_usable})");
         }
+        Ok(())
     }
 }
 
@@ -199,6 +231,13 @@ pub enum PartitionType {
 }
 
 impl PartitionType {
+    pub fn table_type(&self) -> PartitionTableType {
+        match self {
+            PartitionType::Mbr(_) => PartitionTableType::Mbr,
+            PartitionType::Gpt(_) => PartitionTableType::Gpt,
+        }
+    }
+
     pub fn is_free(&self) -> bool {
         match self {
             PartitionType::Mbr(ty) => *ty == 0x00,
@@ -326,11 +365,22 @@ pub const fn parse_size(size: &str) -> Result<NumBytes, InvalidSize> {
     Ok(NumBytes::from_raw(value * factor))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum PartitionTableType {
     Gpt,
+    #[default]
     Mbr,
+}
+
+impl PartitionTableType {
+    pub fn is_mbr(self) -> bool {
+        matches!(self, Self::Mbr)
+    }
+
+    pub fn is_gpt(self) -> bool {
+        matches!(self, Self::Gpt)
+    }
 }
 
 impl std::fmt::Display for PartitionTableType {

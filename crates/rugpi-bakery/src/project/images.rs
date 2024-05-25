@@ -1,6 +1,6 @@
 use rugpi_common::{
     boot::BootFlow,
-    disk::{gpt::gpt_types, PartitionType},
+    disk::{gpt::gpt_types, PartitionTableType, PartitionType},
 };
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,7 @@ pub struct ImageConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ImageLayout {
     #[serde(default, rename = "type")]
-    pub ty: ImageLayoutKind,
+    pub ty: PartitionTableType,
     pub partitions: Vec<ImagePartition>,
 }
 
@@ -77,14 +77,6 @@ impl ImagePartition {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum ImageLayoutKind {
-    #[default]
-    Mbr,
-    Gpt,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Filesystem {
@@ -103,7 +95,7 @@ impl Filesystem {
 
 pub fn pi_image_layout() -> ImageLayout {
     ImageLayout {
-        ty: ImageLayoutKind::Mbr,
+        ty: PartitionTableType::Mbr,
         partitions: vec![
             ImagePartition::new()
                 .with_size("256M")
@@ -131,7 +123,7 @@ pub fn pi_image_layout() -> ImageLayout {
 
 pub fn grub_efi_image_layout() -> ImageLayout {
     ImageLayout {
-        ty: ImageLayoutKind::Gpt,
+        ty: PartitionTableType::Gpt,
         partitions: vec![
             ImagePartition::new()
                 .with_size("256M")
