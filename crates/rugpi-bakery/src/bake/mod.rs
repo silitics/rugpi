@@ -148,9 +148,10 @@ fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> 
         let loop_dev = LoopDevice::attach(image_path)?;
         let temp_dir = tempdir()?;
         let temp_dir_path = temp_dir.path();
-        let system_dir = temp_dir_path.join("root");
-        let _mounted_root = Mounted::mount(loop_dev.partition(2), &system_dir)?;
-        let _mounted_boot = Mounted::mount(loop_dev.partition(1), system_dir.join("boot"))?;
+        let root_dir = temp_dir_path.join("root");
+        std::fs::create_dir_all(&root_dir)?;
+        let _mounted_root = Mounted::mount(loop_dev.partition(2), &root_dir)?;
+        let _mounted_boot = Mounted::mount(loop_dev.partition(1), root_dir.join("boot"))?;
         run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])?;
     }
     Ok(())
