@@ -77,7 +77,7 @@ pub fn customize(
     }
     let root_dir = layer_dir.join("root");
     std::fs::create_dir_all(&root_dir).ok();
-    apply_recipes(project, arch, &jobs, &root_dir, layer_path)?;
+    apply_recipes(project, arch, &jobs, layer_dir, &root_dir, layer_path)?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", layer_dir, "."])?;
     Ok(())
@@ -163,6 +163,7 @@ fn apply_recipes(
     project: &Project,
     arch: Architecture,
     jobs: &[RecipeJob],
+    layer_dir: &Path,
     root_dir_path: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
@@ -232,9 +233,13 @@ fn apply_recipes(
                     let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
                     fs::create_dir_all(&bakery_recipe_path)?;
                     let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
+                    let chroot_layer_dir = root_dir_path.join("run/rugpi/bakery/layer");
+                    fs::create_dir_all(&chroot_layer_dir)?;
+                    let _mounted_layer_dir = Mounted::bind(&layer_dir, &chroot_layer_dir)?;
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
+                        RUGPI_LAYER_DIR = chroot_layer_dir,
                         RUGPI_ROOT_DIR = "/",
                         RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
@@ -251,6 +256,7 @@ fn apply_recipes(
                     let script = recipe.path.join("steps").join(&step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
+                        RUGPI_LAYER_DIR = layer_dir,
                         RUGPI_ROOT_DIR = root_dir_path,
                         RUGPI_PROJECT_DIR = &project_dir,
                         RUGPI_ARCH = arch.as_str(),
