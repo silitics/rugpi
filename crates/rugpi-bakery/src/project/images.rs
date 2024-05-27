@@ -4,15 +4,13 @@ use rugpi_common::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::config::{Architecture, IncludeFirmware};
+use super::config::Architecture;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ImageConfig {
     /// The layer to use for the image.
     pub layer: String,
-    /// Indicates whether to include firmware files in the image.
-    pub include_firmware: Option<IncludeFirmware>,
     /// The target architecture to build an image for.
     #[serde(default)]
     pub architecture: Architecture,

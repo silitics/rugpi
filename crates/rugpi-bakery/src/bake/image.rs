@@ -26,10 +26,7 @@ use crate::{
         generic_grub_efi::initialize_grub, rpi_tryboot::initialize_tryboot,
         rpi_uboot::initialize_uboot,
     },
-    project::{
-        config::IncludeFirmware,
-        images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
-    },
+    project::images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
     utils::prelude::*,
 };
 

@@ -33,13 +33,6 @@ impl BakeryConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum IncludeFirmware {
-    Pi4,
-    Pi5,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq, Hash, ValueEnum)]
 #[clap(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
