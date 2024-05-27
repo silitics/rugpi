@@ -66,18 +66,20 @@ pub fn customize(
     if target.exists() && last_modified < mtime(target)? && !force_run {
         return Ok(());
     }
-    // Prepare system chroot.
-    let root_dir = tempdir()?;
-    let root_dir_path = root_dir.path();
+    let layer_dir = tempdir()?;
+    let layer_dir = layer_dir.path();
     if let Some(src) = src {
-        info!("extracting system files");
-        run!(["tar", "-x", "-f", &src, "-C", root_dir_path])?;
+        info!("Extracting layer.");
+        run!(["tar", "-x", "-f", &src, "-C", layer_dir])?;
     } else {
-        std::fs::create_dir_all(&root_dir_path)?;
+        info!("Creating empty layer.");
+        std::fs::create_dir_all(&layer_dir)?;
     }
-    apply_recipes(project, arch, &jobs, root_dir_path, layer_path)?;
+    let root_dir = layer_dir.join("root");
+    std::fs::create_dir_all(&root_dir).ok();
+    apply_recipes(project, arch, &jobs, &root_dir, layer_path)?;
     info!("packing system files");
-    run!(["tar", "-c", "-f", &target, "-C", root_dir_path, "."])?;
+    run!(["tar", "-c", "-f", &target, "-C", layer_dir, "."])?;
     Ok(())
 }
 

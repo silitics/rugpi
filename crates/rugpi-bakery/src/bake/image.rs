@@ -37,23 +37,24 @@ use crate::{
 
 pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let work_dir = tempdir()?;
-    let work_dir = work_dir.path();
+    let layer_dir = work_dir.path();
 
     if let Some(parent) = image.parent() {
         fs::create_dir_all(parent).ok();
     }
 
     // Initialize system root directory from provided TAR file.
-    info!("Extracting root filesystem.");
-    let root_dir = work_dir.join("system");
+    info!("Extracting layer.");
+    run!(["tar", "-xf", src, "-C", &layer_dir])?;
+
+    let root_dir = layer_dir.join("root");
     fs::create_dir_all(&root_dir)?;
-    run!(["tar", "-xf", src, "-C", &root_dir])?;
 
     // Create directories for config and boot partitions.
     info!("Creating config and boot directories.");
-    let config_dir = work_dir.join("config");
+    let config_dir = layer_dir.join("config");
     fs::create_dir_all(&config_dir)?;
-    let boot_dir = work_dir.join("boot");
+    let boot_dir = layer_dir.join("boot");
     fs::create_dir_all(&boot_dir)?;
 
     // Initialize config and boot partitions based the selected on boot flow.
@@ -107,7 +108,7 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         .ok_or_else(|| anyhow!("image layout needs to be specified"))?;
 
     info!("Computing partition table.");
-    let table = compute_partition_table(&layout, work_dir).context("computing partition table")?;
+    let table = compute_partition_table(&layout, layer_dir).context("computing partition table")?;
 
     let size_bytes = table.blocks_to_bytes(table.disk_size);
 
@@ -150,10 +151,10 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         match filesystem {
             images::Filesystem::Ext4 => {
                 let size = table.blocks_to_bytes(image_partition.size);
-                let fs_image = work_dir.join("ext4.img");
+                let fs_image = layer_dir.join("ext4.img");
                 allocate_file(&fs_image, size.into_raw())?;
                 if let Some(path) = &layout_partition.root {
-                    run!(["mkfs.ext4", "-d", work_dir.join(path), &fs_image])?;
+                    run!(["mkfs.ext4", "-d", layer_dir.join(path), &fs_image])?;
                 } else {
                     run!(["mkfs.ext4", &fs_image])?;
                 }
@@ -169,11 +170,11 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             }
             images::Filesystem::Fat32 => {
                 let size = table.blocks_to_bytes(image_partition.size);
-                let fs_image = work_dir.join("fat32.img");
+                let fs_image = layer_dir.join("fat32.img");
                 allocate_file(&fs_image, size.into_raw())?;
                 run!(["mkfs.vfat", &fs_image])?;
                 if let Some(path) = &layout_partition.root {
-                    let fs_path = work_dir.join(path);
+                    let fs_path = layer_dir.join(path);
                     for entry in fs::read_dir(&fs_path)? {
                         let entry = entry?;
                         run!([
