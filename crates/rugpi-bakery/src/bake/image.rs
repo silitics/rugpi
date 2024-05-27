@@ -23,9 +23,7 @@ use xscript::{run, Run};
 
 use crate::{
     bake::targets::{
-        generic_grub_efi::initialize_grub,
-        rpi::{include_pi4_firmware, include_pi5_firmware},
-        rpi_tryboot::initialize_tryboot,
+        generic_grub_efi::initialize_grub, rpi_tryboot::initialize_tryboot,
         rpi_uboot::initialize_uboot,
     },
     project::{
@@ -83,15 +81,6 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             "/usr/share/rugpi/boot/grub/second.grub.cfg",
             boot_dir.join("second.grub.cfg"),
         )?;
-    }
-
-    // Copy firmware to config partition.
-    if let Some(include_firmware) = &config.include_firmware {
-        info!("Including firmware.");
-        match include_firmware {
-            IncludeFirmware::Pi4 => include_pi4_firmware(&config_dir)?,
-            IncludeFirmware::Pi5 => include_pi5_firmware(&config_dir)?,
-        }
     }
 
     // At this point, everything is initialized and we can compute the partition table.
