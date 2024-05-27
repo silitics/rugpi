@@ -4,22 +4,21 @@ rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v
 [images.generic-amd64]
 layer = "generic-amd64"
 architecture = "amd64"
-boot_flow = "grub-efi"
+target = "generic-grub-efi"
 
 [images.generic-amd64-vm]
 layer = "generic-amd64"
 architecture = "amd64"
-boot_flow = "grub-efi"
+target = "generic-grub-efi"
 size = "16G"
 
 [images.generic-arm64]
 layer = "generic-arm64"
 architecture = "arm64"
-boot_flow = "grub-efi"
+target = "generic-grub-efi"
 
 [images.generic-arm64-vm]
 layer = "generic-arm64"
 architecture = "arm64"
-boot_flow = "grub-efi"
+target = "generic-grub-efi"
 size = "16G"
-

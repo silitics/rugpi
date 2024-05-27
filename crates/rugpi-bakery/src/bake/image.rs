@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::Context;
 use rugpi_common::{
-    boot::BootFlow,
     disk::{
         gpt::gpt_types, mbr::mbr_types, parse_size, DiskId, NumBlocks, Partition, PartitionTable,
         PartitionTableType,
@@ -24,7 +23,7 @@ use xscript::{run, Run};
 use crate::{
     bake::targets::{
         generic_grub_efi::initialize_grub, rpi_tryboot::initialize_tryboot,
-        rpi_uboot::initialize_uboot,
+        rpi_uboot::initialize_uboot, Target,
     },
     project::images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
     utils::prelude::*,
@@ -54,21 +53,21 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
 
     // Initialize config and boot partitions based the selected on boot flow.
     info!("Initialize boot flow.");
-    if let Some(boot_flow) = config.boot_flow {
-        match boot_flow {
-            BootFlow::Tryboot => {
+    if let Some(target) = config.target {
+        match target {
+            Target::RpiTryboot => {
                 initialize_tryboot(&config_dir, &boot_dir, &root_dir)?;
             }
-            BootFlow::UBoot => {
+            Target::RpiUboot => {
                 initialize_uboot(config, &config_dir, &boot_dir, &root_dir)?;
             }
-            BootFlow::GrubEfi => {
+            Target::GenericGrubEfi => {
                 initialize_grub(config, &config_dir)?;
             }
         }
     }
     // Always copy second stage boot scripts independently of the boot flow.
-    if config.boot_flow.is_some() {
+    if config.target.is_some() {
         info!("Copy second stage boot scripts.");
         copy_recursive(
             "/usr/share/rugpi/boot/u-boot/bin/second.scr",
@@ -85,10 +84,10 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         .layout
         .clone()
         .or_else(|| {
-            config.boot_flow.map(|boot_flow| match boot_flow {
-                BootFlow::Tryboot => pi_image_layout(),
-                BootFlow::UBoot => pi_image_layout(),
-                BootFlow::GrubEfi => grub_efi_image_layout(),
+            config.target.map(|target| match target {
+                Target::RpiTryboot => pi_image_layout(),
+                Target::RpiUboot => pi_image_layout(),
+                Target::GenericGrubEfi => grub_efi_image_layout(),
             })
         })
         .ok_or_else(|| anyhow!("image layout needs to be specified"))?;
@@ -109,8 +108,8 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
     info!("Writing image partition table.");
     table.write(image)?;
 
-    if let Some(boot_flow) = &config.boot_flow {
-        if matches!(boot_flow, BootFlow::Tryboot | BootFlow::UBoot) {
+    if let Some(target) = &config.target {
+        if matches!(target, Target::RpiTryboot | Target::RpiUboot) {
             let disk_id = match table.disk_id {
                 DiskId::Mbr(mbr_id) => mbr_id.into_raw(),
                 _ => bail!("unsupported GPT partition layout"),

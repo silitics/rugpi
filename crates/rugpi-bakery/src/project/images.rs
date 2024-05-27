@@ -1,10 +1,8 @@
-use rugpi_common::{
-    boot::BootFlow,
-    disk::{gpt::gpt_types, PartitionTableType, PartitionType},
-};
+use rugpi_common::disk::{gpt::gpt_types, PartitionTableType, PartitionType};
 use serde::{Deserialize, Serialize};
 
 use super::config::Architecture;
+use crate::bake::targets::Target;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -15,7 +13,7 @@ pub struct ImageConfig {
     #[serde(default)]
     pub architecture: Architecture,
     /// Indicates which boot flow to use for the image.
-    pub boot_flow: Option<BootFlow>,
+    pub target: Option<Target>,
     pub size: Option<String>,
     pub layout: Option<ImageLayout>,
 }
