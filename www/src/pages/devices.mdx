@@ -1,0 +1,46 @@
+import DeviceCards from "../components/DeviceCards"
+
+# Supported Devices
+
+:::warning
+
+**This page describes the device support for the upcoming release.**
+
+:::
+
+Rugpi aims to provide out-of-the-box support for a diverse range of devices.
+
+When building a system image with Rugpi, you need to specify a *target* that is appropiate for your device.
+Targets typically support a whole family of devices and are categorized into *generic*, *specific*, and *unknown* targets.
+
+- **Generic targets** are based on some standardized booting mechanism, such as [UEFI](https://en.wikipedia.org/wiki/UEFI) or [EBBR](https://github.com/ARM-software/ebbr).
+Generic targets are suitable for any device that supports the respective standardized booting mechanism.
+- **Specific targets**, on the other hand, are limited to a certain family of devices.
+They come with all necessary device-specific configurations resulting in a bootable image that works out-of-the-box.
+- **Unknown targets** are for devices that do not conform to a standardized booting mechanism and are not specifically supported by Rugpi.
+Using unknown targets allows building images for unsupported devices; however, these images usually require additional device-specific modifications to become bootable.
+
+Device support comes in three different tiers:
+
+- 🥇 **Tier 1**: Rugpi is regularly tested on these devices and fully supports them.
+- 🥈 **Tier 2**: Support for these devices is provided on a best-effort basis.
+- 🥉 **Tier 3**: These devices are supported but are rarely tested and not prioritized.
+
+:::info
+
+We are looking to expand device support. Please [open an issue](https://github.com/silitics/rugpi/issues) if you would like to see support for a specific device.
+
+:::
+
+
+## Generic Targets
+
+<DeviceCards type="generic" />
+
+## Specific Devices
+
+<DeviceCards type="specific" />
+
+## Unknown Targets
+
+<DeviceCards type="unknown" />
