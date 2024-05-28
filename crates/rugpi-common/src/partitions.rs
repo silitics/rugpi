@@ -8,12 +8,12 @@ use anyhow::{anyhow, bail};
 use xscript::{read_str, run, Run};
 
 use crate::{
-    boot::{
-        detect_boot_flow, grub, tryboot,
-        uboot::{self},
-        BootFlow,
+    boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
+    ctrl_config::Config,
+    disk::{
+        repart::{generic_efi_partition_schema, generic_mbr_partition_schema, PartitionSchema},
+        PartitionTable,
     },
-    disk::PartitionTable,
     paths::MOUNT_POINT_SYSTEM,
     Anyhow,
 };
@@ -27,13 +27,14 @@ pub struct Partitions {
     pub system_a: PathBuf,
     pub system_b: PathBuf,
     pub data: PathBuf,
+    pub schema: Option<PartitionSchema>,
 }
 
 /// The `findmnt` executable.
 const LSBLK: &str = "/usr/bin/lsblk";
 
 impl Partitions {
-    pub fn load() -> Anyhow<Self> {
+    pub fn load(config: &Config) -> Anyhow<Self> {
         let system_dev = if Path::new(MOUNT_POINT_SYSTEM).exists() {
             find_dev(MOUNT_POINT_SYSTEM)?
         } else {
@@ -52,17 +53,7 @@ impl Partitions {
             partition_dev_name.push('p');
         }
         let table = PartitionTable::read(&parent_dev_path)?;
-        if table.partitions.len() == 4 {
-            Ok(Self {
-                parent_dev: parent_dev_path,
-                config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
-                boot_a: None,
-                boot_b: None,
-                system_a: PathBuf::from(format!("/dev/{partition_dev_name}2")),
-                system_b: PathBuf::from(format!("/dev/{partition_dev_name}3")),
-                data: PathBuf::from(format!("/dev/{partition_dev_name}4")),
-            })
-        } else if table.is_mbr() {
+        if table.is_mbr() {
             Ok(Self {
                 parent_dev: parent_dev_path,
                 config: PathBuf::from(format!("/dev/{partition_dev_name}1")),
@@ -71,6 +62,7 @@ impl Partitions {
                 system_a: PathBuf::from(format!("/dev/{partition_dev_name}5")),
                 system_b: PathBuf::from(format!("/dev/{partition_dev_name}6")),
                 data: PathBuf::from(format!("/dev/{partition_dev_name}7")),
+                schema: Some(generic_mbr_partition_schema(config.system_size_bytes()?)),
             })
         } else {
             Ok(Self {
@@ -81,6 +73,7 @@ impl Partitions {
                 system_a: PathBuf::from(format!("/dev/{partition_dev_name}4")),
                 system_b: PathBuf::from(format!("/dev/{partition_dev_name}5")),
                 data: PathBuf::from(format!("/dev/{partition_dev_name}6")),
+                schema: Some(generic_efi_partition_schema(config.system_size_bytes()?)),
             })
         }
     }
@@ -176,47 +169,6 @@ impl PartitionSet {
             PartitionSet::B => Self::A,
         }
     }
-}
-
-/// The size of the config partition.
-const CONFIG_PART_SIZE: &str = "256M";
-/// The size of the boot partitions.
-const BOOT_PART_SIZE: &str = "128M";
-
-/// The `sfdisk` partition layout for images.
-pub fn sfdisk_image_layout() -> String {
-    indoc::formatdoc! { r#"
-        label: dos
-        unit: sectors
-        grain: 4M
-        
-        config   : type=0c, size={CONFIG_PART_SIZE}
-        boot-a   : type=0c, size={BOOT_PART_SIZE}
-        boot-b   : type=0c, size={BOOT_PART_SIZE}
-        
-        extended : type=05
-        
-        system-a : type=83 
-    "# }
-}
-
-/// The `sfdisk` partition layout for a Rugpi system.
-pub fn sfdisk_system_layout(system_size: &str) -> String {
-    indoc::formatdoc! { r#"
-        label: dos
-        unit: sectors
-        grain: 4M
-        
-        config   : type=0c, size={CONFIG_PART_SIZE}
-        boot-a   : type=0c, size={BOOT_PART_SIZE}
-        boot-b   : type=0c, size={BOOT_PART_SIZE}
-        
-        extended : type=05
-        
-        system-a : type=83, size={system_size}
-        system-b : type=83, size={system_size}
-        data     : type=83
-    "# }
 }
 
 /// The `sfdisk` executable.

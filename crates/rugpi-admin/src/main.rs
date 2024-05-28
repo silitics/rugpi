@@ -38,10 +38,14 @@ async fn main() {
 
 #[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
-    use rugpi_common::partitions::Partitions;
+    use rugpi_common::{
+        ctrl_config::{load_config, CTRL_CONFIG_PATH},
+        partitions::Partitions,
+    };
 
     tokio::task::spawn_blocking(|| {
-        let partitions = Partitions::load().unwrap();
+        let config = load_config(CTRL_CONFIG_PATH).unwrap();
+        let partitions = Partitions::load(&config).unwrap();
         let hot_partitions = get_hot_partitions(&partitions).unwrap();
         let default_partitions = read_default_partitions().unwrap();
         Html(

@@ -3,17 +3,13 @@ use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 use anyhow::{bail, ensure};
 use nix::mount::MntFlags;
 use rugpi_common::{
-    ctrl_config::{load_config, Config, Overlay},
+    ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH},
     disk::{
         blkpg::update_kernel_partitions,
         repart::{repart, PartitionSchema},
         PartitionTable,
     },
-    partitions::{
-        get_disk_id, get_hot_partitions, is_block_dev, mkfs_ext4, read_default_partitions,
-        sfdisk_apply_layout, sfdisk_system_layout, system_dev, Partitions,
-    },
-    patch_boot,
+    partitions::{get_hot_partitions, mkfs_ext4, read_default_partitions, system_dev, Partitions},
     paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
     Anyhow,
 };
@@ -47,8 +43,6 @@ const CP: &str = "/usr/bin/cp";
 const FSCK: &str = "/usr/sbin/fsck";
 /// The `mount` executable.
 const MOUNT: &str = "/usr/bin/mount";
-/// The `umount` executable.
-const UMOUNT: &str = "/usr/bin/umount";
 /// The `sync` executable.
 const SYNC: &str = "/usr/bin/sync";
 /// The `systemd-machine-id-setup` executable.
@@ -63,21 +57,20 @@ fn init() -> Anyhow<()> {
     // Mount essential filesystems.
     mount_essential_filesystems()?;
 
-    let mut partitions = Partitions::load()?;
+    let partitions = Partitions::load(&config)?;
 
     // Ensure that the disks's partitions match the defined partition schema.
-    if let Some(schema) = &config.partition_schema {
+    let partition_schema = config
+        .partition_schema
+        .as_ref()
+        .or(partitions.schema.as_ref());
+    if let Some(partition_schema) = partition_schema {
         // If an update ships a schema that is incompatible with the existing schema,
         // then it is fine to reboot here and switch to the old version.
-        repartition_disk(&partitions.parent_dev, schema)?;
+        repartition_disk(&config, &partitions.parent_dev, partition_schema)?;
     }
 
-    // 2️⃣ Initialize partitions during the first boot.
-    if !is_block_dev(&partitions.data) && config.partition_schema.is_none() {
-        initialize_partitions(&partitions, &config)?;
-    }
-
-    partitions = Partitions::load()?;
+    let partitions = Partitions::load(&config)?;
 
     // 3️⃣ Check and mount the data partition.
     run!([FSCK, "-y", &partitions.data])?;
@@ -141,8 +134,6 @@ pub fn overlay_work_dir() -> &'static Path {
     Path::new(OVERLAY_WORK_DIR)
 }
 
-const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
-
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
 fn mount_essential_filesystems() -> Anyhow<()> {
     // We ignore any errors. Errors likely mean that the filesystems have already been
@@ -154,32 +145,7 @@ fn mount_essential_filesystems() -> Anyhow<()> {
 }
 
 /// Initializes the partitions and expands the partition table during the first boot.
-fn initialize_partitions(partitions: &Partitions, config: &Config) -> Anyhow<()> {
-    eprintln!("Creating system partitions... DO NOT TURN OFF!");
-    let system_size = config.system_size();
-
-    // 1️⃣ Apply the system layout to the SD card and reread the partition table.
-    sfdisk_apply_layout(&partitions.parent_dev, sfdisk_system_layout(system_size))?;
-
-    let partitions = Partitions::load()?;
-
-    // 2️⃣ Patch the `cmdline.txt` with the new disk id.
-    let disk_id = get_disk_id(&partitions.parent_dev)?;
-    run!([MOUNT, &partitions.boot_a.unwrap(), "/boot"])?;
-    patch_boot("/boot", format!("PARTUUID={disk_id}-05"))?;
-    run!([UMOUNT, "/boot"])?;
-
-    // 3️⃣ Create a file system on the data partition.
-    mkfs_ext4(&partitions.data, "data")?;
-
-    // 4️⃣ Make sure everything is written to disk.
-    run!([SYNC])?;
-
-    Ok(())
-}
-
-/// Initializes the partitions and expands the partition table during the first boot.
-fn repartition_disk(dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
+fn repartition_disk(config: &Config, dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
     let old_table = PartitionTable::read(dev)?;
     if let Some(new_table) = repart(&old_table, schema)? {
         // Write new partition table to disk.
@@ -187,8 +153,10 @@ fn repartition_disk(dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
         run!([SYNC])?;
         // Inform the kernel about new partitions.
         update_kernel_partitions(dev, &old_table, &new_table)?;
-        let partitions = Partitions::load()?;
+        let partitions = Partitions::load(config)?;
         mkfs_ext4(&partitions.data, "data")?;
+        // We do not need to patch the partition ID in the configuration files as we
+        // keep the id from the original image.
     }
     Ok(())
 }

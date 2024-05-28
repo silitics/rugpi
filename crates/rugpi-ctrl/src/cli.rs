@@ -9,12 +9,8 @@ use std::{
 use anyhow::{bail, Context};
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
-    boot::{
-        detect_boot_flow, grub,
-        tryboot::{self},
-        uboot::{self},
-        BootFlow,
-    },
+    boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
+    ctrl_config::{load_config, CTRL_CONFIG_PATH},
     disk::stream::ImgStream,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
@@ -32,7 +28,8 @@ use crate::{
 
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
-    let partitions = Partitions::load()?;
+    let config = load_config(CTRL_CONFIG_PATH)?;
+    let partitions = Partitions::load(&config)?;
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {

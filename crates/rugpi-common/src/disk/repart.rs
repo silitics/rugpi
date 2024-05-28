@@ -3,7 +3,7 @@
 use anyhow::bail;
 use serde::Deserialize;
 
-use super::{PartitionTable, PartitionTableType};
+use super::{parse_size, PartitionTable, PartitionTableType};
 use crate::{
     disk::{gpt::gpt_types, mbr::mbr_types, NumBlocks, Partition, PartitionType},
     utils::units::NumBytes,
@@ -118,5 +118,99 @@ pub fn repart(table: &PartitionTable, schema: &PartitionSchema) -> Anyhow<Option
         Ok(Some(new_table))
     } else {
         Ok(None)
+    }
+}
+
+pub fn generic_mbr_partition_schema(system_size: NumBytes) -> PartitionSchema {
+    PartitionSchema {
+        ty: PartitionTableType::Mbr,
+        partitions: vec![
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("256M").unwrap()),
+                ty: Some(mbr_types::FAT32_LBA),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("128M").unwrap()),
+                ty: Some(mbr_types::FAT32_LBA),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("128M").unwrap()),
+                ty: Some(mbr_types::FAT32_LBA),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: None,
+                ty: Some(mbr_types::EXTENDED),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(system_size),
+                ty: Some(mbr_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(system_size),
+                ty: Some(mbr_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: None,
+                ty: Some(mbr_types::LINUX),
+            },
+        ],
+    }
+}
+
+pub fn generic_efi_partition_schema(system_size: NumBytes) -> PartitionSchema {
+    PartitionSchema {
+        ty: PartitionTableType::Gpt,
+        partitions: vec![
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("256M").unwrap()),
+                ty: Some(gpt_types::EFI),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("128M").unwrap()),
+                ty: Some(gpt_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(parse_size("128M").unwrap()),
+                ty: Some(gpt_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(system_size),
+                ty: Some(gpt_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: Some(system_size),
+                ty: Some(gpt_types::LINUX),
+            },
+            SchemaPartition {
+                number: None,
+                name: None,
+                size: None,
+                ty: Some(gpt_types::LINUX),
+            },
+        ],
     }
 }
