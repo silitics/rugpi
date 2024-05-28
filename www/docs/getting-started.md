@@ -38,7 +38,7 @@ If you run `./run-bakery help` you should now get usage instructions for Rugpi B
 
 ### Emulation of Foreign Architectures
 
-If you want to build an image for foreign architectures, you also need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) for emulation.
+If you want to build images for foreign architectures, you also need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) for emulation.
 The easiest way to do so, and as we are already using Docker anyway, is by running the following command:
 
 ```shell
