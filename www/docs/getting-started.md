@@ -4,100 +4,119 @@ sidebar_position: 1
 
 # Getting Started 🚀
 
-Rugpi consists of two components, _Rugpi Bakery_ for building customized images, and _Rugpi Ctrl_ for maintaining and managing a Rugpi system.
-This quick-start guide takes you through the steps necessary to build a custom Rugpi image with Rugpi Bakery.
+Rugpi consists of two components, _Rugpi Bakery_ for building customized system images, and _Rugpi Ctrl_ for maintaining and managing a system.
+This quick-start guide takes you through the steps necessary to build a customized system image with Rugpi Bakery.
+This image will contain Rugpi Ctrl for managing a system's state and for installing over-the-air system updates.
 
-## Building an Image
+You can build images locally or with a CI/CD system like GitHub Actions.
+Here, we go through the process of building images locally.
+For details about running Rugpi Bakery with a CI/CD system, checkout the [user guide's section on CI/CD Integration](./guide/ci-cd-integration).
 
-You can [build images locally](#building-an-image-locally) or [using a CI system like GitHub Actions](#using-github-actions).
 
-### Using GitHub Actions
+## Setup and Installation
 
-By far the fastest and easiest way to get a working image is to use [GitHub Actions](https://github.com/features/actions).
-Simply [create a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template#creating-a-repository-from-a-template) from our [Rugpi template](https://github.com/silitics/rugpi-template) and GitHub Actions will build the image automatically from your repository.
-Any modifications you push to your repository will trigger GitHub Actions to rebuild the image with your customizations.
-Please be aware that building an image is a rather resource-heavy process and may quickly consume your CI minutes, if the repository is private.
-
-That was easy! Nevertheless, we recommend reading the next section, so you understand how it works under the hood.
-
-### Building an Image Locally
-
-First, obtain a local copy of the [Rugpi template](https://github.com/silitics/rugpi-template), for instance by [downloading its contents](https://github.com/silitics/rugpi-template/archive/refs/heads/main.zip) or cloning it:
-
-```shell
-git clone https://github.com/silitics/rugpi-template
-```
-
-Note that Rugpi Bakery is distributed as a Docker image (for `arm64` and `amd64`) because it relies on various Linux tools and facilities to build the image.
+Rugpi Bakery is distributed as a Docker image (for `arm64` and `amd64`) because it relies on various Linux tools and facilities to build images.
 Building images outside of Docker is fundamentally only possible on Linux and not officially supported.
-So, to build the image locally, a working Docker installation is required.
-On MacOS, make sure to use the [MacOS virtualization framework and VirtioFS](https://docs.docker.com/desktop/settings/mac/#general) (the default with recent versions of Docker Desktop).
-The template ships with a `run-bakery` shell script (for Linux and MacOS) to run Rugpi Bakery in a temporary container.
-For Windows, please run Rugpi Bakery inside WSL.
+So, to build an image locally, a working [Docker](https://www.docker.com/) or [Podman](https://podman.io/) installation is required.
+On MacOS, please make sure to use the [MacOS virtualization framework and VirtioFS](https://docs.docker.com/desktop/settings/mac/#general), which is the default with recent versions of Docker Desktop.
+For Windows, please use [WSL](https://learn.microsoft.com/en-us/windows/wsl/about).
 
-To print the usage instructions of Rugpi Bakery, in the root directory of the template, run:
+For convenience, Rugpi ships a small shell script `run-bakery` for running Rugpi Bakery.
+The script runs an ephemeral Docker container and sets everything up as required.
+To start a fresh Rugpi project, create an empty directory and then run
 
 ```shell
-./run-bakery help
+curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7/bakery/run-bakery && chmod +x ./run-bakery
 ```
 
-On a non-`arm64` system, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) to emulate `arm64` (analogously for `armhf`).
+within this directory.
+This will download the `run-bakery` shell script from Rugpi's GitHub repository and make it executable.
+You can then run Rugpi Bakery with `./run-bakery`.
+If you use a version control system to manage the project, it is good practice to commit the `run-bakery` shell script into the repository so that everyone can run it without any additional setup.
+
+If you run `./run-bakery help` you should now get usage instructions for Rugpi Bakery.
+
+### Emulation of Foreign Architectures
+
+If you want to build an image for foreign architectures, you also need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) for emulation.
 The easiest way to do so, and as we are already using Docker anyway, is by running the following command:
 
 ```shell
-docker run --privileged --rm tonistiigi/binfmt --install arm64
+docker run --privileged --rm tonistiigi/binfmt --install all
 ```
 
-Building an image is then generally achieved by the commend:
+This will allow you to build images for a huge variety of different architectures.
+
+
+## Initializing the Project
+
+To build an image, you first need to create a few configurations files in the project directory.
+Rugpi Bakery ships with a set of templates to help you get started quickly.
+You can list the available templates by running:
 
 ```shell
-./run-bakery bake image <image name> build/image.img
+./run-bakery init
 ```
 
-The configuration file `rugpi-bakery.toml` defines the available images.
-For instance, to build an image for Raspberry Pi 4 including the necessary firmware update for the `tryboot` boot mechanism, run:
+To initialize the project with a template, run:
 
 ```shell
-./run-bakery bake image pi4 build/image-pi4.img
+./run-bakery init <template name>
 ```
 
-The images specified in the template use the `customized` *layer* defined in `layers/customized.toml`.
-A layer specifies the base system and the modification which should be done to it.
+For instance, if you want an image for Raspberry Pi and want it to be based on Raspberry Pi OS, use the `rpi-raspios` template:
 
-When you build an image, internally, Rugpi Bakery does the following steps:
+```shell
+./run-bakery init rpi-raspios
+```
 
-1. First, it downloads and extracts a base image of Raspberry Pi OS.
-   This is achieved via the following directive:
+Instead, if you want a Debian image bootable on any EFI-compatible system, use the `debian-grub-efi` template:
 
-   ```toml title="layers/customized.toml"
-   parent = "core/raspios-bookworm"
-   ```
+```shell
+./run-bakery init debian-grub-efi
+```
 
-   This will tell Rugpi Bakery to use the layer `raspios-bookworm` provided by Rugpi itself as a basis for the `customized` layer.
-   Note that you can define your own base layers.
-   They simply contain an URL of the base image to use.
+Note that a project is not limited to a specific device or family of devices.
+By configuring Rugpi Bakery appropriately, you can also build images based on Raspberry Pi OS and Debian all while sharing parts of the build process.
+Such setups are, however, beyond the scope of this quick start guide and we refer to the [user guide's section on System Customization](./guide/system-customization) for details.
 
-2. Next, the recipes defined in the layer are applied.
-   A *recipe* describes modifications to be made to the system.
-   For instance, the `core/ssh` recipe enables SSH.
-   Recipes can have parameters.
-   For instance, the `root_authorized_keys` parameter of the `core/ssh` recipe sets `authorized_keys` for the `root` user.
-   To be able to login as `root` via SSH later, you should replace the existing key with your public key.
-   In addition to the builtin recipes, you can supply your own recipes.
-   In case of the template, the `hello-world` recipe in the `recipes` directory installs a static website which is served by Nginx.
-   For further information about recipes, checkout the [user guide's section on System Customization](./guide/system-customization).
 
-3. Finally, after applying all customizations, an image is produced.
-   The resulting image is ready to be written to an SD card, e.g., using Raspberry Pi Imager.
-   Note that you cannot use Raspberry Pi Imager to apply any configurations like passwords or WiFi settings.
-   The template also defines images for other boards than Raspberry Pi 4.
-   For further images, we refer to the `rugpi-bakery.toml` configuration file and the [Supported Boards](./guide/supported-boards.md) section of the user guide.
+## Building an Image
 
-On the first boot, Rugpi Ctrl will repartition the SD card and then boot into the actual system.
-Once the system is running, you should be able to visit the static website via the system's IP address and connect via SSH.
+After initializing the project with a template, it is time to build your first image.
+Most templates will come with multiple images that you can build.
+For instance, the `rpi-raspios` template specifies images for different models of Raspberry Pi.
+
+The images are specified in `rugpi-bakery.toml`. You can also list the available images by running:
+
+```shell
+./run-bakery list images
+```
+
+To build an image, run:
+
+```shell
+./run-bakery bake image <image name>
+```
+
+For instance, with the `rpi-raspios` template, you can build an image for Raspberry Pi 4 with:
+
+```shell
+./run-bakery bake image tryboot-pi4
+```
+
+This will build an image `build/images/tryboot-pi4.img`.
+This image uses Raspberry Pi's [`tryboot` feature](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot) for booting and system updates.
+It also includes the necessary firmware update for Raspberry Pi 4.
+Checkout the comments in `rugpi-bakery.toml` to find an image that is compatible with your specific model of Raspberry Pi.
 
 Congratulations! You built your first image with Rugpi Bakery. 🙌
 
-Feel free, to change the website in `recipes/hello-world/html` and experiment with the recipes.
-As a next step, we recommend reading the [user guide](./guide).
-It covers all the details on system customization, state management, and over-the-air updates.
+The resulting images can be written to a storage medium, e.g., an SD card, an NVMe drive, or a thumb drive.
+Compatible systems can then directly boot off the storage medium.
+On the first boot, Rugpi Ctrl will usually bootstrap the device.
+For instance, it will typically automatically repartition the storage medium and create additional file systems.
+
+Feel free to explore the template and modify it according to your needs. 🚀
+
+To learn how to apply your own customizations, checkout the [user guide's section on System Customization](./guide/system-customization).
