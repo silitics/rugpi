@@ -1,0 +1,32 @@
+name: Bake Image
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:  
+  bake-image:
+    name: Bake Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install QEMU
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+      
+      - name: Prepare
+        run: mkdir build
+      
+      - name: Bake Image (Pi4)
+        run: ./run-bakery bake image pi4 build/pi4.img
+      
+      - name: Bake Image (Tryboot)
+        run: ./run-bakery bake image tryboot build/tryboot.img
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: customized.img
+          path: build/customized.img

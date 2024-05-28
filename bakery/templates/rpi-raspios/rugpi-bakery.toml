@@ -1,0 +1,24 @@
+[repositories]
+rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v0.6" }
+
+[images.tryboot]
+layer = "customized"
+include_firmware = "none"
+
+# A specific image including the firmware update for Raspberry Pi 4 and CM4.
+[images.pi4]
+layer = "customized"
+include_firmware = "pi4"
+
+# An image using the U-Boot boot flow for Raspberry Pi 3 and Zero 2.
+[images.u-boot]
+layer = "customized"
+boot_flow = "u-boot"
+include_firmware = "none"
+
+# An `armhf` image for older Raspberry Pi's using the U-Boot boot flow.
+[images.u-boot-armhf]
+layer = "customized"
+architecture = "armhf"
+boot_flow = "u-boot"
+include_firmware = "none"

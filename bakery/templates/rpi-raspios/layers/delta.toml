@@ -1,0 +1,3 @@
+# This is an example for a delta layer which just installs the webpage.
+parent = "customized"
+recipes = ["hello-world"]

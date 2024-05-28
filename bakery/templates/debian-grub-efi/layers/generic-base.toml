@@ -10,6 +10,7 @@ recipes = [
     "rugpi-extra/avahi",
     "setup-network",
     "setup-base",
+    "hello-world",
 ]
 
 [parameters."core/set-hostname"]

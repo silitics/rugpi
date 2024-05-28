@@ -2,16 +2,17 @@ use std::{
     convert::Infallible,
     ffi::{CStr, CString},
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
+use anyhow::bail;
 use bake::{image::make_image, LayerBakery};
 use clap::Parser;
 use colored::Colorize;
 use project::{
     config::Architecture, images::ImageConfig, repositories::Source, Project, ProjectLoader,
 };
-use rugpi_common::Anyhow;
+use rugpi_common::{fsutils::copy_recursive, Anyhow};
 use utils::logging::init_logging;
 
 pub mod bake;
@@ -42,6 +43,7 @@ pub enum Command {
     Pull,
     /// Update Rugpi Bakery itself.
     Update(UpdateCommand),
+    Init(InitCommand),
     /// Internal unstable commands.
     #[clap(subcommand)]
     Internal(InternalCommand),
@@ -84,21 +86,30 @@ pub struct UpdateCommand {
     version: Option<String>,
 }
 
+/// The `init` command.
+#[derive(Debug, Parser)]
+pub struct InitCommand {
+    /// Template to use.
+    template: Option<String>,
+}
+
 /// Entrypoint of the CLI.
 fn main() -> Anyhow<()> {
     init_logging();
 
     let args = Args::parse();
-    let project = load_project(&args)?;
     match &args.command {
-        Command::Bake(command) => match command {
-            BakeCommand::Image { image, output } => {
-                bake::bake_image(&project, image, output)?;
+        Command::Bake(command) => {
+            let project = load_project(&args)?;
+            match command {
+                BakeCommand::Image { image, output } => {
+                    bake::bake_image(&project, image, output)?;
+                }
+                BakeCommand::Layer { layer, arch } => {
+                    LayerBakery::new(&project, *arch).bake_root(layer)?;
+                }
             }
-            BakeCommand::Layer { layer, arch } => {
-                LayerBakery::new(&project, *arch).bake_root(layer)?;
-            }
-        },
+        }
         Command::Shell => {
             exec_shell()?;
         }
@@ -108,6 +119,7 @@ fn main() -> Anyhow<()> {
             std::fs::write("run-bakery", interpolate_run_bakery(version))?;
         }
         Command::Pull => {
+            let project = load_project(&args)?;
             for (_, repository) in project.repositories()?.iter() {
                 println!(
                     "{} {} {}",
@@ -148,6 +160,25 @@ fn main() -> Anyhow<()> {
                 make_image(&config, source, image)?;
             }
         },
+        Command::Init(cmd) => {
+            let Some(template) = &cmd.template else {
+                for entry in std::fs::read_dir("/usr/share/rugpi/templates")? {
+                    let entry = entry?;
+                    if !entry.file_type()?.is_dir() {
+                        continue;
+                    }
+                    let file_name = entry.file_name();
+                    let template_name = file_name.to_str().expect("template names should be UTF-8");
+                    println!("{template_name}");
+                }
+                return Ok(());
+            };
+            if Path::new("rugpi-bakery.toml").exists() {
+                bail!("Project has already been initialized.");
+            }
+            let template_dir = Path::new("/usr/share/rugpi/templates").join(template);
+            copy_recursive(template_dir, "/project")?;
+        }
     }
     Ok(())
 }
