@@ -6,6 +6,7 @@ layer = "generic-amd64"
 architecture = "amd64"
 target = "generic-grub-efi"
 
+# This image has a larger size and can be directly used with QEMU.
 [images.generic-amd64-vm]
 layer = "generic-amd64"
 architecture = "amd64"
@@ -17,6 +18,7 @@ layer = "generic-arm64"
 architecture = "arm64"
 target = "generic-grub-efi"
 
+# This image has a larger size and can be directly used with QEMU.
 [images.generic-arm64-vm]
 layer = "generic-arm64"
 architecture = "arm64"

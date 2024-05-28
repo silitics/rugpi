@@ -6,13 +6,18 @@ parent = "core/raspios-bookworm"
 
 # Include recipes for the custom image.
 recipes = [
-    "core/raspberrypi",  # Prepares the Raspberry Pi base image for usage with Rugpi.
-    "core/set-hostname",  # Sets a static hostname (see parameters below).
-    "core/persist-root-home",  # Persists the home directory of the root user.
-    "core/ssh",  # Configures SSH.
-    "rugpi-extra/zsh",  # Installs ZSH.
-    "rugpi-extra/nginx",  # Installs Nginx.
-    "hello-world",  # Enable the `hello-world` recipe installing the static webpage.
+    # Prepares the Raspberry Pi base image for usage with Rugpi.
+    "core/raspberrypi",
+    # Sets a static hostname (see parameters below).
+    "core/set-hostname",
+    # Persists the home directory of the root user.
+    "core/persist-root-home",
+    # Configures SSH.
+    "core/ssh",
+    # Installs ZSH.
+    "rugpi-extra/zsh",
+    # Enable the `hello-world` recipe installing the static webpage.
+    "hello-world",
 ]
 
 [parameters."core/set-hostname"]
