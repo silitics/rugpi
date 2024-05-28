@@ -37,16 +37,27 @@ pub enum Command {
     /// Bake an image or a layer.
     #[clap(subcommand)]
     Bake(BakeCommand),
+    /// List images, recipes, and layers.
+    #[clap(subcommand)]
+    List(ListCommand),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
     /// Pull in external repositories.
     Pull,
     /// Update Rugpi Bakery itself.
     Update(UpdateCommand),
+    /// Initialize the project.
     Init(InitCommand),
     /// Internal unstable commands.
     #[clap(subcommand)]
     Internal(InternalCommand),
+}
+
+/// The `list` command.
+#[derive(Debug, Parser)]
+pub enum ListCommand {
+    /// List available images.
+    Images,
 }
 
 /// The `bake` command.
@@ -178,6 +189,17 @@ fn main() -> Anyhow<()> {
             }
             let template_dir = Path::new("/usr/share/rugpi/templates").join(template);
             copy_recursive(template_dir, "/project")?;
+        }
+        Command::List(cmd) => {
+            let project = load_project(&args)?;
+            match cmd {
+                ListCommand::Images => {
+                    println!("Available Images:");
+                    for name in project.config.images.keys() {
+                        println!("  {name}");
+                    }
+                }
+            }
         }
     }
     Ok(())
