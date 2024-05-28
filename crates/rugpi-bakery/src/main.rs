@@ -68,7 +68,7 @@ pub enum BakeCommand {
         /// The name of the image to bake.
         image: String,
         /// The output path of the resulting image.
-        output: PathBuf,
+        output: Option<PathBuf>,
     },
     /// Bake a layer.
     Layer {
@@ -114,7 +114,10 @@ fn main() -> Anyhow<()> {
             let project = load_project(&args)?;
             match command {
                 BakeCommand::Image { image, output } => {
-                    bake::bake_image(&project, image, output)?;
+                    let output = output
+                        .clone()
+                        .unwrap_or_else(|| Path::new("build/images").join(image));
+                    bake::bake_image(&project, image, &output)?;
                 }
                 BakeCommand::Layer { layer, arch } => {
                     LayerBakery::new(&project, *arch).bake_root(layer)?;
