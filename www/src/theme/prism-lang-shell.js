@@ -3,10 +3,10 @@ Prism.languages.shell = {
     pattern: /#.*/,
   },
   function: {
-    pattern: /(\sxz\s|\bwget\b|\bcurl\b|docker|rugpi-ctrl|\.\/run-bakery|\bgit\b|\bdocker\b|\bif\b|\bthen\b|\bfi\b|\becho\b)/
+    pattern: /(\sxz\s|\bwget\b|\bchmod\b|\bcurl\b|docker|rugpi-ctrl|^\.\/run-bakery|\bgit\b|\bdocker\b|\bif\b|\bthen\b|\bfi\b|\becho\b)/
   },  
   constant: {
-    pattern: /(true|false)/,
+    pattern: /(true|false|<[^>]*>)/,
     alias: "keyword",
   },
   parameter: {
