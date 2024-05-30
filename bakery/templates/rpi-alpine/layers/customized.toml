@@ -1,0 +1,7 @@
+parent = "alpine-root"
+
+recipes = [
+    "core/rpi-alpine-setup",
+    # Install Rugpi Ctrl into the image.
+    "core/rugpi-ctrl",
+]

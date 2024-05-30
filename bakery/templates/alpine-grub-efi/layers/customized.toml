@@ -1,0 +1,3 @@
+parent = "alpine-base"
+
+recipes = ["setup"]

@@ -1,0 +1,43 @@
+[repositories]
+rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v0.6" }
+
+# Compatible with:
+# - Raspberry Pi 5
+# - Raspberry Pi 4 (with recent firmware)
+# - Raspberry Pi CM4 (with recent firmware)
+[images.tryboot]
+layer = "customized"
+architecture = "arm64"
+target = "rpi-tryboot"
+
+# This image includes a firmware update for the Raspberry Pi 4 family.
+#
+# Compatible with:
+# - Raspberry Pi 4
+# - Raspberry Pi CM4
+[images.tryboot-pi4]
+layer = "customized-pi4"
+architecture = "arm64"
+target = "rpi-tryboot"
+
+# This image uses the U-Boot boot flow for older Raspberry Pi models.
+#
+# Compatible with:
+# - Raspberry Pi 3
+# - Raspberry Pi CM3
+# - Raspberry Pi Zero 2 W
+[images.uboot-arm64]
+layer = "customized"
+architecture = "arm64"
+target = "rpi-uboot"
+
+# This image uses the U-Boot boot flow for older Raspberry Pi models.
+#
+# Compatible with:
+# - Raspberry Pi 2
+# - Raspberry Pi 1
+# - Raspberry Pi Zero
+[images.uboot-armhf]
+layer = "customized"
+architecture = "armhf"
+target = "rpi-uboot"

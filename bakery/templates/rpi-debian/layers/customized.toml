@@ -1,0 +1,33 @@
+parent = "core/debian-bookworm"
+
+# Include recipes for the custom image.
+recipes = [
+    # Prepares the Raspberry Pi base image for usage with Rugpi.
+    "core/rpi-debian-setup",
+    # Install Rugpi Ctrl into the image.
+    "core/rugpi-ctrl",
+    # Sets a static hostname (see parameters below).
+    "core/set-hostname",
+    # Persists the home directory of the root user.
+    "core/persist-root-home",
+    # Configures SSH.
+    "core/ssh",
+    # Installs ZSH.
+    "rugpi-extra/zsh",
+    # Enable the `hello-world` recipe installing the static webpage.
+    "hello-world",
+]
+
+[parameters."core/set-hostname"]
+hostname = "rugpi-template"
+
+[parameters."core/apt-cleanup"]
+autoremove = true
+
+[parameters."core/ssh"]
+root_authorized_keys = """
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC2tN+ZL8lGnx8rW+vm9ukX1uhKE7GREHitIVxIN3fVh406ksaZzY4FB7JqMqor4SBpR/Eigm6mSSE6KdwSYYC99hakLVvFUG6b6xvB7gOgre8M0JuL9XwBfaUfNln6Hl2Xirlml61JwOWa8Lh+T8mquw9OUK20tkXNPrigVKH+RMQA2V0AQrHnzo9GXMT5HEdAfaVVhL8S1inlKixiPbnvt+nWUSoKGLo+I08w5ZKI88C+saP6VqFiinp57uF0F3oqwcupZe0j6vxGuN5hFg8YGcICFnjXUAVjds8pfcf7aImvYZdp192jC9JAfzx3LzJZLn+kY9hIQkqip/tfTtp56eBb+j9i07PhrDsGiZVNOWf+YG3Cw5Ix6ltOL0dvF1/xFG7O+CGz62w8Y925ytuGgzBkVJ090eznnCjpw+lhNiNFmoqUjiJFjs/VSrqmC5bqdRrqF7YIs61uKl/EyAZaEoHZJazUFFauOjjPK0ksVbAAfqxG4nFmOG0URemSvNE= koehlma@Zaylee
+"""
+
+[parameters."core/rugpi-ctrl"]
+rugpi_admin = true  # Enable Rugpi Admin.

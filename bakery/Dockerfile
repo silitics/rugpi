@@ -20,12 +20,13 @@ RUN mkdir -p /usr/share/rugpi/pi \
     && rm -rf firmware-stable \
     && rm -f firmware/kernel*.img
 
-COPY bakery/repositories /usr/share/rugpi/repositories
-COPY bakery/templates /usr/share/rugpi/templates
 COPY boot /usr/share/rugpi/boot
 
 COPY bakery/layers/bakery/10-setup.sh /tmp/rugpi-docker/10-setup.sh
 RUN /tmp/rugpi-docker/10-setup.sh
+
+COPY bakery/repositories /usr/share/rugpi/repositories
+COPY bakery/templates /usr/share/rugpi/templates
 
 COPY build/binaries /usr/share/rugpi/binaries
 

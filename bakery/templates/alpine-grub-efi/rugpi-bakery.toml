@@ -1,0 +1,26 @@
+[repositories]
+rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v0.6" }
+
+[images.generic-amd64]
+layer = "customized"
+architecture = "amd64"
+target = "generic-grub-efi"
+
+# This image has a larger size and can be directly used with QEMU.
+[images.generic-amd64-vm]
+layer = "customized"
+architecture = "amd64"
+target = "generic-grub-efi"
+size = "16G"
+
+[images.generic-arm64]
+layer = "customized"
+architecture = "arm64"
+target = "generic-grub-efi"
+
+# This image has a larger size and can be directly used with QEMU.
+[images.generic-arm64-vm]
+layer = "customized"
+architecture = "arm64"
+target = "generic-grub-efi"
+size = "16G"

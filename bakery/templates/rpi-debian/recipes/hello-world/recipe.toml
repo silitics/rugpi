@@ -1,0 +1,2 @@
+description = "install static webpage"
+dependencies = ["rugpi-extra/nginx"]

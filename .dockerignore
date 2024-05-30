@@ -5,3 +5,4 @@
 /tests
 /www
 /playground
+/bakery/templates/**/build/images/*.img

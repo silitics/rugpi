@@ -1,0 +1,24 @@
+[alpine-grub-efi]
+description = """
+Alpine images for EFI-compatible systems (AMD64 and ARM64).
+"""
+
+[debian-grub-efi]
+description = """
+Debian images for EFI-compatible systems (AMD64 and ARM64).
+"""
+
+[rpi-alpine]
+description = """
+Alpine images for Raspberry Pi 4 and 5.
+"""
+
+[rpi-debian]
+description = """
+Debian images for Raspberry Pi 4 and 5.
+"""
+
+[rpi-raspios]
+description = """
+Raspberry Pi OS images for all Raspberry Pi models.
+"""

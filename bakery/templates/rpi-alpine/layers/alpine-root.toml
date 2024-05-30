@@ -1,0 +1,8 @@
+root = true
+
+recipes = [
+    "core/alpine-bootstrap"
+]
+
+[parameters."core/alpine-bootstrap"]
+version = "3.20"

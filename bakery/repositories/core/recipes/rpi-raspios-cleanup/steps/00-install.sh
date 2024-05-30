@@ -15,3 +15,7 @@ systemctl disable sshswitch.service || true
 
 apt-get purge -y userconf-pi
 rm -f /etc/ssh/sshd_config.d/rename_user.conf
+
+if [ "${RECIPE_PARAM_DISABLE_SWAPFILE}" = "true" ]; then
+    apt-get purge -y dphys-swapfile
+fi
