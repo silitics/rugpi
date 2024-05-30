@@ -1,3 +1,11 @@
-parent = "alpine-base"
+# We use Alpine Linux 3.20 as a basis.
+parent = "core/alpine-3-20"
 
-recipes = ["setup"]
+recipes = [
+    # Setup Alpine for booting via Grub.
+    "core/alpine-grub-setup",
+    # Install Rugpi Ctrl into the image.
+    "core/rugpi-ctrl",
+    # Install a static website.
+    "hello-world",
+]

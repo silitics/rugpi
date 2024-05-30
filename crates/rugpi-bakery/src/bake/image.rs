@@ -73,10 +73,6 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             "/usr/share/rugpi/boot/u-boot/bin/second.scr",
             boot_dir.join("second.scr"),
         )?;
-        copy_recursive(
-            "/usr/share/rugpi/boot/grub/second.grub.cfg",
-            boot_dir.join("second.grub.cfg"),
-        )?;
     }
 
     // At this point, everything is initialized and we can compute the partition table.

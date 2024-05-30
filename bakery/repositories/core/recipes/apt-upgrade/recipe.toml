@@ -1,3 +1,0 @@
-description = "apt: upgrade all packages"
-priority = 899_900  # Execute before everything else but after `apt-update`.
-dependencies = ["apt-update"]

@@ -1,2 +1,0 @@
-description = "setup base system"
-dependencies = ["core/apt-update"]

@@ -1,5 +1,6 @@
 description = "install and configure Rugpi Ctrl"
 priority = 700_000  # Execute very early.
+dependencies = ["pkg-update"]
 
 [parameters]
 rugpi_admin = { default = false }

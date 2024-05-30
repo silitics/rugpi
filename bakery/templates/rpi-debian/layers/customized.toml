@@ -21,7 +21,7 @@ recipes = [
 [parameters."core/set-hostname"]
 hostname = "rugpi-template"
 
-[parameters."core/apt-cleanup"]
+[parameters."core/pkg-cleanup"]
 autoremove = true
 
 [parameters."core/ssh"]

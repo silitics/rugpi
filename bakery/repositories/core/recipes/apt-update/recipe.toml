@@ -1,3 +1,0 @@
-description = "apt: update package lists"
-priority = 900_000  # Execute before everything else.
-dependencies = ["apt-cleanup"]

@@ -1,0 +1,5 @@
+description = "example recipe for installing a static website"
+dependencies = [
+    # Update the package lists such that we can install Nginx.
+    "core/pkg-update"
+]

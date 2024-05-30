@@ -1,0 +1,5 @@
+description = "setup Alpine for `generic-grub-*` targets"
+dependencies = []
+
+[parameters]
+with_firmware = { default = "true" }

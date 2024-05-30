@@ -1,0 +1,6 @@
+description = "setup Debian for `generic-grub-*` targets"
+dependencies = []
+
+[parameters]
+with_firmware = { default = "true" }
+with_nonfree = { default = "true" }
