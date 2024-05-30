@@ -239,7 +239,7 @@ fn apply_recipes(
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGPI_LAYER_DIR = chroot_layer_dir,
+                        RUGPI_LAYER_DIR = "/run/rugpi/bakery/layer",
                         RUGPI_ROOT_DIR = "/",
                         RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
@@ -250,7 +250,10 @@ fn apply_recipes(
                     for (name, value) in &job.parameters {
                         vars.set(format!("RECIPE_PARAM_{}", name.to_uppercase()), value);
                     }
-                    run!(["chroot", root_dir_path, &script].with_vars(vars))?;
+                    run!(["chroot", root_dir_path, &script]
+                        .with_stdout(xscript::Out::Inherit)
+                        .with_stderr(xscript::Out::Inherit)
+                        .with_vars(vars))?;
                 }
                 StepKind::Run => {
                     let script = recipe.path.join("steps").join(&step.filename);
@@ -267,7 +270,10 @@ fn apply_recipes(
                     for (name, value) in &job.parameters {
                         vars.set(format!("RECIPE_PARAM_{}", name.to_uppercase()), value);
                     }
-                    run!([&script].with_vars(vars))?;
+                    run!([&script]
+                        .with_stdout(xscript::Out::Inherit)
+                        .with_stderr(xscript::Out::Inherit)
+                        .with_vars(vars))?;
                 }
             }
         }
