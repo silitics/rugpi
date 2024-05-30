@@ -3,17 +3,23 @@
 set -euo pipefail
 
 case "${RUGPI_ARCH}" in
-    "armhf")
-        TARGET="arm-unknown-linux-musleabihf"
+    "amd64")
+        TARGET="x86_64-unknown-linux-musl"
         ;;
     "arm64")
         TARGET="aarch64-unknown-linux-musl"
         ;;
-    "amd64")
-        TARGET="x86_64-unknown-linux-musl"
+    "armv7")
+        TARGET="armv7-unknown-linux-musleabihf"
+        ;;
+    "armhf")
+        TARGET="arm-unknown-linux-musleabihf"
+        ;;
+    "arm")
+        TARGET="arm-unknown-linux-musleabi"
         ;;
     *)
-        echo "Unsupported architecture ${RUGPI_ARCH}" >&2;
+        echo "Unsupported architecture '${RUGPI_ARCH}'."
         exit 1
 esac
 

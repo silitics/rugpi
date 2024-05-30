@@ -10,7 +10,6 @@ pub struct ImageConfig {
     /// The layer to use for the image.
     pub layer: String,
     /// The target architecture to build an image for.
-    #[serde(default)]
     pub architecture: Architecture,
     /// Indicates which boot flow to use for the image.
     pub target: Option<Target>,

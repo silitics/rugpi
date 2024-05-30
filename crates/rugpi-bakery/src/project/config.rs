@@ -33,14 +33,15 @@ impl BakeryConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq, Hash, ValueEnum)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, ValueEnum)]
 #[clap(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Architecture {
-    #[default]
-    Arm64,
-    Armhf,
     Amd64,
+    Arm64,
+    Armv7,
+    Armhf,
+    Arm,
 }
 
 #[derive(Debug, Error)]
@@ -52,9 +53,11 @@ impl FromStr for Architecture {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "arm64" => Ok(Self::Arm64),
-            "armhf" => Ok(Self::Armhf),
             "amd64" => Ok(Self::Amd64),
+            "arm64" => Ok(Self::Arm64),
+            "armv7" => Ok(Self::Armv7),
+            "armhf" => Ok(Self::Armhf),
+            "arm" => Ok(Self::Arm),
             _ => Err(InvalidArchitectureError),
         }
     }
@@ -63,9 +66,11 @@ impl FromStr for Architecture {
 impl Architecture {
     pub fn as_str(self) -> &'static str {
         match self {
-            Architecture::Arm64 => "arm64",
-            Architecture::Armhf => "armhf",
             Architecture::Amd64 => "amd64",
+            Architecture::Arm64 => "arm64",
+            Architecture::Armv7 => "armv7",
+            Architecture::Armhf => "armhf",
+            Architecture::Arm => "arm",
         }
     }
 }
