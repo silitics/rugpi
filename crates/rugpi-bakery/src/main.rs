@@ -114,9 +114,9 @@ fn main() -> Anyhow<()> {
             let project = load_project(&args)?;
             match command {
                 BakeCommand::Image { image, output } => {
-                    let output = output
-                        .clone()
-                        .unwrap_or_else(|| Path::new("build/images").join(image));
+                    let output = output.clone().unwrap_or_else(|| {
+                        Path::new("build/images").join(image).with_extension("img")
+                    });
                     bake::bake_image(&project, image, &output)?;
                 }
                 BakeCommand::Layer { layer, arch } => {
