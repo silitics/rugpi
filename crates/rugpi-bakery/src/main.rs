@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     convert::Infallible,
     ffi::{CStr, CString},
     fs,
@@ -13,6 +14,7 @@ use project::{
     config::Architecture, images::ImageConfig, repositories::Source, Project, ProjectLoader,
 };
 use rugpi_common::{fsutils::copy_recursive, Anyhow};
+use serde::Deserialize;
 use utils::logging::init_logging;
 
 pub mod bake;
@@ -176,14 +178,19 @@ fn main() -> Anyhow<()> {
         },
         Command::Init(cmd) => {
             let Some(template) = &cmd.template else {
-                for entry in std::fs::read_dir("/usr/share/rugpi/templates")? {
-                    let entry = entry?;
-                    if !entry.file_type()?.is_dir() {
-                        continue;
-                    }
-                    let file_name = entry.file_name();
-                    let template_name = file_name.to_str().expect("template names should be UTF-8");
-                    println!("{template_name}");
+                let templates: HashMap<String, TemplateInfo> = toml::from_str(
+                    &std::fs::read_to_string("/usr/share/rugpi/templates/templates.toml")?,
+                )?;
+                println!("{}\n", "Available Templates:".bold());
+                let mut names = templates.keys().collect::<Vec<_>>();
+                names.sort();
+                for name in names {
+                    let info = templates.get(name).unwrap();
+                    println!(
+                        "  {}:\n    {}",
+                        name.blue(),
+                        info.description.trim().bright_black()
+                    );
                 }
                 return Ok(());
             };
@@ -221,4 +228,9 @@ fn load_project(args: &Args) -> Anyhow<Project> {
 fn exec_shell() -> Anyhow<Infallible> {
     let zsh = CString::new("/bin/zsh").unwrap();
     Ok(nix::unistd::execv::<&CStr>(&zsh, &[])?)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TemplateInfo {
+    pub description: String,
 }
