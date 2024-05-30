@@ -2,8 +2,14 @@
 
 Upcoming Breaking Changes:
 
-- The `boot_flow` option is now optional defaulting to no boot flow. To get the old behavior, `boot_flow = "tryboot"` must be explicitly specified.
-- The `include_firmware` option is now optional defaulting to no firmware inclusion. To get the odl behavior, `include_firmware = "pi4"` must be specified. Setting the option to `"none"` will now result in an error.
+- The `boot_flow` option has been superseded by `target`.
+- The `include_firmware` option has been removed. To include a firmware update for Raspberry Pi, use the `core/rpi-include-firmware` recipe.
+
+- Renamed recipes:
+    - `core/raspberrypi` => `core/rpi-raspios-setup`
+    - `core/pi-cleanup` => `core/rpi-raspios-cleanup`
+- Removed recipes:
+    - `core/disable-swap` (now part of `rpi-raspios-cleanup` via parameter)
 
 ## Version 0.6.6
 
