@@ -102,6 +102,17 @@ pub const fn byte_to_ascii_hex(byte: u8, case: Case) -> [u8; 2] {
     ]
 }
 
+/// Converts a sequence of bytes to its hexadecimal ASCII representation.
+pub fn bytes_to_ascii_hex(bytes: &[u8], case: Case) -> String {
+    let mut hex = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let [first, second] = byte_to_ascii_hex(*byte, case);
+        hex.push(first as char);
+        hex.push(second as char);
+    }
+    hex
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

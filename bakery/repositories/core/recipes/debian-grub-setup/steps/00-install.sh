@@ -48,4 +48,4 @@ cp -L /vmlinuz "${BOOT_DIR}"
 cp -L /initrd.img "${BOOT_DIR}"
 
 echo "Installing second stage boot script..."
-cp "${RECIPE_DIR}/files/second.grub.cfg" "${BOOT_DIR}"
+cp "${RECIPE_DIR}/files/grub.cfg" "${BOOT_DIR}"

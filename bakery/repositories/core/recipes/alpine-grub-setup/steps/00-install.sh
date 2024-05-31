@@ -21,4 +21,4 @@ cp -L /boot/vmlinuz-lts "${BOOT_DIR}/vmlinuz"
 cp -L /boot/initramfs-lts "${BOOT_DIR}/initrd.img"
 
 echo "Installing second stage boot script..."
-cp "${RECIPE_DIR}/files/second.grub.cfg" "${BOOT_DIR}"
+cp "${RECIPE_DIR}/files/grub.cfg" "${BOOT_DIR}"

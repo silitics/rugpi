@@ -1070,6 +1070,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
+ "sha1",
  "thiserror",
  "toml 0.8.12",
  "tracing",

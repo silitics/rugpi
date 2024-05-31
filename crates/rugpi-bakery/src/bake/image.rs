@@ -301,5 +301,6 @@ fn compute_fs_size(root: PathBuf) -> Anyhow<NumBlocks> {
     }
     // Add an overhead of 10% for filesystem metadata.
     size += NumBytes::from_raw(size.into_raw().div_ceil(10));
+    size = size.max(parse_size("64M").unwrap());
     Ok(bytes_to_blocks(size))
 }
