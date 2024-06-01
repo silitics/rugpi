@@ -165,15 +165,16 @@ pub fn commit(hot_partitions: PartitionSet) -> Anyhow<()> {
         PartitionSet::A => envblk.insert(RUGPI_BOOTPART.to_owned(), "2".to_owned()),
         PartitionSet::B => envblk.insert(RUGPI_BOOTPART.to_owned(), "3".to_owned()),
     };
-    write_with_hash(
-        &envblk,
-        &config_partition_path("rugpi/primary.grubenv"),
-        "/rugpi/primary.grubenv",
-    )?;
+    let _writable_config = make_config_writeable()?;
     write_with_hash(
         &envblk,
         &config_partition_path("rugpi/secondary.grubenv"),
         "/rugpi/secondary.grubenv",
+    )?;
+    write_with_hash(
+        &envblk,
+        &config_partition_path("rugpi/primary.grubenv"),
+        "/rugpi/primary.grubenv",
     )?;
     Ok(())
 }

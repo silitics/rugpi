@@ -12,6 +12,7 @@ use rugpi_common::{
     boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
     ctrl_config::{load_config, CTRL_CONFIG_PATH},
     disk::{stream::ImgStream, PartitionTable},
+    grub_patch_env,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
@@ -231,7 +232,7 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
             .gpt_id
             .unwrap()
             .to_hex_str(ascii_numbers::Case::Lower);
-        rpi_patch_boot(temp_dir_spare, part_uuid)?;
+        grub_patch_env(temp_dir_spare, part_uuid)?;
     }
     Ok(())
 }

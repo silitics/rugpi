@@ -39,7 +39,7 @@ pub fn detect_boot_flow() -> Anyhow<BootFlow> {
         Ok(BootFlow::Tryboot)
     } else if config_partition_path("bootpart.default.env").exists() {
         Ok(BootFlow::UBoot)
-    } else if config_partition_path("rugpi/bootpart.default.grubenv").exists()
+    } else if config_partition_path("rugpi/primary.grubenv").exists()
         && config_partition_path("EFI").is_dir()
     {
         Ok(BootFlow::GrubEfi)
