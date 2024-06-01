@@ -17,7 +17,7 @@ use rugpi_common::{
     partitions::{
         get_disk_id, get_hot_partitions, read_default_partitions, PartitionSet, Partitions,
     },
-    patch_boot, Anyhow,
+    rpi_patch_boot, Anyhow,
 };
 use tempfile::tempdir;
 
@@ -213,7 +213,7 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
             PartitionSet::A => format!("PARTUUID={disk_id}-05"),
             PartitionSet::B => format!("PARTUUID={disk_id}-06"),
         };
-        patch_boot(temp_dir_spare, root)?;
+        rpi_patch_boot(temp_dir_spare, root)?;
     }
     Ok(())
 }

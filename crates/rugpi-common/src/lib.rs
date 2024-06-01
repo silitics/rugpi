@@ -1,6 +1,8 @@
 //! Common functionality shared between Rugpi Bakery and Rugpi Ctrl.
 
-use std::{fs, io, path::Path};
+use std::{collections::HashMap, fs, io, path::Path};
+
+use boot::grub::grub_envblk_encode;
 
 use crate::boot::uboot::UBootEnv;
 
@@ -18,8 +20,17 @@ pub mod utils;
 /// The [`anyhow`] result type.
 pub type Anyhow<T> = anyhow::Result<T>;
 
+pub fn grub_path_env(boot_dir: impl AsRef<Path>, bootargs: impl AsRef<str>) -> Anyhow<()> {
+    const RUGPI_BOOTARGS: &str = "rugpi_bootargs";
+    let mut env = HashMap::new();
+    env.insert(RUGPI_BOOTARGS.to_owned(), bootargs.as_ref().to_owned());
+    let encoded = grub_envblk_encode(&env)?;
+    std::fs::write(boot_dir.as_ref().join("boot.grubenv"), encoded.as_bytes())?;
+    Ok(())
+}
+
 /// Patches `cmdline.txt` to use the given root device and `rugpi-ctrl` as init process.
-pub fn patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
+pub fn rpi_patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
     fn _patch_cmdline(path: &Path, root: &str) -> Anyhow<()> {
         let cmdline_path = path.join("cmdline.txt");
         let cmdline = fs::read_to_string(&cmdline_path)?;
@@ -52,7 +63,7 @@ pub fn patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
 }
 
 /// Patches `config.txt` to not use `initramfs`.
-pub fn patch_config(path: impl AsRef<Path>) -> io::Result<()> {
+pub fn rpi_patch_config(path: impl AsRef<Path>) -> io::Result<()> {
     fn _patch_config(path: &Path) -> io::Result<()> {
         let config = fs::read_to_string(path)?;
         let lines = config

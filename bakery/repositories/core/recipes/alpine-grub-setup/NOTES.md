@@ -1,0 +1,1 @@
+We need to provide a custom `mkinitfs` feature. By default, Busybox's `mount` is used which does not support resolving block devices by `PARTUUID`. However, Rugpi uses `PARTUUID` to select the system partition.

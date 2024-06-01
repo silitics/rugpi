@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use super::NumBlocks;
 use crate::utils::{
-    ascii_numbers::{self, byte_to_ascii_hex, parse_ascii_hex_byte},
+    ascii_numbers::{self, byte_to_ascii_hex, parse_ascii_hex_byte, Case},
     const_helpers::const_for,
 };
 
@@ -66,13 +66,13 @@ impl Guid {
     }
 
     /// Convert the GUID to the standard string encoding.
-    pub const fn to_hex_str(&self) -> GuidString {
+    pub const fn to_hex_str(&self, case: Case) -> GuidString {
         let mut hex_bytes = [0; GUID_STRING_LENGTH];
         const_for!(idx in [8, 13, 18, 23] {
             hex_bytes[idx] = b'-';
         });
         const_for!(byte, idx in [6, 4, 2, 0, 11, 9, 16, 14, 19, 21, 24, 26, 28, 30, 32, 34] {
-            let hex = byte_to_ascii_hex(self.bytes[byte], ascii_numbers::Case::Upper);
+            let hex = byte_to_ascii_hex(self.bytes[byte], case);
             hex_bytes[idx] = hex[0];
             hex_bytes[idx + 1] = hex[1];
         });
@@ -82,13 +82,13 @@ impl Guid {
 
 impl std::fmt::Display for Guid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.to_hex_str())
+        f.write_str(&self.to_hex_str(ascii_numbers::Case::Upper))
     }
 }
 
 impl std::fmt::Debug for Guid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Guid({})", &self.to_hex_str()))
+        f.write_fmt(format_args!("Guid({})", &self.to_hex_str(Case::Upper)))
     }
 }
 
@@ -105,7 +105,7 @@ impl serde::Serialize for Guid {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_hex_str())
+        serializer.serialize_str(&self.to_hex_str(Case::Upper))
     }
 }
 
@@ -180,15 +180,24 @@ pub enum InvalidGuid {
 pub mod tests {
     use std::ops::Deref;
 
-    use crate::disk::gpt::Guid;
+    use crate::{disk::gpt::Guid, utils::ascii_numbers};
 
     #[test]
     pub fn test_guid_roundtrip() {
         const EFI: &str = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B";
-        assert_eq!(Guid::from_hex_str(EFI).unwrap().to_hex_str().deref(), EFI);
+        assert_eq!(
+            Guid::from_hex_str(EFI)
+                .unwrap()
+                .to_hex_str(ascii_numbers::Case::Upper)
+                .deref(),
+            EFI
+        );
         const LINUX: &str = "0FC63DAF-8483-4772-8E79-3D69D8477DE4";
         assert_eq!(
-            Guid::from_hex_str(LINUX).unwrap().to_hex_str().deref(),
+            Guid::from_hex_str(LINUX)
+                .unwrap()
+                .to_hex_str(ascii_numbers::Case::Upper)
+                .deref(),
             LINUX
         );
     }

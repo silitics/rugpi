@@ -13,8 +13,8 @@ use rugpi_common::{
         PartitionTableType,
     },
     fsutils::{allocate_file, copy_recursive, copy_sparse},
-    patch_boot, patch_config,
-    utils::units::NumBytes,
+    grub_path_env, rpi_patch_boot, rpi_patch_config,
+    utils::{ascii_numbers, units::NumBytes},
     Anyhow,
 };
 use tempfile::tempdir;
@@ -104,6 +104,8 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
     info!("Writing image partition table.");
     table.write(image)?;
 
+    let table = PartitionTable::read(image)?;
+
     if let Some(target) = &config.target {
         if matches!(target, Target::RpiTryboot | Target::RpiUboot) {
             let disk_id = match table.disk_id {
@@ -111,9 +113,20 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                 _ => bail!("unsupported GPT partition layout"),
             };
             info!("Patching boot configuration.");
-            patch_boot(&boot_dir, format!("PARTUUID={disk_id:08X}-05"))?;
+            rpi_patch_boot(&boot_dir, format!("PARTUUID={disk_id:08X}-05"))?;
             info!("Patching `config.txt`.");
-            patch_config(boot_dir.join("config.txt"))?;
+            rpi_patch_config(boot_dir.join("config.txt"))?;
+        }
+        if matches!(target, Target::GenericGrubEfi) {
+            let root_part = &table.partitions[3];
+            let part_uuid = root_part
+                .gpt_id
+                .unwrap()
+                .to_hex_str(ascii_numbers::Case::Lower);
+            grub_path_env(
+                boot_dir,
+                format!("ro init=/usr/bin/rugpi-ctrl root=PARTUUID={part_uuid}"),
+            )?;
         }
     }
 
