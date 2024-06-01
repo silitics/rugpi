@@ -1,2 +1,2 @@
 description = "Raspberry Pi meta recipe"
-dependencies = ["rpi-raspios-cleanup", "persist-fake-hwclock"]
+dependencies = ["rugpi-ctrl", "rpi-raspios-cleanup", "persist-fake-hwclock"]

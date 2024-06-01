@@ -1,2 +1,3 @@
 description = "setup Debian for Raspberry Pi"
-priority = 9_000_000
+priority = 100_000
+dependencies = ["rugpi-ctrl"]
