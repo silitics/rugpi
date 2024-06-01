@@ -1,8 +1,7 @@
-/.rugpi
-/target
-/template
-/examples
-/tests
-/www
-/playground
-/bakery/templates/**/build/images/*.img
+.git
+target
+tests
+www
+playground
+**/.rugpi
+**/*.img
