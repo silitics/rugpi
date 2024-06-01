@@ -4,8 +4,8 @@ parent = "core/alpine-3-20"
 recipes = [
     # Setup Alpine for booting via Grub.
     "core/alpine-grub-setup",
-    # Install Rugpi Ctrl into the image.
-    "core/rugpi-ctrl",
+    # Persist `/root`.
+    "core/persist-root-home",
     # Install a static website.
     "hello-world",
 ]
