@@ -157,6 +157,12 @@ impl std::fmt::Debug for GuidString {
     }
 }
 
+impl AsRef<str> for GuidString {
+    fn as_ref(&self) -> &str {
+        self
+    }
+}
+
 impl std::ops::Deref for GuidString {
     type Target = str;
 

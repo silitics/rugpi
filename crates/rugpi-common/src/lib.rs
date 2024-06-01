@@ -20,10 +20,16 @@ pub mod utils;
 /// The [`anyhow`] result type.
 pub type Anyhow<T> = anyhow::Result<T>;
 
-pub fn grub_path_env(boot_dir: impl AsRef<Path>, bootargs: impl AsRef<str>) -> Anyhow<()> {
+pub fn grub_patch_env(boot_dir: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
     const RUGPI_BOOTARGS: &str = "rugpi_bootargs";
     let mut env = HashMap::new();
-    env.insert(RUGPI_BOOTARGS.to_owned(), bootargs.as_ref().to_owned());
+    env.insert(
+        RUGPI_BOOTARGS.to_owned(),
+        format!(
+            "ro init=/usr/bin/rugpi-ctrl root=PARTUUID={}",
+            root.as_ref()
+        ),
+    );
     let encoded = grub_envblk_encode(&env)?;
     std::fs::write(boot_dir.as_ref().join("boot.grubenv"), encoded.as_bytes())?;
     Ok(())

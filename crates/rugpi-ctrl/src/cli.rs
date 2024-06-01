@@ -11,13 +11,15 @@ use clap::{Parser, ValueEnum};
 use rugpi_common::{
     boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
     ctrl_config::{load_config, CTRL_CONFIG_PATH},
-    disk::stream::ImgStream,
+    disk::{stream::ImgStream, PartitionTable},
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
     partitions::{
         get_disk_id, get_hot_partitions, read_default_partitions, PartitionSet, Partitions,
     },
-    rpi_patch_boot, Anyhow,
+    rpi_patch_boot,
+    utils::ascii_numbers,
+    Anyhow,
 };
 use tempfile::tempdir;
 
@@ -214,6 +216,22 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
             PartitionSet::B => format!("PARTUUID={disk_id}-06"),
         };
         rpi_patch_boot(temp_dir_spare, root)?;
+    }
+    if matches!(boot_flow, BootFlow::GrubEfi) {
+        let _mounted_spare = Mounted::mount(
+            spare_partitions.boot_dev(partitions).unwrap(),
+            temp_dir_spare,
+        )?;
+        let table = PartitionTable::read(&partitions.parent_dev)?;
+        let root_part = match spare_partitions {
+            PartitionSet::A => &table.partitions[3],
+            PartitionSet::B => &table.partitions[4],
+        };
+        let part_uuid = root_part
+            .gpt_id
+            .unwrap()
+            .to_hex_str(ascii_numbers::Case::Lower);
+        rpi_patch_boot(temp_dir_spare, part_uuid)?;
     }
     Ok(())
 }

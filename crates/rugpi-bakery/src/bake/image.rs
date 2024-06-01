@@ -13,7 +13,7 @@ use rugpi_common::{
         PartitionTableType,
     },
     fsutils::{allocate_file, copy_recursive, copy_sparse},
-    grub_path_env, rpi_patch_boot, rpi_patch_config,
+    grub_patch_env, rpi_patch_boot, rpi_patch_config,
     utils::{ascii_numbers, units::NumBytes},
     Anyhow,
 };
@@ -123,10 +123,7 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                 .gpt_id
                 .unwrap()
                 .to_hex_str(ascii_numbers::Case::Lower);
-            grub_path_env(
-                boot_dir,
-                format!("ro init=/usr/bin/rugpi-ctrl root=PARTUUID={part_uuid}"),
-            )?;
+            grub_patch_env(boot_dir, part_uuid)?;
         }
     }
 
