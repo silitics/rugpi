@@ -24,6 +24,7 @@
     "blkpg",
     "BLKRRPART",
     "bootable",
+    "bootargs",
     "bootloader",
     "bootloaders",
     "bootpart",
