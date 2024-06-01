@@ -4,17 +4,13 @@ parent = "core/debian-bookworm"
 recipes = [
     # Prepares the Raspberry Pi base image for usage with Rugpi.
     "core/rpi-debian-setup",
-    # Install Rugpi Ctrl into the image.
-    "core/rugpi-ctrl",
     # Sets a static hostname (see parameters below).
     "core/set-hostname",
     # Persists the home directory of the root user.
     "core/persist-root-home",
     # Configures SSH.
     "core/ssh",
-    # Installs ZSH.
-    "rugpi-extra/zsh",
-    # Enable the `hello-world` recipe installing the static webpage.
+    # Install a static website.
     "hello-world",
 ]
 
