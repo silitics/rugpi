@@ -4,11 +4,13 @@ Upcoming Breaking Changes:
 
 - The `boot_flow` option has been superseded by `target`.
 - The `include_firmware` option has been removed. To include a firmware update for Raspberry Pi, use the `core/rpi-include-firmware` recipe.
-
-- Renamed recipes:
+- The following recipes have been renamed:
     - `core/raspberrypi` => `core/rpi-raspios-setup`
     - `core/pi-cleanup` => `core/rpi-raspios-cleanup`
-- Removed recipes:
+    - `core/apt-cleanup` => `core/pkg-cleanup` (also supports `apk` now)
+    - `core/apt-update` => `core/pkg-cleanup` (also supports `apk` now)
+    - `core/apt-upgrade` => `core/pkg-upgrade` (also supports `apk` now)
+- The following recipes have been removed:
     - `core/disable-swap` (now part of `rpi-raspios-cleanup` via parameter)
 
 ## Version 0.6.6
