@@ -1,6 +1,14 @@
 # Changelog
 
-Upcoming Breaking Changes:
+## Version 0.7.0 (UNRELEASED)
+
+New features:
+
+- Official support for Alpine Linux and Debian.
+- Support for EFI systems and integration with Grub.
+- Configurable image and system partition layouts.
+
+Breaking changes to the image building pipeline:
 
 - The `boot_flow` option has been superseded by `target`.
 - The `include_firmware` option has been removed. To include a firmware update for Raspberry Pi, use the `core/rpi-include-firmware` recipe.
