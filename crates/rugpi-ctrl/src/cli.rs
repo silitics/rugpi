@@ -26,7 +26,7 @@ use tempfile::tempdir;
 
 use crate::{
     overlay::overlay_dir,
-    utils::{clear_flag, reboot, reboot_syscall, set_flag, DEFERRED_SPARE_REBOOT_FLAG},
+    utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG},
 };
 
 pub fn main() -> Anyhow<()> {
@@ -135,7 +135,6 @@ pub fn main() -> Anyhow<()> {
             }
         },
         Command::Unstable(command) => match command {
-            UnstableCommand::Tryboot => reboot_syscall(true)?,
             UnstableCommand::SetDeferredSpareReboot { value } => match value {
                 Boolean::True => set_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
                 Boolean::False => clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
@@ -324,8 +323,6 @@ pub enum SystemCommand {
 
 #[derive(Debug, Parser)]
 pub enum UnstableCommand {
-    /// Directly reboot with tryboot using a syscall.
-    Tryboot,
     /// Set deferred spare reboot flag.
     SetDeferredSpareReboot { value: Boolean },
 }

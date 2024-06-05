@@ -3,6 +3,7 @@ use std::{fs::File, io::Write};
 use anyhow::bail;
 
 use crate::{
+    devices,
     partitions::{make_config_writeable, PartitionSet},
     paths::config_partition_path,
     Anyhow,
@@ -67,5 +68,17 @@ pub fn commit(hot_partitions: PartitionSet) -> Anyhow<()> {
     autoboot_new.flush()?;
     autoboot_new.sync_all()?;
     std::fs::rename(autoboot_new_path, config_partition_path("autoboot.txt"))?;
+    Ok(())
+}
+
+pub fn set_spare_flag() -> Anyhow<()> {
+    // Instead of rebooting with `reboot "0 tryboot"`, we directly set the
+    // required flag via Raspberry Pi's firmware interface. By default,
+    // `reboot` should not set any reboot flags, hence, our flags wil not
+    // be overwritten. Using `reboot "0 tryboot"` requires support by the
+    // kernel and a `reboot` binary that actually passes down the flags to
+    // the kernel. This cannot be assumed on all systems. In particular, on
+    // Alpine Linux, the `reboot`` binary does not pass down flags.
+    devices::rpi::set_tryboot_flag(true)?;
     Ok(())
 }

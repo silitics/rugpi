@@ -47,3 +47,18 @@ pub fn detect_boot_flow() -> Anyhow<BootFlow> {
         bail!("unable to detect boot flow");
     }
 }
+
+pub fn set_spare_flag() -> Anyhow<()> {
+    match detect_boot_flow()? {
+        BootFlow::Tryboot => {
+            tryboot::set_spare_flag()?;
+        }
+        BootFlow::UBoot => {
+            uboot::set_spare_flag()?;
+        }
+        BootFlow::GrubEfi => {
+            grub::set_spare_flag()?;
+        }
+    }
+    Ok(())
+}
