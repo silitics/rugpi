@@ -199,7 +199,12 @@ impl RecipeStep {
                     .split_whitespace()
                     .map(str::to_owned)
                     .collect();
-                StepKind::Packages { packages }
+                let manager = match kind.rsplit_once('.') {
+                    Some((_, "apt")) => Some(PackageManager::Apt),
+                    Some((_, "apk")) => Some(PackageManager::Apk),
+                    _ => None,
+                };
+                StepKind::Packages { packages, manager }
             }
             "install" => StepKind::Install,
             "run" => StepKind::Run,
@@ -217,9 +222,18 @@ impl RecipeStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StepKind {
     /// Install the given packages.
-    Packages { packages: Vec<String> },
+    Packages {
+        manager: Option<PackageManager>,
+        packages: Vec<String>,
+    },
     /// Run a script in the `chroot` environment of the system.
     Install,
     /// Run a script on the host machine.
     Run,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PackageManager {
+    Apt,
+    Apk,
 }

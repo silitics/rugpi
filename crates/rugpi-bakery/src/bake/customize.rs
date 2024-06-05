@@ -17,7 +17,7 @@ use crate::{
         config::Architecture,
         layers::{Layer, LayerConfig},
         library::Library,
-        recipes::{Recipe, StepKind},
+        recipes::{PackageManager, Recipe, StepKind},
         repositories::RepositoryIdx,
         Project,
     },
@@ -216,15 +216,32 @@ fn apply_recipes(
         for step in &recipe.steps {
             info!("    - {}", step.filename);
             match &step.kind {
-                StepKind::Packages { packages } => {
+                StepKind::Packages { packages, manager } => {
                     if mount_stack.is_empty() {
                         mount_all(project, root_dir_path, &mut mount_stack)?;
                     }
-                    let mut cmd = cmd!("chroot", root_dir_path, "apt-get", "install", "-y");
-                    cmd.extend_args(packages);
-                    ParentEnv.run(cmd.with_vars(vars! {
-                        DEBIAN_FRONTEND = "noninteractive"
-                    }))?;
+                    let chroot_manager = if root_dir_path.join("usr/bin/apt-get").exists() {
+                        PackageManager::Apt
+                    } else if root_dir_path.join("sbin/apk").exists() {
+                        PackageManager::Apk
+                    } else {
+                        bail!("unable to determine package manager")
+                    };
+                    let manager = manager.unwrap_or(chroot_manager);
+                    if manager == chroot_manager {
+                        let mut cmd = match manager {
+                            PackageManager::Apt => {
+                                cmd!("chroot", root_dir_path, "apt-get", "install", "-y")
+                            }
+                            PackageManager::Apk => {
+                                cmd!("chroot", root_dir_path, "apk", "add", "--no-interactive")
+                            }
+                        };
+                        cmd.extend_args(packages);
+                        ParentEnv.run(cmd.with_vars(vars! {
+                            DEBIAN_FRONTEND = "noninteractive"
+                        }))?;
+                    }
                 }
                 StepKind::Install => {
                     if mount_stack.is_empty() {
