@@ -66,20 +66,20 @@ pub fn customize(
     if target.exists() && last_modified < mtime(target)? && !force_run {
         return Ok(());
     }
-    let layer_dir = tempdir()?;
-    let layer_dir = layer_dir.path();
+    let bundle_dir = tempdir()?;
+    let bundle_dir = bundle_dir.path();
     if let Some(src) = src {
         info!("Extracting layer.");
-        run!(["tar", "-x", "-f", &src, "-C", layer_dir])?;
+        run!(["tar", "-x", "-f", &src, "-C", bundle_dir])?;
     } else {
         info!("Creating empty layer.");
-        std::fs::create_dir_all(&layer_dir)?;
+        std::fs::create_dir_all(&bundle_dir)?;
     }
-    let root_dir = layer_dir.join("root");
+    let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
-    apply_recipes(project, arch, &jobs, layer_dir, &root_dir, layer_path)?;
+    apply_recipes(project, arch, &jobs, bundle_dir, &root_dir, layer_path)?;
     info!("packing system files");
-    run!(["tar", "-c", "-f", &target, "-C", layer_dir, "."])?;
+    run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])?;
     Ok(())
 }
 
@@ -163,7 +163,7 @@ fn apply_recipes(
     project: &Project,
     arch: Architecture,
     jobs: &[RecipeJob],
-    layer_dir: &Path,
+    bundle_dir: &Path,
     root_dir_path: &Path,
     layer_path: &Path,
 ) -> Anyhow<()> {
@@ -250,13 +250,13 @@ fn apply_recipes(
                     let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
                     fs::create_dir_all(&bakery_recipe_path)?;
                     let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
-                    let chroot_layer_dir = root_dir_path.join("run/rugpi/bakery/layer");
+                    let chroot_layer_dir = root_dir_path.join("run/rugpi/bakery/bundle/");
                     fs::create_dir_all(&chroot_layer_dir)?;
-                    let _mounted_layer_dir = Mounted::bind(&layer_dir, &chroot_layer_dir)?;
+                    let _mounted_layer_dir = Mounted::bind(&bundle_dir, &chroot_layer_dir)?;
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGPI_LAYER_DIR = "/run/rugpi/bakery/layer",
+                        RUGPI_BUNDLE_DIR = "/run/rugpi/bakery/bundle/",
                         RUGPI_ROOT_DIR = "/",
                         RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
@@ -276,7 +276,7 @@ fn apply_recipes(
                     let script = recipe.path.join("steps").join(&step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGPI_LAYER_DIR = layer_dir,
+                        RUGPI_BUNDLE_DIR = bundle_dir,
                         RUGPI_ROOT_DIR = root_dir_path,
                         RUGPI_PROJECT_DIR = &project_dir,
                         RUGPI_ARCH = arch.as_str(),

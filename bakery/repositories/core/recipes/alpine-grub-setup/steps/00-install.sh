@@ -4,7 +4,7 @@ set -eu
 
 apk update
 
-BOOT_DIR="${RUGPI_LAYER_DIR}/boot"
+BOOT_DIR="${RUGPI_BUNDLE_DIR}/roots/boot"
 
 mkdir -p "${BOOT_DIR}"
 

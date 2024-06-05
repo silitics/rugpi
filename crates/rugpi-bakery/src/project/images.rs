@@ -110,8 +110,7 @@ pub fn pi_image_layout() -> ImageLayout {
             ImagePartition::new()
                 .with_ty(PartitionType::Mbr(0x83))
                 .with_filesystem(Filesystem::Ext4)
-                .with_label("system-a")
-                .with_root("root"),
+                .with_root("system"),
         ],
     }
 }
@@ -136,7 +135,7 @@ pub fn grub_efi_image_layout() -> ImageLayout {
             ImagePartition::new()
                 .with_ty(gpt_types::LINUX)
                 .with_filesystem(Filesystem::Ext4)
-                .with_root("root"),
+                .with_root("system"),
         ],
     }
 }

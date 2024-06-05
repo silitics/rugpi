@@ -31,7 +31,7 @@ use crate::{
 
 pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
     let work_dir = tempdir()?;
-    let layer_dir = work_dir.path();
+    let bundle_dir = work_dir.path();
 
     if let Some(parent) = image.parent() {
         fs::create_dir_all(parent).ok();
@@ -39,16 +39,16 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
 
     // Initialize system root directory from provided TAR file.
     info!("Extracting layer.");
-    run!(["tar", "-xf", src, "-C", &layer_dir])?;
+    run!(["tar", "-xf", src, "-C", &bundle_dir])?;
 
-    let root_dir = layer_dir.join("root");
-    fs::create_dir_all(&root_dir)?;
+    let system_dir = bundle_dir.join("roots/system");
+    fs::create_dir_all(&system_dir)?;
 
     // Create directories for config and boot partitions.
     info!("Creating config and boot directories.");
-    let config_dir = layer_dir.join("config");
+    let config_dir = bundle_dir.join("roots/config");
     fs::create_dir_all(&config_dir)?;
-    let boot_dir = layer_dir.join("boot");
+    let boot_dir = bundle_dir.join("roots/boot");
     fs::create_dir_all(&boot_dir)?;
 
     // Initialize config and boot partitions based the selected on boot flow.
@@ -56,10 +56,10 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
     if let Some(target) = config.target {
         match target {
             Target::RpiTryboot => {
-                initialize_tryboot(&config_dir, &boot_dir, &root_dir)?;
+                initialize_tryboot(&config_dir)?;
             }
             Target::RpiUboot => {
-                initialize_uboot(config, &config_dir, &boot_dir, &root_dir)?;
+                initialize_uboot(config, &config_dir)?;
             }
             Target::GenericGrubEfi => {
                 initialize_grub(config, &config_dir)?;
@@ -89,7 +89,8 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         .ok_or_else(|| anyhow!("image layout needs to be specified"))?;
 
     info!("Computing partition table.");
-    let table = compute_partition_table(&layout, layer_dir).context("computing partition table")?;
+    let table = compute_partition_table(&layout, &bundle_dir.join("roots"))
+        .context("computing partition table")?;
 
     let size_bytes = table.blocks_to_bytes(table.disk_size);
 
@@ -142,10 +143,15 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         match filesystem {
             images::Filesystem::Ext4 => {
                 let size = table.blocks_to_bytes(image_partition.size);
-                let fs_image = layer_dir.join("ext4.img");
+                let fs_image = bundle_dir.join("ext4.img");
                 allocate_file(&fs_image, size.into_raw())?;
                 if let Some(path) = &layout_partition.root {
-                    run!(["mkfs.ext4", "-d", layer_dir.join(path), &fs_image])?;
+                    run!([
+                        "mkfs.ext4",
+                        "-d",
+                        bundle_dir.join("roots").join(path),
+                        &fs_image
+                    ])?;
                 } else {
                     run!(["mkfs.ext4", &fs_image])?;
                 }
@@ -161,11 +167,11 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             }
             images::Filesystem::Fat32 => {
                 let size = table.blocks_to_bytes(image_partition.size);
-                let fs_image = layer_dir.join("fat32.img");
+                let fs_image = bundle_dir.join("fat32.img");
                 allocate_file(&fs_image, size.into_raw())?;
                 run!(["mkfs.vfat", &fs_image])?;
                 if let Some(path) = &layout_partition.root {
-                    let fs_path = layer_dir.join(path);
+                    let fs_path = bundle_dir.join("roots").join(path);
                     for entry in fs::read_dir(&fs_path)? {
                         let entry = entry?;
                         run!([
@@ -205,7 +211,7 @@ fn bytes_to_blocks(bytes: NumBytes) -> NumBlocks {
 }
 
 /// Compute the partition table for an image based on the provided layout.
-fn compute_partition_table(layout: &ImageLayout, work_dir: &Path) -> Anyhow<PartitionTable> {
+fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<PartitionTable> {
     let table_type = layout.ty;
     let mut partitions = Vec::new();
     let mut next_usable = ALIGNMENT;
@@ -255,7 +261,7 @@ fn compute_partition_table(layout: &ImageLayout, work_dir: &Path) -> Anyhow<Part
                     let Some(path) = &partition.root else {
                         bail!("partitions without a fixed size must have a root path");
                     };
-                    compute_fs_size(work_dir.join(path))?
+                    compute_fs_size(roots_dir.join(path))?
                 }
             };
             partitions.push(Partition {

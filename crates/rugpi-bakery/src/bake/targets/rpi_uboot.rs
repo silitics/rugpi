@@ -2,19 +2,10 @@ use std::path::Path;
 
 use anyhow::bail;
 use rugpi_common::{boot::uboot::UBootEnv, fsutils::copy_recursive, Anyhow};
-use xscript::{run, Run};
 
 use crate::project::{config::Architecture, images::ImageConfig};
 
-pub fn initialize_uboot(
-    config: &ImageConfig,
-    config_dir: &Path,
-    boot_dir: &Path,
-    root_dir: &Path,
-) -> Anyhow<()> {
-    copy_recursive(root_dir.join("boot"), &boot_dir)?;
-    run!(["rm", "-rf", root_dir.join("boot")])?;
-    std::fs::create_dir_all(root_dir.join("boot"))?;
+pub fn initialize_uboot(config: &ImageConfig, config_dir: &Path) -> Anyhow<()> {
     copy_recursive("/usr/share/rugpi/pi/firmware", &config_dir)?;
     match config.architecture {
         Architecture::Arm64 => {
