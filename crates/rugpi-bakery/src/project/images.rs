@@ -30,7 +30,6 @@ pub struct ImagePartition {
     pub size: Option<String>,
     pub filesystem: Option<Filesystem>,
     pub root: Option<String>,
-    pub label: Option<String>,
     #[serde(rename = "type")]
     pub ty: Option<PartitionType>,
 }
@@ -41,7 +40,6 @@ impl ImagePartition {
             size: None,
             filesystem: None,
             root: None,
-            label: None,
             ty: None,
         }
     }
@@ -58,11 +56,6 @@ impl ImagePartition {
 
     pub fn with_root(mut self, path: impl Into<String>) -> Self {
         self.root = Some(path.into());
-        self
-    }
-
-    pub fn with_label(mut self, label: impl Into<String>) -> Self {
-        self.label = Some(label.into());
         self
     }
 

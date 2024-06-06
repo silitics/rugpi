@@ -248,7 +248,7 @@ fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<Par
                 // We fix this later once we know the size of the extended part.
                 size: 0.into(),
                 ty: partition_type,
-                name: partition.label.clone(),
+                name: None,
                 gpt_id: None,
             });
             in_extended = true;
@@ -269,7 +269,7 @@ fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<Par
                 start,
                 size,
                 ty: partition_type,
-                name: partition.label.clone(),
+                name: None,
                 gpt_id: None,
             });
             next_usable = (start + size).ceil_align_to(ALIGNMENT);
