@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-CONFIG_DIR="${RUGPI_BUNDLE_DIR}/config"
+CONFIG_DIR="${RUGPI_BUNDLE_DIR}/roots/config"
 
 RPI_EEPROM_DIGEST="/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest"
 

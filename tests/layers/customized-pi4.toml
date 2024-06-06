@@ -1,4 +1,4 @@
-parent = "core/raspios-bookworm"
+parent = "customized"
 
 recipes = [
     "core/rpi-include-firmware"

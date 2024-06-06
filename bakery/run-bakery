@@ -9,7 +9,7 @@ RUGPI_DEV=${RUGPI_DEV:-"false"}
 
 if [ "${RUGPI_DEV}" = "false" ]; then
     DOCKER_FLAGS="${DOCKER_FLAGS} --pull always"
-    RUGPI_VERSION=${RUGPI_VERSION:-"v0.6"}
+    RUGPI_VERSION=${RUGPI_VERSION:-"v0.7"}
 else
     RUGPI_VERSION=${RUGPI_VERSION:-"dev"}
 fi

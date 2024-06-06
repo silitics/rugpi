@@ -103,22 +103,22 @@ function check_u_boot() {
 }
 
 
-mount_image "build/tryboot-pi4-firmware.img"
-echo "Checking 'tryboot-pi4-firmware.img'"
+mount_image "build/images/tryboot-pi4.img"
+echo "Checking 'tryboot-pi4.img'"
 check_tryboot
 check_firmware
 check_boot
 umount_image
 
-mount_image "build/tryboot-without-firmware.img"
-echo "Checking 'tryboot-without-firmware.img'"
+mount_image "build/images/tryboot.img"
+echo "Checking 'tryboot.img'"
 check_tryboot
 check_not_firmware
 [ ! -f "${CONFIG_DIR}/pieeprom.upd" ]
 umount_image
 
-mount_image "build/u-boot-arm64.img"
-echo "Checking 'u-boot-arm64.img'"
+mount_image "build/images/u-boot.img"
+echo "Checking 'u-boot.img'"
 ls -l "${CONFIG_DIR}"
 [ -f "${CONFIG_DIR}/u-boot-arm64.bin" ]
 check_u_boot
@@ -126,8 +126,8 @@ check_boot
 check_not_firmware
 umount_image
 
-mount_image "build/u-boot-armhf.img"
-echo "Checking 'u-boot-arhf.img'"
+mount_image "build/images/u-boot-armhf.img"
+echo "Checking 'u-boot-armhf.img'"
 ls -l "${CONFIG_DIR}"
 [ -f "${CONFIG_DIR}/u-boot-armhf-pi1.bin" ]
 [ -f "${CONFIG_DIR}/u-boot-armhf-pi2.bin" ]

@@ -1,2 +1,2 @@
-description = "Raspberry Pi meta recipe"
+description = "setup Raspberry Pi OS for Rugpi"
 dependencies = ["rugpi-ctrl", "rpi-raspios-cleanup", "persist-fake-hwclock"]

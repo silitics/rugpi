@@ -3,14 +3,17 @@ rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git" }
 
 [images.tryboot]
 layer = "customized"
+architecture = "arm64"
 target = "rpi-tryboot"
 
-[images.pi4]
+[images.tryboot-pi4]
 layer = "customized-pi4"
+architecture = "arm64"
 target = "rpi-tryboot"
 
 [images.u-boot]
 layer = "customized"
+architecture = "arm64"
 target = "rpi-uboot"
 
 [images.u-boot-armhf]
