@@ -140,22 +140,24 @@ fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> 
             fs::create_dir_all(parent)?;
         }
     }
+    let temp_dir = tempdir()?;
+    let temp_dir_path = temp_dir.path();
+    let system_dir = temp_dir_path.join("roots/system");
+    let boot_dir = temp_dir_path.join("roots/boot");
+    std::fs::create_dir_all(&system_dir)?;
+    std::fs::create_dir_all(&boot_dir)?;
     if image_path.extension() == Some("tar".as_ref()) {
         info!("Copying root filesystem {image_path:?}");
-        fs::copy(image_path, layer_path)?;
+        run!(["tar", "-x", "-f", &image_path, "-C", system_dir])?;
+        run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])?;
     } else {
         info!("creating `.tar` archive with system files");
         let loop_dev = LoopDevice::attach(image_path)?;
-        let temp_dir = tempdir()?;
-        let temp_dir_path = temp_dir.path();
-        let system_dir = temp_dir_path.join("roots/system");
-        let boot_dir = temp_dir_path.join("roots/boot");
-        std::fs::create_dir_all(&system_dir)?;
-        std::fs::create_dir_all(&boot_dir)?;
         let _mounted_root = Mounted::mount(loop_dev.partition(2), &system_dir)?;
         let _mounted_boot =
             Mounted::mount(loop_dev.partition(1), temp_dir_path.join("roots/boot"))?;
         run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])?;
     }
+
     Ok(())
 }
