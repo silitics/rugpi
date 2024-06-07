@@ -20,7 +20,13 @@ case "${RUGPI_ARCH}" in
         exit 1
 esac
 
+MIRROR=""
+if [ "${RECIPE_PARAM_SNAPSHOT}" != "" ]; then 
+    MIRROR="https://snapshot.debian.org/archive/debian/${RECIPE_PARAM_SNAPSHOT}/"
+fi
+
 mmdebstrap \
     --architectures="${DEBIAN_ARCH}" \
     "${RECIPE_PARAM_SUITE}" \
-    "${RUGPI_ROOT_DIR}"
+    "${RUGPI_ROOT_DIR}" \
+    ${MIRROR}
