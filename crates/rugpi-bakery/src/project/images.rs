@@ -118,12 +118,12 @@ pub fn grub_efi_image_layout() -> ImageLayout {
                 .with_filesystem(Filesystem::Fat32)
                 .with_root("config"),
             ImagePartition::new()
-                .with_size("128M")
+                .with_size("256M")
                 .with_ty(gpt_types::LINUX)
                 .with_filesystem(Filesystem::Ext4)
                 .with_root("boot"),
             ImagePartition::new()
-                .with_size("128M")
+                .with_size("256M")
                 .with_ty(gpt_types::LINUX),
             ImagePartition::new()
                 .with_ty(gpt_types::LINUX)
