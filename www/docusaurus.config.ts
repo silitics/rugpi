@@ -68,17 +68,22 @@ const config: Config = {
       },
       items: [
         {
-          type: "doc",
-          docId: "getting-started",
-          position: "left",
-          label: "Docs",
-        },
-        {
           to: "/devices",
           label: "Supported Devices",
           position: "left",
         },
+        {
+          type: "doc",
+          docId: "getting-started",
+          position: "left",
+          label: "Docs",
+        },        
         { to: "/blog", label: "Blog", position: "left" },
+        {
+          to: "/commercial-support",
+          label: "Commercial Support",
+          position: "right"
+        },
         {
           type: "docsVersionDropdown",
           position: "right",
@@ -147,11 +152,11 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div><div style="margin-top: 0.5em"><small>Raspberry Pi is a trademark of Raspberry Pi Ltd</small></div>`,
+      copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div>`,
     },
     prism: {
       theme: require("prism-react-renderer").themes.vsDark,
-      additionalLanguages: ["rust", "toml"],
+      additionalLanguages: ["rust", "toml", "yaml"],
     },
   } satisfies Preset.ThemeConfig,
 

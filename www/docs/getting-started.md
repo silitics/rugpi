@@ -21,7 +21,7 @@ So, to build an image locally, a working [Docker](https://www.docker.com/) or [P
 On MacOS, please make sure to use the [MacOS virtualization framework and VirtioFS](https://docs.docker.com/desktop/settings/mac/#general), which is the default with recent versions of Docker Desktop.
 For Windows, please use [WSL](https://learn.microsoft.com/en-us/windows/wsl/about).
 
-For convenience, Rugpi ships a small shell script `run-bakery` for running Rugpi Bakery.
+For convenience, Rugpi Bakery ships as a small shell script named `run-bakery`.
 The script runs an ephemeral Docker container and sets everything up as required.
 To start a fresh Rugpi project, create an empty directory and then run
 
@@ -77,7 +77,7 @@ Instead, if you want a Debian image bootable on any EFI-compatible system, use t
 ```
 
 Note that a project is not limited to a specific device or family of devices.
-By configuring Rugpi Bakery appropriately, you can also build images based on Raspberry Pi OS and Debian all while sharing parts of the build process.
+By configuring Rugpi Bakery appropriately, you can also build images based on Raspberry Pi OS and Debian, all while sharing parts of the build process.
 Such setups are, however, beyond the scope of this quick start guide and we refer to the [user guide's section on System Customization](./guide/system-customization) for details.
 
 
@@ -106,17 +106,19 @@ For instance, with the `rpi-raspios` template, you can build an image for Raspbe
 ```
 
 This will build an image `build/images/tryboot-pi4.img`.
-This image uses Raspberry Pi's [`tryboot` feature](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot) for booting and system updates.
+This image uses Raspberry Pi's [`tryboot` feature](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting) for booting and system updates.
 It also includes the necessary firmware update for Raspberry Pi 4.
 Checkout the comments in `rugpi-bakery.toml` to find an image that is compatible with your specific model of Raspberry Pi.
+
+Building images based on other templates is analogous.
 
 Congratulations! You built your first image with Rugpi Bakery. 🙌
 
 The resulting images can be written to a storage medium, e.g., an SD card, an NVMe drive, or a thumb drive.
 Compatible systems can then directly boot off the storage medium.
 On the first boot, Rugpi Ctrl will usually bootstrap the device.
-For instance, it will typically automatically repartition the storage medium and create additional file systems.
+For instance, it will typically automatically repartition the storage medium and create additional filesystems.
 
 Feel free to explore the template and modify it according to your needs. 🚀
 
-To learn how to apply your own customizations, checkout the [user guide's section on System Customization](./guide/system-customization).
+To learn how to apply your own customizations, continue reading the [user guide](./guide).

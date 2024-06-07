@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 4
 ---
 
 # State Management
@@ -19,6 +19,8 @@ To enable persistency of the overlay, use the following option in `ctrl.toml`:
 ```toml title="ctrl.toml"
 overlay = "persist"
 ```
+
+To change the default size of the system partition use the `system_size` option in `ctrl.toml`.
 
 Note that you must use a recipe to install `ctrl.toml` to `/etc/rugpi` in the image.
 

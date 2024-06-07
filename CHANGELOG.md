@@ -1,12 +1,12 @@
 # Changelog
 
-## Version 0.7.0 (UNRELEASED)
+## Version 0.7.0
 
 New features:
 
 - Official support for Alpine Linux and Debian.
 - Support for EFI systems and integration with Grub.
-- Configurable image and system partition layouts.
+- Configurable image layouts.
 
 Breaking changes to the image building pipeline:
 

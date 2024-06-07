@@ -25,12 +25,11 @@ We call the currently booted set *hot set* and to the other *cold set*.
 The usual partition layout of a Rugpi installation comprises seven partitions:
 
 - Partition 1: Contains the bootloader configuration for switching between the A and B set.
-- Partition 2: The `/boot` partition of the A set.
-- Partition 3: The `/boot` partition of the B set.
-- Partition 4: The extended MBR for the additional partitions.
-- Partition 5: The root partition of the A set.
-- Partition 6: The root partition of the B set.
-- Partition 7: Contains any persistent state (see [State Management](./state-management)).
+- Partition 2: The boot partition of the A set.
+- Partition 3: The boot partition of the B set.
+- Partition 4: The root partition of the A set.
+- Partition 5: The root partition of the B set.
+- Partition 6: Contains any persistent state (see [State Management](./state-management)).
 
 The bootloader configuration specifies the default set of partitions.
 We call the other, non-default set, the *spare set*.
@@ -40,6 +39,8 @@ The Rugpi update mechanism installs the update to the cold spare set of partitio
 After installing the update, it tries booting into the newly installed version, crucially without changing the default set.
 Hence, if anything goes wrong, the system automatically reboots into the previous version by default.
 Only after booting successfully into the newly installed system, by which the set of partitions with the new version becomes the hot set, and verifying that everything is in working order, the update is made permanent by making the hot set the default set.
+
+In case of an MBR partition table, the fourth partition is an EBR partition and the subsequent partitions are shifted by one.
 
 ## Updating a System
 
@@ -123,15 +124,3 @@ Then, after rebooting, commit the rollback with:
 ```shell
 rugpi-ctrl system commit
 ```
-
-### On Atomicity of Commits
-
-Note that commits are the only critical operation because they modify the default set.
-This is done by temporarily remounting the bootloader configuration partition such that it is writeable.
-For the `tryboot` and U-Boot boot flow, the `autoboot.txt` file and `bootpart.default.env` file are then replaced as suggested by [Raspberry Pi's documentation on the `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#fail-safe-os-updates-tryboot).
-As the filesystem is FAT32, the automitcity of this operation cannot be guaranteed.
-Still, Rugpi Ctrl does its best by first creating a new file and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.
-However, should the system crash during this process, the FAT32 filesystem may still be corrupted.
-We think that this is an acceptable risk as the likelihood of it happening is very low and any alternatives, like swapping the MBR, may be problematic for other reasons.[^4]
-
-[^4]: If you have any suggestions, please share them with us.

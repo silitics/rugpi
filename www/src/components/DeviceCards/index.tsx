@@ -8,6 +8,8 @@ type Target = "unknown" | "generic-grub-efi" | "rpi-tryboot" | "rpi-uboot"
 
 type Architecture = "amd64" | "arm64" | "armhf"
 
+type Distribution = "alpine" | "debian" | "raspios"
+
 type DeviceInfo = {
   name: string
   type: DeviceType

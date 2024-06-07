@@ -14,7 +14,17 @@ const FeatureList: FeatureItem[] = [
       <>
         Rugpi's focus on reliability ensures uninterrupted operation and
         minimizes costly repairs in the field, making it the ideal platform for
-        businesses developing Raspberry Pi-based embedded devices.
+        businesses developing Linux-based embedded devices.
+      </>
+    ),
+  },
+  {
+    title: "Over-the-Air Updates",
+    description: (
+      <>
+        Streamline software updates for embedded devices with Rugpi's robust
+        over-the-air update capability. Seamlessly deliver the latest features
+        and enhancements while minimizing disruptions.
       </>
     ),
   },
@@ -25,16 +35,6 @@ const FeatureList: FeatureItem[] = [
         Simplify embedded device development with Rugpi's managed state feature.
         Effortlessly implement factory reset functionality and safeguard against
         accidental state corrupting the system.
-      </>
-    ),
-  },
-  {
-    title: "Over-the-Air Updates",
-    description: (
-      <>
-        Streamline software updates for embedded devices with Rugpi's
-        robust over-the-air update capability. Seamlessly deliver the latest features
-        and enhancements while minimizing disruptions.
       </>
     ),
   },

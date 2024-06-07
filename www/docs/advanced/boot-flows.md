@@ -6,21 +6,14 @@ sidebar_position: 4
 
 A *boot flow* provides the base mechanism to switch between the A and B system, e.g., after installing an update.
 To this end, it must implement two primitive operations: (i) rebooting to the spare system once and (ii) setting the default system.
-Boot flows are typically implemented on top of a bootloader and Rugpi offers out-of-the-box integrations with four popular bootloaders:
+Boot flows are typically implemented on top of a bootloader and Rugpi offers out-of-the-box integrations with popular bootloaders:
 
 - [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting)
 - [U-Boot](https://docs.u-boot.org/en/latest/) (popular on single board computers, GPL-2.0)
 - [Grub](https://www.gnu.org/software/grub/) (well-established standard option, GPL-3.0)
-- [Systemd Boot](https://www.freedesktop.org/software/systemd/man/latest/systemd-boot.html) (newer alternative to Grub, GPL-2.0)
+<!-- - [Systemd Boot](https://www.freedesktop.org/software/systemd/man/latest/systemd-boot.html) (newer alternative to Grub, GPL-2.0) -->
 
-Together, they cover almost all systems and use cases.
-
-👉 **Choosing a Boot Flow**: If you are building for a Raspberry Pi 4 or newer, the `tryboot` mechanism is highly recommended as it is the officially blessed way to implement A/B updates on Raspberry Pi.
-For other embedded single board computers, U-Boot is probably the best choice, as it supports a wide [variety of different platforms](https://docs.u-boot.org/en/latest/board/index.html).
-Grub is the best choice for ordinary x86 hardware, e.g., thin clients, and does not require [UEFI](https://en.wikipedia.org/wiki/UEFI) support.
-Systemd Boot is a good choice for newer hardware supporting UEFI.
-
-The boot flow is configured as part of the image configuration in `rugpi-bakery.toml`.
+The boot flow for an image is chosen based on the target of the image as configured in `rugpi-bakery.toml`.
 Depending on the boot flow, Rugpi will automatically select an appropriate partitioning scheme for the image and system.
 
 ## Supported Boot Flows
@@ -28,8 +21,6 @@ Depending on the boot flow, Rugpi will automatically select an appropriate parti
 We will now discuss the supported boot flows in more detail.
 
 ### Tryboot
-
-⚙️ `boot_flow="tryboot"`
 
 ```
 MBR =============================== Image
@@ -48,8 +39,6 @@ Instead of reading the device tree `tryboot` flag, it compares the booted partit
 This boot flow also allows updating the `config.txt` file as well as the device tree files.
 
 ### U-Boot
-
-⚙️ `boot_flow="u-boot"`
 
 ```
 MBR =============================== Image
@@ -83,9 +72,7 @@ This has the advantage that the second stage script can be updated in a fail-saf
 
 For further details, we refer to the reference [boot scripts](https://github.com/silitics/rugpi/tree/main/boot/u-boot/scripts) for Raspberry Pi.
 
-### Grub
-
-⚙️ `boot_flow="grub-efi"`
+### Grub (EFI)
 
 ```
 GPT =============================== Image
@@ -100,11 +87,13 @@ GPT =============================== Image
 
 Follows a similar approach to U-Boot, using Grub boot scripts and environment blocks.
 
-The `grub-efi` boot flow uses the EFI variant of Grub.
-
 ### Systemd Boot
 
-⚙️ `boot_flow="systemd-boot"`
+:::warning
+
+**Not implemented yet!**
+
+:::
 
 ```
 GPT =============================== Image
@@ -128,7 +117,18 @@ Rugpi detects the boot flow of a system dynamically at runtime by inspecting the
 
 1. If a file `autoboot.txt` exists, then the boot flow is `tryboot`.
 2. If a file `bootpart.default.env` exists, then the boot flow is `u-boot`.
-3. If a file `grub/grub.cfg` exists, then the boot flow is `grub`.
-4. If a file `loader/loader.conf` exists, then the boot flow is `systemd-boot`.
+3. If a file `rugpi/grub.cfg` and a directory `EFI` exist, then the boot flow is `grub-efi`.
+<!-- 4. If a file `loader/loader.conf` exists, then the boot flow is `systemd-boot`. -->
 
 This information is used for repartitioning the root drive and interpreting updates.
+
+## On Atomicity of Commits
+
+Note that commits are the only critical operation because they modify the default partition set.
+This is usually done by temporarily remounting the bootloader configuration partition such that it is writeable and then replacing some files.
+As the filesystem is FAT32, the automitcity of this operation cannot be guaranteed.
+Still, Rugpi Ctrl does its best by first creating a new file and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.
+However, should the system crash during this process, the FAT32 filesystem may still be corrupted.
+We think that this is an acceptable risk as the likelihood of it happening is very low and any alternatives, like swapping the MBR, may be problematic for other reasons.[^4]
+
+[^4]: If you have any suggestions, please share them with us.
