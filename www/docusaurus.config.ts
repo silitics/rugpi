@@ -52,8 +52,8 @@ const config: Config = {
     announcementBar: {
       // id: "release",
       content: `
-          We are excited to announce the release of Rugpi version 0.6! 🎉
-          Read the <a href="/rugpi/blog/releases/0.6">release blog post</a>.
+          We are excited to announce the release of Rugpi version 0.7! 🎉
+          Read the <a href="/rugpi/blog/releases/0.7">release blog post</a>.
         `,
       backgroundColor: "#bdddfb",
       // backgroundColor: "#bdddfb",
