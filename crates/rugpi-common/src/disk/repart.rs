@@ -225,13 +225,13 @@ pub fn generic_efi_partition_schema(system_size: NumBytes) -> PartitionSchema {
             SchemaPartition {
                 number: None,
                 name: None,
-                size: Some(parse_size("128M").unwrap()),
+                size: Some(parse_size("256M").unwrap()),
                 ty: Some(gpt_types::LINUX),
             },
             SchemaPartition {
                 number: None,
                 name: None,
-                size: Some(parse_size("128M").unwrap()),
+                size: Some(parse_size("256M").unwrap()),
                 ty: Some(gpt_types::LINUX),
             },
             SchemaPartition {
