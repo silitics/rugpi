@@ -10,6 +10,12 @@ To upgrade to v0.7, first update the `run-bakery` script with:
 curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7/bakery/run-bakery && chmod +x ./run-bakery
 ```
 
+Please also remove the old cache with:
+
+```shell
+rm -rf .rugpi
+```
+
 Here are the changes you need to make compared to version 0.6:
 
 1. The image option `boot_flow` has been superseded by the `target` option. To use the new `target` option make the following changes depending your previous `boot_flow`:
