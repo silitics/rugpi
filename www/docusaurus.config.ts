@@ -28,7 +28,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          lastVersion: "0.7.0",
+          lastVersion: "0.7.1",
           editUrl: "https://github.com/silitics/rugpi/tree/main/www/",
         },
         blog: {
