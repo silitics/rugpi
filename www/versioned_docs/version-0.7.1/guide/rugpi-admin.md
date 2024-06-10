@@ -18,4 +18,4 @@ In particular, it allows users to update a system simply by uploading an image a
 
 By default, Rugpi Admin is served on port `8088`.
 
-![Rugpi Admin Screenshot](/img/screenshots/rugpi-admin.png)
+![Rugpi Admin Screenshot](../../static/img/screenshots/rugpi-admin.png)
