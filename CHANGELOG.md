@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.7.1
+
+- Add `unknown` target.
+- Limit size of MBR partitions (fix).
+
 ## Version 0.7.0
 
 New features:
