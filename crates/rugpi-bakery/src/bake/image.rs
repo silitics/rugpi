@@ -64,6 +64,7 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             Target::GenericGrubEfi => {
                 initialize_grub(config, &config_dir)?;
             }
+            Target::Unknown => { /* nothing to do */ }
         }
     }
     // Always copy second stage boot scripts independently of the boot flow.
@@ -80,10 +81,11 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         .layout
         .clone()
         .or_else(|| {
-            config.target.map(|target| match target {
-                Target::RpiTryboot => pi_image_layout(),
-                Target::RpiUboot => pi_image_layout(),
-                Target::GenericGrubEfi => grub_efi_image_layout(),
+            config.target.and_then(|target| match target {
+                Target::RpiTryboot => Some(pi_image_layout()),
+                Target::RpiUboot => Some(pi_image_layout()),
+                Target::GenericGrubEfi => Some(grub_efi_image_layout()),
+                Target::Unknown => None,
             })
         })
         .ok_or_else(|| anyhow!("image layout needs to be specified"))?;

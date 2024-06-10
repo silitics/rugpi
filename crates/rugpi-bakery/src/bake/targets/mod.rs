@@ -10,4 +10,5 @@ pub enum Target {
     GenericGrubEfi,
     RpiTryboot,
     RpiUboot,
+    Unknown,
 }
