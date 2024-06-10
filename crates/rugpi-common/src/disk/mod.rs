@@ -129,7 +129,14 @@ impl PartitionTable {
 
     /// The last usable block.
     pub fn last_usable_block(&self) -> NumBlocks {
-        self.disk_size - GPT_TABLE_BLOCKS - NumBlocks::ONE
+        match self.disk_id {
+            DiskId::Mbr(_) => {
+                self.disk_size.min(NumBlocks::from_raw(u32::MAX.into()))
+                    - GPT_TABLE_BLOCKS
+                    - NumBlocks::ONE
+            }
+            DiskId::Gpt(_) => self.disk_size - GPT_TABLE_BLOCKS - NumBlocks::ONE,
+        }
     }
 
     /// Write the partition table to a device or image.
