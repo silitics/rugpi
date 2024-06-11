@@ -16,7 +16,8 @@
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of popular Linux distributions** for your devices. It boasts three core features designed to work seamlessly together: (1) A modern, flexible workflow to build customized system images, (2) **robust over-the-air system updates** with rollback support for the entire system, and (3) **managed state** that is preserved across reboots and updates.
 
 - Supports **Debian, Alpine Linux, and Raspberry Pi OS**.
-- Supports **all models of Raspberry Pi and generic EFI-compatible systems**.
+- Supports **all models of Raspberry Pi and any EFI-compatible system**.
+- Supports root filesystems built with third-party tools.
 
 Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
 
