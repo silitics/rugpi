@@ -26,6 +26,7 @@ if [ "${RECIPE_PARAM_SNAPSHOT}" != "" ]; then
 fi
 
 mmdebstrap \
+    --skip=check/qemu \
     --architectures="${DEBIAN_ARCH}" \
     "${RECIPE_PARAM_SUITE}" \
     "${RUGPI_ROOT_DIR}" \
