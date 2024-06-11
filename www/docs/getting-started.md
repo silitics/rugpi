@@ -26,7 +26,7 @@ The script runs an ephemeral Docker container and sets everything up as required
 To start a fresh Rugpi project, create an empty directory and then run
 
 ```shell
-curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7/bakery/run-bakery && chmod +x ./run-bakery
+curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7.0/bakery/run-bakery && chmod +x ./run-bakery
 ```
 
 within this directory.

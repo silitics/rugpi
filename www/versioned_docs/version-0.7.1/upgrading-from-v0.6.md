@@ -7,7 +7,7 @@ sidebar_position: 40
 To upgrade to v0.7, first update the `run-bakery` script with:
 
 ```shell
-curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7/bakery/run-bakery && chmod +x ./run-bakery
+curl -O https://raw.githubusercontent.com/silitics/rugpi/v0.7.0/bakery/run-bakery && chmod +x ./run-bakery
 ```
 
 Please also remove the old cache with:
