@@ -73,6 +73,11 @@ const config: Config = {
           position: "left",
         },
         {
+          to: "/why",
+          label: "Why Rugpi?",
+          position: "left",
+        },
+        {
           type: "doc",
           docId: "getting-started",
           position: "left",
