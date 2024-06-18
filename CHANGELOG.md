@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 0.7.3
+
+- Fixes issues with incompatible partition layouts when upgrading from v0.6 (see #29).
+
+**Additional Notes:** Flashing a device with a v0.7.3 image and then installing an update based on an older 0.7 version will fail for the `rpi-` targets.
+
+## Version 0.7.2
+
+- Fixes bootstrapping of foreign architectures with `binfmt_misc`.
+
 ## Version 0.7.1
 
 - Add `unknown` target.
