@@ -50,24 +50,25 @@ pub fn repart(
     let align = NumBlocks::from_raw(2048);
     let mut new_table = old_table.clone();
     let mut next_start = old_table.first_usable_block().ceil_align_to(align);
-    let mut last_free = old_table.last_usable_block().floor_align_to(align);
+    let mut last_usable = old_table.last_usable_block();
     let mut in_extended = false;
     let mut has_changed = false;
     for (idx, partition) in schema.partitions.iter().enumerate() {
-        println!(
-            "Partition: {}, Next Start: {next_start}, Last Free: {last_free}",
+        eprintln!(
+            "Partition: {}, Next Start: {next_start}, Last Useable: {last_usable}",
             idx + 1
         );
         if in_extended {
-            next_start = (next_start + NumBlocks::from_raw(63)).ceil_align_to(align);
+            // We need to leave some space for the EBR.
+            next_start += NumBlocks::from_raw(63);
         }
+        let mut start = next_start;
+        let mut size = partition.size.map(|size| old_table.bytes_to_blocks(size));
         let old = old_table.partitions.get(idx);
         let old_next = old_table.partitions.get(idx + 1);
         let ty = partition.ty.unwrap_or(default_partition_ty);
-        // Compute the requested size of the partition.
-        let mut size = partition.size.map(|size| old_table.bytes_to_blocks(size));
         if let Some(old) = old {
-            next_start = old.start;
+            start = old.start;
             if old.ty != ty {
                 bail!(
                     "partition types of partition {} do not match ({} != {})",
@@ -78,23 +79,34 @@ pub fn repart(
             }
             size = size.map(|size| size.max(old.size));
         } else {
-            next_start = next_start.ceil_align_to(align);
+            // If we are not using the old offset, align partition.
+            start = start.ceil_align_to(align);
         }
+        // Compute available space.
         let available = if ty.is_extended() {
-            last_free - next_start
+            // We need to add one block as the last block is still usable.
+            last_usable - start + NumBlocks::ONE
         } else if let Some(old_next) = old_next {
-            let old_start = old.expect("old partition must exist").start;
-            old_next.start - old_start
+            if in_extended {
+                // We need to account for the EBR.
+                (old_next.start - start - NumBlocks::from_raw(63)).floor_align_to(align)
+            } else {
+                old_next.start - start
+            }
         } else {
-            if next_start >= last_free {
-                println!("{new_table:#?}");
+            if start >= last_usable {
                 bail!("insufficient space, cannot add partition {}", idx + 1);
             }
-            last_free - next_start
+            // We need to add one block as the last block is still usable.
+            last_usable - start + NumBlocks::ONE
         };
-        let size = size.unwrap_or(available).min(available);
-        println!("  Available: {available}, Size: {size}");
+        let mut size = size.unwrap_or(available).min(available);
+        eprintln!(
+            "  Start: {start}, End: {}, Available: {available}, Size: {size}",
+            start + size - NumBlocks::ONE,
+        );
         if let Some(new) = new_table.partitions.get_mut(idx) {
+            size = size.max(new.size);
             if new.size != size {
                 has_changed = true;
             }
@@ -103,7 +115,7 @@ pub fn repart(
             has_changed = true;
             new_table.partitions.push(Partition {
                 number: (idx + 1) as u8,
-                start: next_start,
+                start,
                 size,
                 ty,
                 name: None,
@@ -111,10 +123,11 @@ pub fn repart(
             })
         }
         if ty.is_extended() {
-            last_free = next_start + size;
+            last_usable = start + size - NumBlocks::ONE;
             in_extended = true;
+            next_start = start;
         } else {
-            next_start += size;
+            next_start = start + size;
         }
     }
     if has_changed {

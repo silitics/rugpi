@@ -33,7 +33,9 @@ pub enum DiskCmd {
         dst: PathBuf,
     },
     Repart {
-        image: PathBuf,
+        #[clap(long)]
+        write: bool,
+        dev: PathBuf,
         schema: PathBuf,
     },
     DecodeGrubEnv {
@@ -76,13 +78,18 @@ fn main() -> Anyhow<()> {
                 partition_idx += 1;
             }
         }
-        DiskCmd::Repart { image, schema } => {
-            let old_table = PartitionTable::read(&image)?;
+        DiskCmd::Repart { dev, schema, write } => {
+            let old_table = PartitionTable::read(&dev)?;
+            println!("Disk Size: {}", old_table.disk_size);
+            println!("First Usable: {}", old_table.first_usable_block());
+            println!("Last Usable: {}", old_table.last_usable_block());
             let schema = serde_json::from_str(&std::fs::read_to_string(schema)?)?;
             if let Some(new_table) = repart::repart(&old_table, &schema)? {
-                new_table.write(&image)?;
-                if is_block_dev(&image) {
-                    update_kernel_partitions(&image, &old_table, &new_table)?;
+                if write {
+                    new_table.write(&dev)?;
+                    if is_block_dev(&dev) {
+                        update_kernel_partitions(&dev, &old_table, &new_table)?;
+                    }
                 }
             } else {
                 println!("Table has not been changed.");
