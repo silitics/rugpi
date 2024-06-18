@@ -60,14 +60,13 @@ fn init() -> Anyhow<()> {
     let partitions = Partitions::load(&config)?;
 
     if !partitions.data.exists() {
-        // Ensure that the disks's partitions match the defined partition schema.
+        // If the data partitions already exists, we do not repartition the disk or
+        // create any filesystems on it.
         let partition_schema = config
             .partition_schema
             .as_ref()
             .or(partitions.schema.as_ref());
         if let Some(partition_schema) = partition_schema {
-            // If an update ships a schema that is incompatible with the existing schema,
-            // then it is fine to reboot here and switch to the old version.
             bootstrap_partitions(&config, &partitions.parent_dev, partition_schema)?;
         }
     }
