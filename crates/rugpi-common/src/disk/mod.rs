@@ -131,9 +131,7 @@ impl PartitionTable {
     pub fn last_usable_block(&self) -> NumBlocks {
         match self.disk_id {
             DiskId::Mbr(_) => {
-                self.disk_size.min(NumBlocks::from_raw(u32::MAX.into()))
-                    - GPT_TABLE_BLOCKS
-                    - NumBlocks::ONE
+                (self.disk_size - NumBlocks::ONE).min(NumBlocks::from_raw(u32::MAX.into()))
             }
             DiskId::Gpt(_) => self.disk_size - GPT_TABLE_BLOCKS - NumBlocks::ONE,
         }
