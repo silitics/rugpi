@@ -68,7 +68,7 @@ fn init() -> Anyhow<()> {
         if let Some(partition_schema) = partition_schema {
             // If an update ships a schema that is incompatible with the existing schema,
             // then it is fine to reboot here and switch to the old version.
-            repartition_disk(&config, &partitions.parent_dev, partition_schema)?;
+            bootstrap_partitions(&config, &partitions.parent_dev, partition_schema)?;
         }
     }
 
@@ -147,7 +147,7 @@ fn mount_essential_filesystems() -> Anyhow<()> {
 }
 
 /// Initializes the partitions and expands the partition table during the first boot.
-fn repartition_disk(config: &Config, dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
+fn bootstrap_partitions(config: &Config, dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
     let old_table = PartitionTable::read(dev)?;
     if let Some(new_table) = repart(&old_table, schema)? {
         // Write new partition table to disk.
