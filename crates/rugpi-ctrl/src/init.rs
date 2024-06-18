@@ -59,15 +59,17 @@ fn init() -> Anyhow<()> {
 
     let partitions = Partitions::load(&config)?;
 
-    // Ensure that the disks's partitions match the defined partition schema.
-    let partition_schema = config
-        .partition_schema
-        .as_ref()
-        .or(partitions.schema.as_ref());
-    if let Some(partition_schema) = partition_schema {
-        // If an update ships a schema that is incompatible with the existing schema,
-        // then it is fine to reboot here and switch to the old version.
-        repartition_disk(&config, &partitions.parent_dev, partition_schema)?;
+    if !partitions.data.exists() {
+        // Ensure that the disks's partitions match the defined partition schema.
+        let partition_schema = config
+            .partition_schema
+            .as_ref()
+            .or(partitions.schema.as_ref());
+        if let Some(partition_schema) = partition_schema {
+            // If an update ships a schema that is incompatible with the existing schema,
+            // then it is fine to reboot here and switch to the old version.
+            repartition_disk(&config, &partitions.parent_dev, partition_schema)?;
+        }
     }
 
     let partitions = Partitions::load(&config)?;
