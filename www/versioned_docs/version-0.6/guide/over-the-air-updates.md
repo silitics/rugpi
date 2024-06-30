@@ -72,13 +72,13 @@ This also allows using compressed images.
 For instance, to download, decompress, and install an image on-the-fly, use:
 
 ```shell
-curl <url to the image> | xz -d | rugpi-ctrl update install --stream -
+curl <url to the image> | xz -d | rugpi-ctrl update install -
 ```
 
 In case the internet connection is unstable, you may also want to use
 
 ```shell
-wget -q -t 0 -O - <url to the image> | rugpi-ctrl update install --stream -
+wget -q -t 0 -O - <url to the image> | rugpi-ctrl update install -
 ```
 
 to retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
