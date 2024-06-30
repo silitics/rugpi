@@ -24,6 +24,13 @@ impl<R: Read> MaybeCompressed<R> {
             })
         }
     }
+
+    pub fn into_inner(self) -> R {
+        match self.inner {
+            MaybeCompressedInner::Uncompressed(reader) => reader.reader,
+            MaybeCompressedInner::Xz(reader) => reader.into_inner().reader,
+        }
+    }
 }
 
 impl<R: Read> Read for MaybeCompressed<R> {
@@ -46,7 +53,7 @@ const DEFAULT_PEEK_BUFFER_SIZE: usize = 8192;
 /// A reader from which bytes can be peeked.
 struct PeekReader<R> {
     /// The underlying reader.
-    reader: R,
+    pub reader: R,
     /// The peek buffer.
     buffer: Vec<u8>,
     /// The number of bytes in the peek buffer.

@@ -99,6 +99,10 @@ impl<R: Read> ImgStream<R> {
         Ok(this)
     }
 
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
     /// Fill the buffer with the next sector.
     fn read_next_sector(&mut self) -> io::Result<()> {
         assert!(

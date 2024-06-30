@@ -2,11 +2,11 @@
 
 use std::{
     fs::{self, File},
-    io,
+    io::{self, Read},
     path::Path,
 };
 
-use anyhow::{bail, Context};
+use anyhow::{anyhow, bail, Context};
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
     boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
@@ -19,6 +19,7 @@ use rugpi_common::{
         get_disk_id, get_hot_partitions, read_default_partitions, PartitionSet, Partitions,
     },
     rpi_patch_boot,
+    stream_hasher::StreamHasher,
     utils::ascii_numbers,
     Anyhow,
 };
@@ -55,54 +56,71 @@ pub fn main() -> Anyhow<()> {
                 },
             },
         },
-        Command::Update(update_cmd) => match update_cmd {
-            UpdateCommand::Install {
-                image,
-                no_reboot,
-                reboot: reboot_type,
-                keep_overlay,
-                stream,
-            } => {
-                if reboot_type.is_some() && *no_reboot {
-                    bail!("--no-reboot and --reboot are incompatible");
-                }
+        Command::Update(update_cmd) => {
+            match update_cmd {
+                UpdateCommand::Install {
+                    image,
+                    no_reboot,
+                    reboot: reboot_type,
+                    keep_overlay,
+                    check_hash,
+                    stream,
+                } => {
+                    if reboot_type.is_some() && *no_reboot {
+                        bail!("--no-reboot and --reboot are incompatible");
+                    }
 
-                let hot_partitions = get_hot_partitions(&partitions)?;
-                let default_partitions = read_default_partitions()?;
-                let spare_partitions = default_partitions.flipped();
-                if hot_partitions != default_partitions {
-                    bail!("Hot partitions are not the default!");
-                }
-                if !keep_overlay {
-                    let spare_overlay_dir = overlay_dir(spare_partitions);
-                    fs::remove_dir_all(spare_overlay_dir).ok();
-                }
+                    let check_hash = check_hash.as_deref()
+                        .map(|encoded_hash| -> Anyhow<ImageHash> {
+                            let (algorithm, hash) = encoded_hash
+                                .split_once(':')
+                                .ok_or_else(||
+                                    anyhow!("Invalid format of hash. Format must be `sha256:<HEX-ENCODED-HASH>`.")
+                                )?;
+                            if algorithm != "sha256" {
+                                bail!("Algorithm must be SHA256.");
+                            }
+                            let decoded_hash = hex::decode(hash)?;
+                            Ok(ImageHash::Sha256(decoded_hash))
+                    }).transpose()?;
 
-                if *stream {
-                    indoc::eprintdoc! {"
+                    let hot_partitions = get_hot_partitions(&partitions)?;
+                    let default_partitions = read_default_partitions()?;
+                    let spare_partitions = default_partitions.flipped();
+                    if hot_partitions != default_partitions {
+                        bail!("Hot partitions are not the default!");
+                    }
+                    if !keep_overlay {
+                        let spare_overlay_dir = overlay_dir(spare_partitions);
+                        fs::remove_dir_all(spare_overlay_dir).ok();
+                    }
+
+                    if *stream {
+                        indoc::eprintdoc! {"
                         **Deprecation Warning:**
                         The option `--stream` has been deprecated and will be removed in future versions.
                         Streaming updates are the default now.
                     "}
-                }
+                    }
 
-                install_update_stream(&partitions, image)?;
+                    install_update_stream(&partitions, image, check_hash)?;
 
-                let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
-                    UpdateRebootType::No
-                } else {
-                    UpdateRebootType::Yes
-                });
+                    let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
+                        UpdateRebootType::No
+                    } else {
+                        UpdateRebootType::Yes
+                    });
 
-                match reboot_type {
-                    UpdateRebootType::Yes => reboot(true)?,
-                    UpdateRebootType::No => { /* nothing to do */ }
-                    UpdateRebootType::Deferred => {
-                        set_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
+                    match reboot_type {
+                        UpdateRebootType::Yes => reboot(true)?,
+                        UpdateRebootType::No => { /* nothing to do */ }
+                        UpdateRebootType::Deferred => {
+                            set_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
+                        }
                     }
                 }
             }
-        },
+        }
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
                 let boot_flow = detect_boot_flow().context("loading boot flow")?;
@@ -144,13 +162,71 @@ pub fn main() -> Anyhow<()> {
     Ok(())
 }
 
-fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> {
+#[derive(Debug, Clone)]
+pub enum ImageHash {
+    Sha256(Vec<u8>),
+}
+
+pub enum MaybeStreamHasher<R> {
+    NoHash {
+        reader: R,
+    },
+    Sha256 {
+        hasher: StreamHasher<R, sha2::Sha256>,
+        expected: Vec<u8>,
+    },
+}
+
+impl<R> MaybeStreamHasher<R> {
+    pub fn verify(self) -> Anyhow<()> {
+        match self {
+            MaybeStreamHasher::NoHash { .. } => Ok(()),
+            MaybeStreamHasher::Sha256 { hasher, expected } => {
+                let found = hasher.finalize();
+                if expected.as_slice() != found.as_slice() {
+                    bail!(indoc::formatdoc! {
+                        r#"
+                            **Image Hash Mismatch:**
+                            Expected: {}
+                            Found: {}
+                        "#,
+                        hex::encode(expected),
+                        hex::encode(found)
+                    })
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<R: Read> Read for MaybeStreamHasher<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            MaybeStreamHasher::NoHash { reader } => reader.read(buf),
+            MaybeStreamHasher::Sha256 { hasher, .. } => hasher.read(buf),
+        }
+    }
+}
+
+fn install_update_stream(
+    partitions: &Partitions,
+    image: &String,
+    check_hash: Option<ImageHash>,
+) -> Anyhow<()> {
     let default_partitions = read_default_partitions()?;
     let spare_partitions = default_partitions.flipped();
-    let reader: Box<dyn io::Read> = if image == "-" {
-        Box::new(io::stdin())
+    let reader: &mut dyn io::Read = if image == "-" {
+        &mut io::stdin()
     } else {
-        Box::new(File::open(image)?)
+        &mut File::open(image)?
+    };
+    let reader = match check_hash {
+        Some(ImageHash::Sha256(expected)) => MaybeStreamHasher::Sha256 {
+            hasher: StreamHasher::new(reader),
+            expected,
+        },
+        None => MaybeStreamHasher::NoHash { reader },
     };
     println!("Copying partitions...");
     // let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
@@ -199,6 +275,17 @@ fn install_update_stream(partitions: &Partitions, image: &String) -> Anyhow<()> 
 
         partition_idx += 1;
     }
+
+    let mut hashed_stream = img_stream.into_inner().into_inner();
+    // Make sure that the entire stream has been consumed. Otherwise, the hash
+    // may not be match the file.
+    loop {
+        let mut buffer = vec![0; 4096];
+        if hashed_stream.read_to_end(&mut buffer)? == 0 {
+            break;
+        }
+    }
+    hashed_stream.verify()?;
 
     let temp_dir_spare = tempdir()?;
     let temp_dir_spare = temp_dir_spare.path();
@@ -287,6 +374,9 @@ pub enum UpdateCommand {
     Install {
         /// Path to the image.
         image: String,
+        /// Check whether the (streamed) image matches the given hash.
+        #[clap(long)]
+        check_hash: Option<String>,
         /// Prevent Rugpi from rebooting the system.
         #[clap(long)]
         no_reboot: bool,

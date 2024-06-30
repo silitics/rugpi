@@ -15,11 +15,22 @@
 
 💡 **TL;DR**: Rugpi enables you to **build commercial-grade, customized variants of popular Linux distributions** for your devices. It boasts three core features designed to work seamlessly together: (1) A modern, flexible workflow to build customized system images, (2) **robust over-the-air system updates** with rollback support for the entire system, and (3) **managed state** that is preserved across reboots and updates.
 
-- Supports **Debian, Alpine Linux, and Raspberry Pi OS**.
-- Supports **all models of Raspberry Pi and any EFI-compatible system**.
-- Supports root filesystems built with third-party tools.
+## ✨ Features
+
+- 🌈 Supports **Debian, Alpine Linux, and Raspberry Pi OS**.
+- 🖥️ Supports **all models of Raspberry Pi and any EFI-compatible system**.
+- ➡️ Supports **streaming of updates** without intermediate storage.
+- 🔒 Enables [cryptographically **signed and verified updates**](https://rugpi.io/docs/advanced/signed-updates).
+- 🙌 Supports root filesystems built with third-party tools.
+- 🔌 Integrates well with [existing device management solutions](https://rugpi.io/docs/advanced/device-management).
+- 🧩 Provides interfaces to built your own update workflow upon.
+- 💾 Provides built-in state management inspired by Docker.
 
 Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
+
+## 🤔 Why Rugpi?
+
+While many excellent tools are already available for building images, updating systems, and managing state, integrating them into a robust setup can be challenging. Rugpi strives to simplify this process by bundling all essential functionalities into a cohesive package, allowing you to focus on what matters most to you and your users. We believe that building innovative devices shouldn't be as complicated as it often is today. Although Rugpi may *currently* offer less flexibility and configurability than standalone solutions, it excels at delivering a robust base for your device right out of the box.
 
 ## ⚖️ Licensing
 
