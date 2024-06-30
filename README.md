@@ -26,7 +26,7 @@
 - 🧩 Provides interfaces to built your own update workflow upon.
 - 💾 Provides built-in state management inspired by Docker.
 
-Checkout the [documentation](https://oss.silitics.com/rugpi/) for details.
+Checkout the [documentation](https://oss.silitics.com/rugpi/) for details and build your first image in less than an hour. 🚀
 
 ## 🤔 Why Rugpi?
 
