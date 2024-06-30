@@ -40,7 +40,7 @@ const SupportedDistributions: React.FC<{}> = () => {
             target="_blank"
             className="flex items-center h-20"
           >
-            <AlpineLinuxLogo viewBox="0 0 665 162" className="h-12 w-fit" />
+            <AlpineLinuxLogo viewBox="0 0 665 162" className="h-12" width="200" />
           </a>
           <a
             href="https://www.raspberrypi.com/"
