@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.4
+
+- Add support for verifying the hash of updates via `--check-hash`.
+
 ## Version 0.7.3
 
 - Fixes issues with incompatible partition layouts when upgrading from v0.6 (see #29).
