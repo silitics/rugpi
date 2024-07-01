@@ -18,7 +18,7 @@
 ## ✨ Features
 
 - 🌈 Supports **Debian, Alpine Linux, and Raspberry Pi OS**.
-- 🖥️ Supports **all models of Raspberry Pi and any EFI-compatible system**.
+- 🖥️ Supports **any EFI-compatible system and all models of Raspberry Pi**.
 - ➡️ Supports **streaming of updates** without intermediate storage.
 - 🔒 Enables [cryptographically **signed and verified updates**](https://rugpi.io/docs/advanced/signed-updates).
 - 🙌 Supports root filesystems built with third-party tools.

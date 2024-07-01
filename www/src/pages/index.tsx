@@ -115,7 +115,7 @@ export default function Home(): JSX.Element {
     <Layout title="Home" description={siteConfig.tagline}>
       <HomepageHeader />
       <main>
-        <div style={{ maxWidth: "80ch", padding: "3rem 0", margin: "0 auto" }}>
+        <div style={{ maxWidth: "80ch", margin: "3rem auto" }}>
           <Admonition type="info" title="Stability Guarantees">
             <p>
               While Rugpi is a young and evolving project, we understand that
@@ -128,6 +128,17 @@ export default function Home(): JSX.Element {
           </Admonition>
         </div>
         <SupportedDistributions />
+        <div className="flex flex-col items-center mt-12">
+          <h3 className="text-center">Feature Highlights</h3>
+          <ul className="list-none">
+            <li>✅ Supports <strong>any EFI-compatible system and all models of Raspberry Pi</strong>.</li>
+            <li>✅ Supports <strong>streaming of updates</strong> without intermediate storage.</li>
+            <li>✅ Enables <a href="docs/advanced/signed-updates">cryptographically <strong>signed and verified updates</strong></a>.</li>
+            <li>✅ Integrates well with <a href="docs/advanced/device-management">existing device management solutions</a>.</li>
+            <li>✅ Provides interfaces to built your own update workflow upon.</li>
+            <li>✅ Provides built-in state management inspired by Docker.</li>
+          </ul>
+        </div>
         <HomepageFeatures />
       </main>
     </Layout>
