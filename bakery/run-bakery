@@ -20,6 +20,7 @@ if [ -t 0 ] && [ -t 1 ]; then
     DOCKER_FLAGS="${DOCKER_FLAGS} -it"
 fi
 
+# shellcheck disable=SC2086
 exec $DOCKER run --rm --privileged \
     $DOCKER_FLAGS \
     -v "$(pwd)":/project \
