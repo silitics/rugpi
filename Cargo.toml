@@ -10,6 +10,7 @@ repository = "https://github.com/silitics/rugpi/"
 homepage = "https://oss.silitics.com/rugpi/"
 
 [workspace.dependencies]
+bytes = "1.7.1"
 anyhow = "1.0.71"
 clap = { version = "4.3", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
