@@ -17,6 +17,7 @@ serde = { version = "1", features = ["derive"] }
 nix = { version = "0.28", features = ["ioctl", "fs", "mount", "process"] }
 xscript = "0.3.0"
 tracing = "0.1"
+rugpi-common = { path = "crates/rugpi-common" }
 
 [workspace.lints.clippy]
 needless_borrows_for_generic_args = "allow"

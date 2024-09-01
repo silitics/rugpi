@@ -17,10 +17,10 @@ macro_rules! define_struct {
             )*
         }
 
-        impl $crate::format::decode::Decode for $name {
+        impl $crate::artifact::format::decode::Decode for $name {
             fn decode_segment<'r, R: std::io::BufRead>(
-                mut segment: $crate::format::decode::SegmentDecoder<'r, R>,
-            ) -> Result<Self, $crate::format::decode::DecodeError> {
+                mut segment: $crate::artifact::format::decode::SegmentDecoder<'r, R>,
+            ) -> Result<Self, $crate::artifact::format::decode::DecodeError> {
                 $(
                     let mut $field_name = <$field_type>::initial_value();
                 )*
@@ -44,7 +44,7 @@ macro_rules! define_struct {
         }
 
         impl Encode for $name {
-            fn encode<W: Write>(&self, writer: &mut W, tag: $crate::format::stlv::Tag) -> io::Result<()> {
+            fn encode<W: Write>(&self, writer: &mut W, tag: $crate::artifact::format::stlv::Tag) -> io::Result<()> {
                 write_atom_head(writer, AtomHead::Open { tag })?;
                 $(
                     self.$field_name.encode(writer, tags::$field_tag)?;
@@ -101,7 +101,7 @@ macro_rules! define_enum {
         }
 
         impl Encode for $name {
-            fn encode<W: Write>(&self, writer: &mut W, tag: $crate::format::stlv::Tag) -> io::Result<()> {
+            fn encode<W: Write>(&self, writer: &mut W, tag: $crate::artifact::format::stlv::Tag) -> io::Result<()> {
                 write_atom_head(writer, AtomHead::Open { tag })?;
                 match self {
                     $(

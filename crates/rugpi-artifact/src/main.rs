@@ -1,15 +1,16 @@
 use std::{
     error::Error,
-    fs::File,
+    fs::{self, File},
     io::{self, BufRead, BufReader, BufWriter, Write},
     path::PathBuf,
 };
 
 use clap::Parser;
-use rugpi_artifact::format::{
+use rugpi_common::artifact::format::{
     encode::{self, Encode},
-    stlv::{write_atom_head, write_close_segment, write_open_segment, AtomHead},
-    tags, ArtifactHeader, FragmentHeader, FragmentInfo, Hash, Metadata,
+    stlv::{self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek},
+    tags::{self, TagNameResolver},
+    ArtifactHeader, FragmentHeader, FragmentInfo, Hash, Metadata,
 };
 use sha2::Digest;
 
@@ -23,6 +24,8 @@ pub struct Args {
 pub enum Cmd {
     /// Create an artifact.
     Create(CreateCmd),
+    /// Print the structure of the artifact.
+    Print(PrintCmd),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -34,6 +37,11 @@ pub struct CreateCmd {
     artifact: PathBuf,
     /// Paths to the fragments of the artifact.
     fragments: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct PrintCmd {
+    artifact: PathBuf,
 }
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -113,6 +121,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             }
             write_close_segment(&mut writer, tags::FRAGMENTS)?;
             write_close_segment(&mut writer, tags::ARTIFACT)?;
+        }
+        Cmd::Print(cmd) => {
+            let file = fs::File::open(&cmd.artifact)?;
+            let mut reader = BufReader::new(file);
+            stlv::pretty_print::<_, SkipSeek>(&mut reader, Some(&TagNameResolver))?;
         }
     }
     Ok(())

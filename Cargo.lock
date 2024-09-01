@@ -1037,13 +1037,10 @@ dependencies = [
 name = "rugpi-artifact"
 version = "0.1.0"
 dependencies = [
- "bytes",
  "clap",
- "console",
- "serde",
+ "rugpi-common",
  "serde_json",
  "sha2",
- "thiserror",
 ]
 
 [[package]]
@@ -1076,7 +1073,9 @@ name = "rugpi-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap",
+ "console",
  "crc32fast",
  "digest",
  "hex",

@@ -6,13 +6,16 @@ use boot::grub::grub_envblk_encode;
 
 use crate::boot::uboot::UBootEnv;
 
+pub mod artifact;
 pub mod boot;
 pub mod ctrl_config;
 pub mod devices;
 pub mod disk;
+#[cfg(target_os = "linux")]
 pub mod fsutils;
 pub mod loop_dev;
 pub mod maybe_compressed;
+#[cfg(target_os = "linux")]
 pub mod mount;
 pub mod partitions;
 pub mod paths;
