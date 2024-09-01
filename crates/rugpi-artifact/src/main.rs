@@ -1,16 +1,21 @@
 use std::{
-    error::Error,
     fs::{self, File},
     io::{self, BufRead, BufReader, BufWriter, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
+use anyhow::anyhow;
 use clap::Parser;
-use rugpi_common::artifact::format::{
-    encode::{self, Encode},
-    stlv::{self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek},
-    tags::{self, TagNameResolver},
-    ArtifactHeader, FragmentHeader, FragmentInfo, Hash, Metadata,
+use rugpi_common::{
+    artifact::format::{
+        encode::{self, Encode},
+        stlv::{
+            self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek,
+        },
+        tags::{self, TagNameResolver},
+        ArtifactHeader, FragmentHeader, FragmentInfo, Hash,
+    },
+    Anyhow,
 };
 use sha2::Digest;
 
@@ -22,21 +27,10 @@ pub struct Args {
 
 #[derive(Debug, Clone, Parser)]
 pub enum Cmd {
-    /// Create an artifact.
-    Create(CreateCmd),
+    /// Pack an artifact.
+    Pack(PackCmd),
     /// Print the structure of the artifact.
     Print(PrintCmd),
-}
-
-#[derive(Debug, Clone, Parser)]
-pub struct CreateCmd {
-    /// File containing artifact metadata.
-    #[clap(long)]
-    metadata: Option<PathBuf>,
-    /// Path to the artifact.
-    artifact: PathBuf,
-    /// Paths to the fragments of the artifact.
-    fragments: Vec<PathBuf>,
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -44,31 +38,43 @@ pub struct PrintCmd {
     artifact: PathBuf,
 }
 
-pub fn main() -> Result<(), Box<dyn Error>> {
+#[derive(Debug, Clone, Parser)]
+pub struct PackCmd {
+    /// Path to the artifact.
+    artifact: PathBuf,
+    /// Directory containing the unpacked artifact.
+    directory: PathBuf,
+}
+
+pub fn main() -> Anyhow<()> {
     let args = Args::parse();
     match args.cmd {
-        Cmd::Create(cmd) => {
-            let metadata = cmd
-                .metadata
-                .map(|path| {
-                    Ok::<_, Box<dyn Error>>(Metadata {
-                        map: serde_json::from_str(&std::fs::read_to_string(path)?)?,
-                    })
-                })
-                .transpose()?
-                .unwrap_or_default();
+        Cmd::Pack(cmd) => {
+            let mut fragment_ids = Vec::new();
+            for entry in std::fs::read_dir(cmd.directory.join("fragments"))? {
+                let entry = entry?;
+                let file_name = entry.file_name();
+                let id = file_name
+                    .to_str()
+                    .ok_or_else(|| anyhow!("invalid UTF-8 in fragment id"))?
+                    .to_owned();
+                if id.chars().any(|c| !c.is_ascii_digit()) {
+                    eprintln!("ignoring fragments/{id}");
+                    continue;
+                }
+                fragment_ids.push(id);
+            }
+            fragment_ids.sort();
             let mut fragment_infos = Vec::new();
             let mut fragment_headers = Vec::new();
             let mut offset = 0;
-            for fragment in &cmd.fragments {
-                let size = fragment.metadata()?.len();
-                let header = FragmentHeader {
-                    compression: None,
-                    encoded_index: None,
-                    decoded_index: None,
-                };
+            for fragment in &fragment_ids {
+                let fragment_path = cmd.directory.join("fragments").join(fragment);
+                let payload_path = fragment_path.join("payload");
+                let payload_size = payload_path.metadata()?.len();
+                let header = FragmentHeader {};
                 let mut hasher = sha2::Sha512_256::new();
-                let mut reader = BufReader::new(File::open(fragment)?);
+                let mut reader = BufReader::new(File::open(&payload_path)?);
                 loop {
                     let buffer = reader.fill_buf()?;
                     if buffer.is_empty() {
@@ -89,34 +95,39 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                     algorithm: "sha512_256".to_owned(),
                     digest: header_digest.as_slice().to_vec().into(),
                 };
+
                 fragment_infos.push(FragmentInfo {
-                    metadata: Metadata::default(),
-                    filename: fragment.to_str().unwrap().to_owned(),
+                    // metadata: Metadata::default(),
+                    filename: read_optional_string(&fragment_path.join("filename"))?,
                     offset: Some(offset),
-                    slot: None,
+                    slot: read_optional_string(&fragment_path.join("slot"))?,
                     header_hash,
                     payload_hash,
                 });
                 offset += AtomHead::open(tags::FRAGMENT).atom_size();
                 offset += encoded_header.len() as u64;
-                offset += AtomHead::value(tags::FRAGMENT_PAYLOAD, size).atom_size();
+                offset += AtomHead::value(tags::FRAGMENT_PAYLOAD, payload_size).atom_size();
                 offset += AtomHead::close(tags::FRAGMENT).atom_size();
                 fragment_headers.push(encoded_header);
             }
             let header = ArtifactHeader {
-                metadata,
                 fragments: fragment_infos,
             };
             let mut writer = BufWriter::new(File::create(&cmd.artifact)?);
             write_open_segment(&mut writer, tags::ARTIFACT)?;
             header.encode(&mut writer, tags::ARTIFACT_HEADER)?;
             write_open_segment(&mut writer, tags::FRAGMENTS)?;
-            for (idx, fragment) in cmd.fragments.iter().enumerate() {
+            for (idx, fragment) in fragment_ids.iter().enumerate() {
                 write_open_segment(&mut writer, tags::FRAGMENT)?;
                 writer.write_all(&fragment_headers[idx])?;
-                let size = fragment.metadata()?.len();
+                let payload = cmd
+                    .directory
+                    .join("fragments")
+                    .join(fragment)
+                    .join("payload");
+                let size = payload.metadata()?.len();
                 write_atom_head(&mut writer, AtomHead::value(tags::FRAGMENT_PAYLOAD, size))?;
-                io::copy(&mut File::open(fragment)?, &mut writer)?;
+                io::copy(&mut File::open(&payload)?, &mut writer)?;
                 write_close_segment(&mut writer, tags::FRAGMENT)?;
             }
             write_close_segment(&mut writer, tags::FRAGMENTS)?;
@@ -129,4 +140,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+fn read_optional_string(path: &Path) -> io::Result<Option<String>> {
+    if path.exists() {
+        Ok(Some(fs::read_to_string(path)?.trim().to_owned()))
+    } else {
+        Ok(None)
+    }
 }

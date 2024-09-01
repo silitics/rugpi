@@ -26,8 +26,8 @@ mod macros;
 
 define_struct! {
     pub struct ArtifactHeader {
-        /// Metadata of the artifact.
-        pub metadata[METADATA]: Metadata,
+        // /// Metadata of the artifact.
+        // pub metadata[METADATA]: Metadata,
         /// Information about the artifact's fragments.
         pub fragments[FRAGMENT]: Vec<FragmentInfo>,
     }
@@ -35,10 +35,10 @@ define_struct! {
 
 define_struct! {
     pub struct FragmentInfo {
-        /// Metadata of the fragment.
-        pub metadata[METADATA]: Metadata,
+        // /// Metadata of the fragment.
+        // pub metadata[METADATA]: Metadata,
         /// Filename of the fragment.
-        pub filename[FRAGMENT_INFO_FILENAME]: String,
+        pub filename[FRAGMENT_INFO_FILENAME]: Option<String>,
         /// Optional offset of the fragment.
         pub offset[FRAGMENT_INFO_OFFSET]: Option<u64>,
         /// Optional slot indicting where to install the fragment.
@@ -61,16 +61,14 @@ define_struct! {
 
 define_struct! {
     pub struct FragmentHeader {
-        /// Compression applied to the fragment's payload.
-        pub compression[FRAGMENT_COMPRESSION]: Option<FragmentCompression>,
-        /// Block index of the encoded payload.
-        ///
-        /// Is used to ensure the block-wise integrity of the payload.
-        pub encoded_index[FRAGMENT_ENCODED_INDEX]: Option<BlockIndex>,
-        /// Block index of the decoded payload.
-        ///
-        /// Is used to ensure the block-wise integrity of the payload.
-        pub decoded_index[FRAGMENT_DECODED_INDEX]: Option<BlockIndex>,
+        // /// Block index of the encoded payload.
+        // ///
+        // /// Is used to ensure the block-wise integrity of the payload.
+        // pub encoded_index[FRAGMENT_ENCODED_INDEX]: Option<BlockIndex>,
+        // /// Block index of the decoded payload.
+        // ///
+        // /// Is used to ensure the block-wise integrity of the payload.
+        // pub decoded_index[FRAGMENT_DECODED_INDEX]: Option<BlockIndex>,
     }
 }
 

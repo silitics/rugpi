@@ -1037,6 +1037,7 @@ dependencies = [
 name = "rugpi-artifact"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "rugpi-common",
  "serde_json",
