@@ -141,9 +141,9 @@ pub fn start_decoder<'r, R: BufRead>(
         return Ok(None);
     };
     match head {
-        AtomHead::Value { tag, length } => Ok(Some(Decoder::Value(ValueDecoder {
+        AtomHead::Value { length, .. } => Ok(Some(Decoder::Value(ValueDecoder {
             reader,
-            tag,
+            head,
             remaining: length,
         }))),
         AtomHead::Open { .. } => Ok(Some(Decoder::Segment(SegmentDecoder {
@@ -199,9 +199,9 @@ impl<'r, R: BufRead> SegmentDecoder<'r, R> {
             todo!("unexpected eof");
         };
         match head {
-            AtomHead::Value { tag, length } => Ok(Some(Decoder::Value(ValueDecoder {
+            AtomHead::Value { length, .. } => Ok(Some(Decoder::Value(ValueDecoder {
                 reader: self.reader,
-                tag,
+                head,
                 remaining: length,
             }))),
             AtomHead::Open { .. } => Ok(Some(Decoder::Segment(SegmentDecoder {
@@ -238,7 +238,7 @@ impl<'r, R: BufRead> Decoder<'r, R> {
     pub fn tag(&self) -> Tag {
         match self {
             Decoder::Segment(segment) => segment.head.tag(),
-            Decoder::Value(value) => value.tag,
+            Decoder::Value(value) => value.head.tag(),
         }
     }
 
@@ -250,13 +250,13 @@ impl<'r, R: BufRead> Decoder<'r, R> {
 #[must_use]
 pub struct ValueDecoder<'r, R> {
     reader: &'r mut R,
-    tag: Tag,
+    head: AtomHead,
     remaining: u64,
 }
 
 impl<'r, R: BufRead> ValueDecoder<'r, R> {
     pub fn tag(&self) -> Tag {
-        self.tag
+        self.head.tag()
     }
 
     pub fn skip(&mut self) -> Result<(), DecodeError> {
