@@ -173,8 +173,6 @@ impl PartitionSet {
 
 /// The `sfdisk` executable.
 const SFDISK: &str = "/usr/sbin/sfdisk";
-/// The `partprobe` executable.
-const PARTPROBE: &str = "/usr/sbin/partprobe";
 
 /// Returns the disk id of the provided image or device.
 pub fn get_disk_id(path: impl AsRef<Path>) -> Anyhow<String> {
@@ -187,18 +185,6 @@ pub fn get_disk_id(path: impl AsRef<Path>) -> Anyhow<String> {
         }
     }
     _disk_id(path.as_ref())
-}
-
-/// Partitions an image or device with the provided layout.
-pub fn sfdisk_apply_layout(path: impl AsRef<Path>, layout: impl AsRef<str>) -> Anyhow<()> {
-    fn _sfdisk_apply_layout(path: &Path, layout: &str) -> Anyhow<()> {
-        run!([SFDISK, "--no-reread", path].with_stdin(layout))?;
-        if is_block_dev(path) {
-            run!([PARTPROBE, path])?;
-        }
-        Ok(())
-    }
-    _sfdisk_apply_layout(path.as_ref(), layout.as_ref())
 }
 
 /// The `mkfs.ext4` executable.
