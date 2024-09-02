@@ -1,6 +1,10 @@
 //! Raspberry Pi-specific functionality.
 
-use std::{io, path::Path};
+use std::{
+    io,
+    os::fd::{AsRawFd, FromRawFd, OwnedFd},
+    path::Path,
+};
 
 use nix::{
     fcntl,
@@ -110,7 +114,7 @@ const VCIO_PATH: &str = "/dev/vcio";
 #[derive(Debug)]
 struct Vcio {
     /// Underlying file descriptor.
-    fd: c_int,
+    fd: OwnedFd,
 }
 
 impl Vcio {
@@ -124,7 +128,12 @@ impl Vcio {
         let flags = fcntl::OFlag::O_NONBLOCK;
         let mode = stat::Mode::empty();
         let fd = fcntl::open(VCIO_PATH, flags, mode)?;
-        Ok(Self { fd })
+        Ok(Self {
+            fd: unsafe {
+                // SAFETY: We own the file descriptor.
+                OwnedFd::from_raw_fd(fd)
+            },
+        })
     }
 
     /// Perform an `ioctl` call to the VCIO property interface using the provided buffer.
@@ -160,6 +169,9 @@ impl Vcio {
             c_char
         };
 
-        Ok(ioctl_property(self.fd, buffer.as_mut_ptr() as *mut c_char)?)
+        Ok(ioctl_property(
+            self.fd.as_raw_fd(),
+            buffer.as_mut_ptr() as *mut c_char,
+        )?)
     }
 }
