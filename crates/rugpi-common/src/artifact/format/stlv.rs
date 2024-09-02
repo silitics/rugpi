@@ -653,7 +653,7 @@ const fn compute_varint_size(integer: u64) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use std::{io, u64};
+    use std::io;
 
     use super::{read_atom_head, write_atom_head, AtomHead, BufReadExt, Tag, WriteExt};
 

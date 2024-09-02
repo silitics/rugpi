@@ -20,6 +20,7 @@ pub mod mount;
 pub mod partitions;
 pub mod paths;
 pub mod stream_hasher;
+pub mod system;
 pub mod utils;
 
 /// The [`anyhow`] result type.

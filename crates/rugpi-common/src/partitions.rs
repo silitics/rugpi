@@ -15,6 +15,7 @@ use crate::{
         PartitionTable,
     },
     paths::MOUNT_POINT_SYSTEM,
+    system::ConfigPartition,
     Anyhow,
 };
 
@@ -123,11 +124,11 @@ pub fn get_hot_partitions(partitions: &Partitions) -> Anyhow<PartitionSet> {
     }
 }
 
-pub fn read_default_partitions() -> Anyhow<PartitionSet> {
-    match detect_boot_flow()? {
-        BootFlow::Tryboot => tryboot::read_default_partitions(),
-        BootFlow::UBoot => uboot::read_default_partitions(),
-        BootFlow::GrubEfi => grub::read_default_partitions(),
+pub fn read_default_partitions(config_partition: &ConfigPartition) -> Anyhow<PartitionSet> {
+    match detect_boot_flow(config_partition)? {
+        BootFlow::Tryboot => tryboot::read_default_partitions(config_partition),
+        BootFlow::UBoot => uboot::read_default_partitions(config_partition),
+        BootFlow::GrubEfi => grub::read_default_partitions(config_partition),
     }
 }
 
@@ -202,17 +203,4 @@ pub fn mkfs_vfat(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
 pub fn mkfs_ext4(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
     run!([MKFS_ETX4, "-F", "-L", label.as_ref(), dev.as_ref()])?;
     Ok(())
-}
-
-pub struct WritableConfig(());
-
-impl Drop for WritableConfig {
-    fn drop(&mut self) {
-        run!(["mount", "-o", "remount,ro", "/run/rugpi/mounts/config"]).ok();
-    }
-}
-
-pub fn make_config_writeable() -> Anyhow<WritableConfig> {
-    run!(["mount", "-o", "remount,rw", "/run/rugpi/mounts/config"])?;
-    Ok(WritableConfig(()))
 }

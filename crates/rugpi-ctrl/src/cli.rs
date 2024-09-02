@@ -6,20 +6,19 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, bail};
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
-    boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
+    boot::BootFlow,
     ctrl_config::{load_config, CTRL_CONFIG_PATH},
     disk::{stream::ImgStream, PartitionTable},
     grub_patch_env,
     maybe_compressed::MaybeCompressed,
     mount::Mounted,
-    partitions::{
-        get_disk_id, get_hot_partitions, read_default_partitions, PartitionSet, Partitions,
-    },
+    partitions::{get_disk_id, PartitionSet, Partitions},
     rpi_patch_boot,
     stream_hasher::StreamHasher,
+    system::System,
     utils::ascii_numbers,
     Anyhow,
 };
@@ -33,13 +32,14 @@ use crate::{
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
     let config = load_config(CTRL_CONFIG_PATH)?;
+    let system = System::initialize(&config)?;
     let partitions = Partitions::load(&config)?;
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {
                 fs::create_dir_all("/run/rugpi/state/.rugpi")?;
                 fs::write("/run/rugpi/state/.rugpi/reset-state", "")?;
-                reboot(false)?;
+                reboot(&system, false)?;
             }
             StateCommand::Overlay(overlay_cmd) => match overlay_cmd {
                 OverlayCommand::ForcePersist { persist } => match persist {
@@ -84,14 +84,11 @@ pub fn main() -> Anyhow<()> {
                             Ok(ImageHash::Sha256(decoded_hash))
                     }).transpose()?;
 
-                    let hot_partitions = get_hot_partitions(&partitions)?;
-                    let default_partitions = read_default_partitions()?;
-                    let spare_partitions = default_partitions.flipped();
-                    if hot_partitions != default_partitions {
+                    if system.hot_partitions() != system.default_partitions() {
                         bail!("Hot partitions are not the default!");
                     }
                     if !keep_overlay {
-                        let spare_overlay_dir = overlay_dir(spare_partitions);
+                        let spare_overlay_dir = overlay_dir(system.spare_partitions());
                         fs::remove_dir_all(spare_overlay_dir).ok();
                     }
 
@@ -103,7 +100,7 @@ pub fn main() -> Anyhow<()> {
                     "}
                     }
 
-                    install_update_stream(&partitions, image, check_hash)?;
+                    install_update_stream(&system, &partitions, image, check_hash)?;
 
                     let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
                         UpdateRebootType::No
@@ -112,7 +109,7 @@ pub fn main() -> Anyhow<()> {
                     });
 
                     match reboot_type {
-                        UpdateRebootType::Yes => reboot(true)?,
+                        UpdateRebootType::Yes => reboot(&system, true)?,
                         UpdateRebootType::No => { /* nothing to do */ }
                         UpdateRebootType::Deferred => {
                             set_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
@@ -123,33 +120,21 @@ pub fn main() -> Anyhow<()> {
         }
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
-                let boot_flow = detect_boot_flow().context("loading boot flow")?;
-                println!("Boot Flow: {}", boot_flow.as_str());
-                let hot_partitions =
-                    get_hot_partitions(&partitions).context("loading hot partitions")?;
-                let default_partitions =
-                    read_default_partitions().context("loading default partitions")?;
-                println!("Hot: {}", hot_partitions.as_str());
-                println!("Cold: {}", hot_partitions.flipped().as_str());
-                println!("Default: {}", default_partitions.as_str());
-                println!("Spare: {}", default_partitions.flipped().as_str());
+                println!("Boot Flow: {}", system.boot_flow().as_str());
+                println!("Hot: {}", system.hot_partitions().as_str());
+                println!("Cold: {}", system.hot_partitions().flipped().as_str());
+                println!("Default: {}", system.default_partitions().as_str());
+                println!("Spare: {}", system.default_partitions().flipped().as_str());
             }
             SystemCommand::Commit => {
-                let boot_flow = detect_boot_flow()?;
-                let hot_partitions = get_hot_partitions(&partitions)?;
-                let default_partitions = read_default_partitions()?;
-                if hot_partitions != default_partitions {
-                    match boot_flow {
-                        BootFlow::Tryboot => tryboot::commit(hot_partitions)?,
-                        BootFlow::UBoot => uboot::commit(hot_partitions)?,
-                        BootFlow::GrubEfi => grub::commit(hot_partitions)?,
-                    }
+                if system.needs_commit() {
+                    system.commit()?;
                 } else {
                     println!("Hot partition is already the default!");
                 }
             }
             SystemCommand::Reboot { spare } => {
-                reboot(*spare)?;
+                reboot(&system, *spare)?;
             }
         },
         Command::Unstable(command) => match command {
@@ -210,12 +195,13 @@ impl<R: Read> Read for MaybeStreamHasher<R> {
 }
 
 fn install_update_stream(
+    system: &System,
     partitions: &Partitions,
     image: &String,
     check_hash: Option<ImageHash>,
 ) -> Anyhow<()> {
-    let default_partitions = read_default_partitions()?;
-    let spare_partitions = default_partitions.flipped();
+    let default_partitions = system.default_partitions();
+    let spare_partitions = system.spare_partitions();
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
     } else {
@@ -291,7 +277,7 @@ fn install_update_stream(
     let temp_dir_spare = temp_dir_spare.path();
 
     // Path `/boot`.
-    let boot_flow = detect_boot_flow()?;
+    let boot_flow = system.boot_flow();
     if matches!(boot_flow, BootFlow::Tryboot | BootFlow::UBoot) {
         let _mounted_spare = Mounted::mount(
             spare_partitions.boot_dev(partitions).unwrap(),

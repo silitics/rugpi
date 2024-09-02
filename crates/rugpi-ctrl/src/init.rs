@@ -9,8 +9,9 @@ use rugpi_common::{
         repart::{repart, PartitionSchema},
         PartitionTable,
     },
-    partitions::{get_hot_partitions, mkfs_ext4, read_default_partitions, system_dev, Partitions},
+    partitions::{get_hot_partitions, mkfs_ext4, system_dev, Partitions},
     paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
+    system::System,
     Anyhow,
 };
 use xscript::{run, Run};
@@ -85,7 +86,9 @@ fn init() -> Anyhow<()> {
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([MOUNT, "-o", "ro", &partitions.config, MOUNT_POINT_CONFIG])?;
 
-    if let Err(error) = check_deferred_spare_reboot(&partitions) {
+    let system = System::initialize(&config)?;
+
+    if let Err(error) = check_deferred_spare_reboot(&system) {
         println!("Warning: Error executing deferred reboot.");
         println!("{:?}", error);
     }
@@ -328,17 +331,15 @@ fn exec_chroot_init() -> Anyhow<()> {
 }
 
 /// Reboot the system to the spare partitions if the deferred spare reboot flag is set.
-fn check_deferred_spare_reboot(partitions: &Partitions) -> Anyhow<()> {
+fn check_deferred_spare_reboot(system: &System) -> Anyhow<()> {
     if is_flag_set(DEFERRED_SPARE_REBOOT_FLAG) {
         println!("Executing deferred reboot to spare partitions.");
         // Remove file and make sure that changes are synced to disk.
         clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
         nix::unistd::sync();
-        let default_partitions = read_default_partitions()?;
-        let hot_partitions = get_hot_partitions(partitions)?;
-        if default_partitions == hot_partitions {
+        if system.default_partitions() == system.hot_partitions() {
             // Reboot to the spare partitions.
-            reboot(true)?;
+            reboot(system, true)?;
         }
     }
     Ok(())

@@ -4,8 +4,8 @@ use anyhow::bail;
 
 use crate::{
     devices,
-    partitions::{make_config_writeable, PartitionSet},
-    paths::config_partition_path,
+    partitions::PartitionSet,
+    system::{ConfigPartition, System},
     Anyhow,
 };
 
@@ -48,27 +48,33 @@ pub fn parse_autoboot(autoboot_txt: &str) -> Anyhow<PartitionSet> {
     bail!("unable to determine partition set from `autoboot.txt`");
 }
 
-pub fn read_default_partitions() -> Anyhow<PartitionSet> {
-    parse_autoboot(&std::fs::read_to_string(config_partition_path(
-        "autoboot.txt",
-    ))?)
+pub fn read_default_partitions(config_partition: &ConfigPartition) -> Anyhow<PartitionSet> {
+    parse_autoboot(&std::fs::read_to_string(
+        config_partition.path().join("autoboot.txt"),
+    )?)
 }
 
-pub fn commit(hot_partitions: PartitionSet) -> Anyhow<()> {
-    let _writable_config = make_config_writeable()?;
-    let autoboot_new_path = config_partition_path("autoboot.txt.new");
-    let mut autoboot_new = File::create(&autoboot_new_path)?;
-    autoboot_new.write_all(
-        match hot_partitions {
-            PartitionSet::A => AUTOBOOT_A,
-            PartitionSet::B => AUTOBOOT_B,
-        }
-        .as_bytes(),
-    )?;
-    autoboot_new.flush()?;
-    autoboot_new.sync_all()?;
-    std::fs::rename(autoboot_new_path, config_partition_path("autoboot.txt"))?;
-    Ok(())
+pub fn commit(system: &System) -> Anyhow<()> {
+    let config_partition = system.require_config_partition()?;
+    config_partition.ensure_writable(|| {
+        let autoboot_new_path = config_partition.path().join("autoboot.txt.new");
+        let mut autoboot_new = File::create(&autoboot_new_path)?;
+        autoboot_new.write_all(
+            match system.hot_partitions() {
+                PartitionSet::A => AUTOBOOT_A,
+                PartitionSet::B => AUTOBOOT_B,
+            }
+            .as_bytes(),
+        )?;
+        autoboot_new.flush()?;
+        autoboot_new.sync_all()?;
+        drop(autoboot_new);
+        std::fs::rename(
+            autoboot_new_path,
+            config_partition.path().join("autoboot.txt"),
+        )?;
+        Ok(())
+    })?
 }
 
 pub fn set_spare_flag() -> Anyhow<()> {
