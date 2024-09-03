@@ -68,7 +68,7 @@
 //! This module provides low-level functions for reading and writing STLV streams.
 //!
 //! ```rust
-//! # use rugpi_artifact::format::stlv::{
+//! # use rugpi_common::artifact::format::stlv::{
 //! #   read_atom_head, skip, write_atom_head, write_open_segment,
 //! #   write_close_segment, write_value, Tag, AtomHead, SkipSeek,
 //! # };
