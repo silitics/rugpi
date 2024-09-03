@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -15,6 +14,8 @@ use crate::{
     paths::MOUNT_POINT_CONFIG,
     Anyhow,
 };
+
+pub mod config;
 
 pub struct System {
     boot_flow: BootFlow,
@@ -155,44 +156,4 @@ pub struct ConfigPartitionConfig {
     pub path: Option<String>,
     /// Block device of the config partition.
     pub device: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct SystemConfig {
-    config_device: Option<String>,
-    data_device: Option<String>,
-    boot_flow: Option<String>,
-    slots: Option<HashMap<String, SlotConfig>>,
-    boot_entries: Option<HashMap<String, BootEntryConfig>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
-pub enum BootFlowConfig {
-    GrubEfi,
-    Tryboot,
-    UBoot,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
-pub enum SlotConfig {
-    Partition(PartitionSlotConfig),
-    Directory(DirectorySlotConfig),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PartitionSlotConfig {
-    device: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DirectorySlotConfig {
-    path: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BootEntryConfig {
-    slots: HashMap<String, String>,
 }
