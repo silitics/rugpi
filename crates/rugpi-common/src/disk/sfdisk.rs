@@ -9,10 +9,7 @@ use anyhow::anyhow;
 use serde::Deserialize;
 use xscript::{read_str, run, Run};
 
-use super::{
-    blkdev::block_device_get_size, gpt::Guid, mbr, DiskId, NumBlocks, Partition, PartitionTable,
-    PartitionType,
-};
+use super::{blkdev, gpt::Guid, mbr, DiskId, NumBlocks, Partition, PartitionTable, PartitionType};
 use crate::{utils::units::NumBytes, Anyhow};
 
 /// Path to the `sfdisk` executable.
@@ -24,7 +21,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
             .partition_table;
     let metadata = dev.metadata()?;
     let size = if metadata.file_type().is_block_device() {
-        NumBlocks::from_raw(block_device_get_size(dev)? / json_table.sector_size)
+        NumBlocks::from_raw(blkdev::get_size(dev)? / json_table.sector_size)
     } else {
         NumBlocks::from_raw(metadata.size() / json_table.sector_size)
     };
