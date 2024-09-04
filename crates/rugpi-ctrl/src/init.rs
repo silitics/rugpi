@@ -6,12 +6,19 @@ use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH},
     disk::{
         blkpg::update_kernel_partitions,
-        repart::{repart, PartitionSchema},
+        repart::{
+            generic_efi_partition_schema, generic_mbr_partition_schema, repart, PartitionSchema,
+        },
         PartitionTable,
     },
-    partitions::{get_hot_partitions, mkfs_ext4, system_dev, Partitions},
+    partitions::mkfs_ext4,
     paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
-    system::System,
+    system::{
+        config::{load_system_config, PartitionConfig},
+        detect_config_partition, detect_data_partition,
+        slots::SlotKind,
+        System, SystemRoot,
+    },
     Anyhow,
 };
 use xscript::{run, Run};
@@ -58,35 +65,91 @@ fn init() -> Anyhow<()> {
     // Mount essential filesystems.
     mount_essential_filesystems()?;
 
-    let partitions = Partitions::load(&config)?;
+    let system_config = load_system_config()?;
+    let root = SystemRoot::detect();
 
-    if !partitions.data.exists() {
+    let has_data_partition = if let Some(device) = &system_config.data_partition.device {
+        if system_config.data_partition.partition.is_some() {
+            eprintln!("ignoring `partition` because `device` is set");
+        }
+        Path::new(device).exists()
+    } else {
+        let partition = match system_config.config_partition.partition {
+            Some(partition) => partition,
+            None => {
+                // The default depends on the partition table of the parent.
+                let Some(table) = &root.table else {
+                    bail!("unable to determine default data partition: no partition table");
+                };
+                if table.is_mbr() {
+                    7
+                } else {
+                    6
+                }
+            }
+        };
+        root.resolve_partition(partition)?.is_some()
+    };
+
+    if !has_data_partition {
         // If the data partitions already exists, we do not repartition the disk or
         // create any filesystems on it.
-        let partition_schema = config
-            .partition_schema
-            .as_ref()
-            .or(partitions.schema.as_ref());
+        let mut partition_schema = config.partition_schema.clone();
+        if partition_schema.is_none() {
+            let Some(table) = &root.table else {
+                bail!("no root partition table");
+            };
+            if table.is_mbr() {
+                partition_schema = Some(generic_mbr_partition_schema(config.system_size_bytes()?));
+            } else {
+                partition_schema = Some(generic_efi_partition_schema(config.system_size_bytes()?));
+            }
+        }
         if let Some(partition_schema) = partition_schema {
-            bootstrap_partitions(&config, &partitions.parent_dev, partition_schema)?;
+            bootstrap_partitions(
+                root.parent.as_ref().unwrap().path(),
+                &partition_schema,
+                &root,
+                &system_config.data_partition,
+            )?;
         }
     }
 
-    let partitions = Partitions::load(&config)?;
+    let Some(config_partition) = detect_config_partition(&root, &system_config.config_partition)?
+    else {
+        bail!("Rugpi pre-init requires a config partition");
+    };
+    let Some(data_partition) = detect_data_partition(&root, &system_config.data_partition)? else {
+        bail!("Rugpi pre-init requires a data partition");
+    };
+    let Some(root_device) = &root.device else {
+        bail!("Rugpi pre-init requires a root device");
+    };
 
     // 3️⃣ Check and mount the data partition.
-    run!([FSCK, "-y", &partitions.data])?;
+    run!([FSCK, "-y", data_partition.path()])?;
     fs::create_dir_all(MOUNT_POINT_DATA).ok();
-    run!([MOUNT, "-o", "noatime", &partitions.data, MOUNT_POINT_DATA])?;
+    run!([
+        MOUNT,
+        "-o",
+        "noatime",
+        data_partition.path(),
+        MOUNT_POINT_DATA
+    ])?;
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
-    let system_dev = system_dev()?;
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
-    run!([MOUNT, "-o", "ro", system_dev, MOUNT_POINT_SYSTEM])?;
+    run!([MOUNT, "-o", "ro", root_device.path(), MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
-    run!([MOUNT, "-o", "ro", &partitions.config, MOUNT_POINT_CONFIG])?;
+    run!([
+        MOUNT,
+        "-o",
+        "ro",
+        config_partition.path(),
+        MOUNT_POINT_CONFIG
+    ])?;
 
-    let system = System::initialize(&config)?;
+    let system = System::initialize()?;
 
     if let Err(error) = check_deferred_spare_reboot(&system) {
         println!("Warning: Error executing deferred reboot.");
@@ -104,7 +167,7 @@ fn init() -> Anyhow<()> {
     run!([MOUNT, "--bind", &state_profile, STATE_DIR])?;
 
     // 7️⃣ Setup the root filesystem overlay.
-    setup_root_overlay(&partitions, &config, state_profile)?;
+    setup_root_overlay(&system, &config, state_profile)?;
 
     // 8️⃣ Setup the bind mounts for the persistent state.
     setup_persistent_state(state_profile)?;
@@ -149,7 +212,12 @@ fn mount_essential_filesystems() -> Anyhow<()> {
 }
 
 /// Initializes the partitions and expands the partition table during the first boot.
-fn bootstrap_partitions(config: &Config, dev: &Path, schema: &PartitionSchema) -> Anyhow<()> {
+fn bootstrap_partitions(
+    dev: &Path,
+    schema: &PartitionSchema,
+    root: &SystemRoot,
+    data_partition_config: &PartitionConfig,
+) -> Anyhow<()> {
     let old_table = PartitionTable::read(dev)?;
     if let Some(new_table) = repart(&old_table, schema)? {
         // Write new partition table to disk.
@@ -157,8 +225,9 @@ fn bootstrap_partitions(config: &Config, dev: &Path, schema: &PartitionSchema) -
         run!([SYNC])?;
         // Inform the kernel about new partitions.
         update_kernel_partitions(dev, &old_table, &new_table)?;
-        let partitions = Partitions::load(config)?;
-        mkfs_ext4(&partitions.data, "data")?;
+        if let Some(data_partition) = detect_data_partition(root, data_partition_config)? {
+            mkfs_ext4(data_partition, "data")?;
+        }
         // We do not need to patch the partition ID in the configuration files as we
         // keep the id from the original image.
     }
@@ -166,19 +235,15 @@ fn bootstrap_partitions(config: &Config, dev: &Path, schema: &PartitionSchema) -
 }
 
 /// Sets up the overlay.
-fn setup_root_overlay(
-    partitions: &Partitions,
-    config: &Config,
-    state_profile: &Path,
-) -> Anyhow<()> {
+fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) -> Anyhow<()> {
     let overlay_state = state_profile.join("overlay");
     let force_persist = state_profile.join(".rugpi/force-persist-overlay").exists();
     if !force_persist && !matches!(config.overlay, Overlay::Persist) {
         fs::remove_dir_all(&overlay_state).ok();
     }
 
-    let hot_partitions = get_hot_partitions(partitions)?;
-    let hot_overlay_state = overlay_state.join(hot_partitions.as_str());
+    let active_boot_entry = &system.boot_entries()[system.active_boot_entry().unwrap()];
+    let hot_overlay_state = overlay_state.join(active_boot_entry.name());
     fs::create_dir_all(&hot_overlay_state).ok();
 
     // Reinitialize `work` and `root` directories.
@@ -197,8 +262,15 @@ fn setup_root_overlay(
         OVERLAY_ROOT_DIR
     ])?;
     run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
-    if let Some(boot_dev) = hot_partitions.boot_dev(partitions) {
-        run!([MOUNT, "-o", "ro", boot_dev, overlay_root_dir().join("boot")])?;
+    if let Some(boot_slot) = active_boot_entry.get_slot("boot") {
+        let SlotKind::Raw(boot_slot) = system.slots()[boot_slot].kind();
+        run!([
+            MOUNT,
+            "-o",
+            "ro",
+            boot_slot.device().path(),
+            overlay_root_dir().join("boot")
+        ])?;
     }
     Ok(())
 }
@@ -337,9 +409,12 @@ fn check_deferred_spare_reboot(system: &System) -> Anyhow<()> {
         // Remove file and make sure that changes are synced to disk.
         clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
         nix::unistd::sync();
-        if system.default_partitions() == system.hot_partitions() {
+        if !system.needs_commit()? {
             // Reboot to the spare partitions.
-            reboot(system, true)?;
+            if let Some((spare, _)) = system.spare_entry()? {
+                system.boot_flow().set_try_next(system, spare)?;
+                reboot()?;
+            }
         }
     }
     Ok(())

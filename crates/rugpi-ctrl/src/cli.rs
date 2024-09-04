@@ -9,20 +9,16 @@ use std::{
 use anyhow::{anyhow, bail};
 use clap::{Parser, ValueEnum};
 use rugpi_common::{
-    boot::BootFlow,
-    ctrl_config::{load_config, CTRL_CONFIG_PATH},
-    disk::{stream::ImgStream, PartitionTable},
-    grub_patch_env,
+    disk::stream::ImgStream,
     maybe_compressed::MaybeCompressed,
-    mount::Mounted,
-    partitions::{get_disk_id, PartitionSet, Partitions},
-    rpi_patch_boot,
     stream_hasher::StreamHasher,
-    system::System,
-    utils::ascii_numbers,
+    system::{
+        boot_entries::{BootEntry, BootEntryIdx},
+        slots::SlotKind,
+        System,
+    },
     Anyhow,
 };
-use tempfile::tempdir;
 
 use crate::{
     overlay::overlay_dir,
@@ -31,15 +27,13 @@ use crate::{
 
 pub fn main() -> Anyhow<()> {
     let args = Args::parse();
-    let config = load_config(CTRL_CONFIG_PATH)?;
-    let system = System::initialize(&config)?;
-    let partitions = Partitions::load(&config)?;
+    let system = System::initialize()?;
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {
                 fs::create_dir_all("/run/rugpi/state/.rugpi")?;
                 fs::write("/run/rugpi/state/.rugpi/reset-state", "")?;
-                reboot(&system, false)?;
+                reboot()?;
             }
             StateCommand::Overlay(overlay_cmd) => match overlay_cmd {
                 OverlayCommand::ForcePersist { persist } => match persist {
@@ -65,6 +59,7 @@ pub fn main() -> Anyhow<()> {
                     keep_overlay,
                     check_hash,
                     stream,
+                    boot_entry,
                 } => {
                     if reboot_type.is_some() && *no_reboot {
                         bail!("--no-reboot and --reboot are incompatible");
@@ -84,11 +79,36 @@ pub fn main() -> Anyhow<()> {
                             Ok(ImageHash::Sha256(decoded_hash))
                     }).transpose()?;
 
-                    if system.hot_partitions() != system.default_partitions() {
-                        bail!("Hot partitions are not the default!");
+                    if system.needs_commit()? {
+                        bail!("System needs to be committed before installing an update.");
                     }
+
+                    // Find the entry where we are going to install the update to.
+                    let (entry_idx, entry) = match boot_entry {
+                        Some(entry_name) => {
+                            let Some(entry) = system.boot_entries().find_by_name(entry_name) else {
+                                bail!("unable to find entry {entry_name}")
+                            };
+                            entry
+                        }
+                        None => {
+                            let Some(entry) = system
+                                .boot_entries()
+                                .iter()
+                                .filter(|(_, entry)| !entry.active())
+                                .next()
+                            else {
+                                bail!("unable to find an entry");
+                            };
+                            entry
+                        }
+                    };
+                    if entry.active() {
+                        bail!("selected entry {} is active", entry.name());
+                    }
+
                     if !keep_overlay {
-                        let spare_overlay_dir = overlay_dir(system.spare_partitions());
+                        let spare_overlay_dir = overlay_dir(entry);
                         fs::remove_dir_all(spare_overlay_dir).ok();
                     }
 
@@ -100,7 +120,7 @@ pub fn main() -> Anyhow<()> {
                     "}
                     }
 
-                    install_update_stream(&system, &partitions, image, check_hash)?;
+                    install_update_stream(&system, image, check_hash, entry_idx, entry)?;
 
                     let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
                         UpdateRebootType::No
@@ -109,7 +129,10 @@ pub fn main() -> Anyhow<()> {
                     });
 
                     match reboot_type {
-                        UpdateRebootType::Yes => reboot(&system, true)?,
+                        UpdateRebootType::Yes => {
+                            system.boot_flow().set_try_next(&system, entry_idx)?;
+                            reboot()?;
+                        }
                         UpdateRebootType::No => { /* nothing to do */ }
                         UpdateRebootType::Deferred => {
                             set_flag(DEFERRED_SPARE_REBOOT_FLAG)?;
@@ -120,21 +143,31 @@ pub fn main() -> Anyhow<()> {
         }
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info => {
-                println!("Boot Flow: {}", system.boot_flow().as_str());
-                println!("Hot: {}", system.hot_partitions().as_str());
-                println!("Cold: {}", system.hot_partitions().flipped().as_str());
-                println!("Default: {}", system.default_partitions().as_str());
-                println!("Spare: {}", system.default_partitions().flipped().as_str());
+                println!("Boot Flow: {}", system.boot_flow().name());
+                let hot = system.active_boot_entry().unwrap();
+                let default = system.boot_flow().get_default(&system)?;
+                let spare = system.spare_entry()?.unwrap().0;
+                let cold = if hot == default { spare } else { default };
+                let entries = system.boot_entries();
+                println!("Hot: {}", entries[hot].name());
+                println!("Cold: {}", entries[cold].name());
+                println!("Default: {}", entries[default].name());
+                println!("Spare: {}", entries[spare].name());
             }
             SystemCommand::Commit => {
-                if system.needs_commit() {
+                if system.needs_commit()? {
                     system.commit()?;
                 } else {
                     println!("Hot partition is already the default!");
                 }
             }
             SystemCommand::Reboot { spare } => {
-                reboot(&system, *spare)?;
+                if *spare {
+                    if let Some((spare, _)) = system.spare_entry()? {
+                        system.boot_flow().set_try_next(&system, spare)?;
+                    }
+                }
+                reboot()?;
             }
         },
         Command::Unstable(command) => match command {
@@ -208,11 +241,19 @@ impl<R: Read> Read for MaybeStreamHasher<R> {
 
 fn install_update_stream(
     system: &System,
-    partitions: &Partitions,
     image: &String,
     check_hash: Option<ImageHash>,
+    entry_idx: BootEntryIdx,
+    entry: &BootEntry,
 ) -> Anyhow<()> {
-    let spare_partitions = system.spare_partitions();
+    system.boot_flow().pre_install(system, entry_idx)?;
+
+    let boot_slot = entry.get_slot("boot").unwrap();
+    let system_slot = entry.get_slot("system").unwrap();
+
+    let SlotKind::Raw(raw_boot_slot) = system.slots()[boot_slot].kind();
+    let SlotKind::Raw(raw_system_slot) = system.slots()[system_slot].kind();
+
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
     } else {
@@ -248,7 +289,7 @@ fn install_update_stream(
             1 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(spare_partitions.boot_dev(partitions).unwrap())?,
+                    &mut fs::File::create(raw_boot_slot.device())?,
                 )?;
                 // run!([
                 //     "fatlabel",
@@ -259,7 +300,7 @@ fn install_update_stream(
             3 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(spare_partitions.system_dev(partitions))?,
+                    &mut fs::File::create(raw_system_slot.device())?,
                 )?;
                 // run!([
                 //     "e2label",
@@ -284,39 +325,7 @@ fn install_update_stream(
     }
     hashed_stream.verify()?;
 
-    let temp_dir_spare = tempdir()?;
-    let temp_dir_spare = temp_dir_spare.path();
-
-    // Path `/boot`.
-    let boot_flow = system.boot_flow();
-    if matches!(boot_flow, BootFlow::Tryboot | BootFlow::UBoot) {
-        let _mounted_spare = Mounted::mount(
-            spare_partitions.boot_dev(partitions).unwrap(),
-            temp_dir_spare,
-        )?;
-        let disk_id = get_disk_id(&partitions.parent_dev)?;
-        let root = match spare_partitions {
-            PartitionSet::A => format!("PARTUUID={disk_id}-05"),
-            PartitionSet::B => format!("PARTUUID={disk_id}-06"),
-        };
-        rpi_patch_boot(temp_dir_spare, root)?;
-    }
-    if matches!(boot_flow, BootFlow::GrubEfi) {
-        let _mounted_spare = Mounted::mount(
-            spare_partitions.boot_dev(partitions).unwrap(),
-            temp_dir_spare,
-        )?;
-        let table = PartitionTable::read(&partitions.parent_dev)?;
-        let root_part = match spare_partitions {
-            PartitionSet::A => &table.partitions[3],
-            PartitionSet::B => &table.partitions[4],
-        };
-        let part_uuid = root_part
-            .gpt_id
-            .unwrap()
-            .to_hex_str(ascii_numbers::Case::Lower);
-        grub_patch_env(temp_dir_spare, part_uuid)?;
-    }
+    system.boot_flow().post_install(system, entry_idx)?;
     Ok(())
 }
 
@@ -385,6 +394,9 @@ pub enum UpdateCommand {
         stream: bool,
         #[clap(long)]
         reboot: Option<UpdateRebootType>,
+        /// Boot entry to install the update to.
+        #[clap(long)]
+        boot_entry: Option<String>,
     },
 }
 

@@ -36,23 +36,21 @@ async fn main() {
 
 #[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
-    use rugpi_common::{
-        ctrl_config::{load_config, CTRL_CONFIG_PATH},
-        system::System,
-    };
+    use rugpi_common::system::System;
 
     tokio::task::spawn_blocking(|| {
-        let config = load_config(CTRL_CONFIG_PATH).unwrap();
-        let system = System::initialize(&config).unwrap();
+        let system = System::initialize().unwrap();
+        let default_entry = system.boot_flow().get_default(&system).unwrap();
+        let active_entry = system.active_boot_entry().unwrap();
         Html(
             include_str!("../assets/index.html")
                 .replace(
                     "HOT_PARTITIONS",
-                    &system.hot_partitions().as_str().to_uppercase(),
+                    &system.boot_entries()[active_entry].name().to_uppercase(),
                 )
                 .replace(
                     "DEFAULT_PARTITIONS",
-                    &system.default_partitions().as_str().to_uppercase(),
+                    &system.boot_entries()[default_entry].name().to_uppercase(),
                 ),
         )
     })

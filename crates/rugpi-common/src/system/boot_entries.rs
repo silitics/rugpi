@@ -1,4 +1,7 @@
-use std::sync::atomic::{self, AtomicBool};
+use std::{
+    ops::Index,
+    sync::atomic::{self, AtomicBool},
+};
 
 use anyhow::bail;
 use indexmap::IndexMap;
@@ -71,6 +74,18 @@ impl BootEntries {
             .enumerate()
             .map(|(idx, entry)| (BootEntryIdx { idx }, entry))
     }
+
+    pub fn find_by_name(&self, name: &str) -> Option<(BootEntryIdx, &BootEntry)> {
+        self.iter().find(|(_, entry)| entry.name == name)
+    }
+}
+
+impl Index<BootEntryIdx> for BootEntries {
+    type Output = BootEntry;
+
+    fn index(&self, index: BootEntryIdx) -> &Self::Output {
+        &self.entries[index.idx]
+    }
 }
 
 #[derive(Debug)]
@@ -95,5 +110,9 @@ impl BootEntry {
 
     pub fn mark_active(&self) {
         self.active.store(true, atomic::Ordering::Release);
+    }
+
+    pub fn get_slot(&self, name: &str) -> Option<SlotIdx> {
+        self.slots.get(name).cloned()
     }
 }

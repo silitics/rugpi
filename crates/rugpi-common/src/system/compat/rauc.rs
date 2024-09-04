@@ -23,6 +23,7 @@ pub struct RaucGrubBootFlowConfig {
 }
 
 /// RAUC-compatible Grub boot flow.
+#[derive(Debug)]
 pub struct RaucGrubBootFlow {
     /// Path to the Grub environment file.
     grub_env_path: PathBuf,
@@ -55,14 +56,13 @@ impl RaucGrubBootFlow {
 #[allow(unused_variables)]
 impl BootFlow for RaucGrubBootFlow {
     fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
-        // RAUC's Grub integration does not allow setting oneshot entries. Making the
-        // entry the default will guarantee that the system will try to boot the entry
-        // on the next boot. If anything goes wrong, the system will revert to the current
-        // system anyway as it is still in the boot order.
-        self.set_default(system, entry)
+        // RAUC's Grub integration does not allow setting oneshot entries. We make the
+        // the requested entry the primary. If anything goes wrong, the system will revert
+        // to the current system anyway as it is still in the boot order.
+        todo!()
     }
 
-    fn set_default(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn commit(&self, system: &System) -> Anyhow<()> {
         todo!()
     }
 
@@ -84,5 +84,9 @@ impl BootFlow for RaucGrubBootFlow {
 
     fn mark_bad(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
         todo!()
+    }
+
+    fn name(&self) -> &str {
+        "rauc-grub"
     }
 }

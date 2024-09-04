@@ -3,21 +3,19 @@ use std::{
     sync::Mutex,
 };
 
-use anyhow::{anyhow, bail, Context};
-use boot_entries::BootEntries;
+use anyhow::{anyhow, bail};
+use boot_entries::{BootEntries, BootEntry, BootEntryIdx};
+use boot_flow::BootFlow;
 use config::{load_system_config, PartitionConfig, SystemConfig};
 use slots::{SlotKind, SystemSlots};
 use tracing::warn;
 use xscript::{run, Run};
 
 use crate::{
-    boot::{detect_boot_flow, grub, tryboot, uboot, BootFlow},
-    ctrl_config::Config,
     disk::{
         blkdev::{find_block_device, BlockDevice},
         PartitionTable,
     },
-    partitions::{get_hot_partitions, read_default_partitions, PartitionSet, Partitions},
     paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_SYSTEM},
     Anyhow,
 };
@@ -134,16 +132,13 @@ pub struct System {
     root: SystemRoot,
     slots: SystemSlots,
     boot_entries: BootEntries,
-
-    boot_flow: BootFlow,
-    hot_partitions: PartitionSet,
-    default_partitions: PartitionSet,
-    /// Configuration partition of the system.
+    active_boot_entry: Option<BootEntryIdx>,
+    boot_flow: Box<dyn BootFlow>,
     config_partition: Option<ConfigPartition>,
 }
 
 impl System {
-    pub fn initialize(config: &Config) -> Anyhow<Self> {
+    pub fn initialize() -> Anyhow<Self> {
         let system_config = load_system_config()?;
         let system_root = SystemRoot::detect();
         let config_partition = ConfigPartition::from_config(&system_config.config_partition);
@@ -153,7 +148,8 @@ impl System {
         let slots = SystemSlots::from_config(&system_root, system_config.slots.as_ref())?;
         let boot_entries = BootEntries::from_config(&slots, system_config.boot_entries.as_ref())?;
         // Mark boot entries and slots active.
-        for (_, entry) in boot_entries.iter() {
+        let mut active_boot_entry = None;
+        for (idx, entry) in boot_entries.iter() {
             for (_, slot) in entry.slots() {
                 let SlotKind::Raw(raw) = &slots[slot].kind();
                 if Some(raw.device()) == system_root.device.as_ref() {
@@ -180,28 +176,29 @@ impl System {
                 */
             }
             if entry.active() {
+                active_boot_entry = Some(idx);
                 // If the entry is active, then so are all its slots.
                 for (_, slot) in entry.slots() {
                     slots[slot].mark_active();
                 }
+                break;
             }
         }
-
-        let partitions = Partitions::load(config).context("loading partitions")?;
-        let boot_flow = detect_boot_flow(&config_partition).context("detecting boot flow")?;
-        let hot_partitions =
-            get_hot_partitions(&partitions).context("determining hot partitions")?;
-        let default_partitions =
-            read_default_partitions(&config_partition).context("reading default partitions")?;
+        if active_boot_entry.is_none() {
+            warn!("unable to determine active boot entry");
+        }
+        let boot_flow = boot_flow::from_config(
+            system_config.boot_flow.as_ref(),
+            &config_partition,
+            &boot_entries,
+        )?;
         Ok(Self {
             config: system_config,
             root: system_root,
             slots,
             boot_entries,
-
+            active_boot_entry,
             boot_flow,
-            hot_partitions,
-            default_partitions,
             config_partition: Some(config_partition),
         })
     }
@@ -222,24 +219,22 @@ impl System {
         &self.boot_entries
     }
 
-    pub fn hot_partitions(&self) -> PartitionSet {
-        self.hot_partitions
+    pub fn active_boot_entry(&self) -> Option<BootEntryIdx> {
+        self.active_boot_entry
     }
 
-    pub fn spare_partitions(&self) -> PartitionSet {
-        self.hot_partitions.flipped()
+    /// First entry that is not the default.
+    pub fn spare_entry(&self) -> Anyhow<Option<(BootEntryIdx, &BootEntry)>> {
+        let default = self.boot_flow.get_default(self)?;
+        Ok(self.boot_entries().iter().find(|(idx, _)| *idx != default))
     }
 
-    pub fn default_partitions(&self) -> PartitionSet {
-        self.default_partitions
+    pub fn needs_commit(&self) -> Anyhow<bool> {
+        Ok(self.active_boot_entry != Some(self.boot_flow.get_default(self)?))
     }
 
-    pub fn needs_commit(&self) -> bool {
-        self.hot_partitions != self.default_partitions
-    }
-
-    pub fn boot_flow(&self) -> BootFlow {
-        self.boot_flow
+    pub fn boot_flow(&self) -> &dyn BootFlow {
+        &*self.boot_flow
     }
 
     pub fn config_partition(&self) -> Option<&ConfigPartition> {
@@ -252,11 +247,7 @@ impl System {
     }
 
     pub fn commit(&self) -> Anyhow<()> {
-        match self.boot_flow {
-            BootFlow::Tryboot => tryboot::commit(self),
-            BootFlow::UBoot => uboot::commit(self),
-            BootFlow::GrubEfi => grub::commit(self),
-        }
+        self.boot_flow.commit(self)
     }
 }
 

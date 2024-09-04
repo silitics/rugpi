@@ -1,14 +1,9 @@
-use std::{collections::HashMap, fs::File, io, path::Path};
+use std::{collections::HashMap, io, path::Path};
 
-use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{
-    partitions::PartitionSet,
-    system::{ConfigPartition, System},
-    Anyhow,
-};
+use crate::{system::System, Anyhow};
 
 /// A U-Boot environment.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -115,42 +110,21 @@ fn crc32(data: &[u8]) -> [u8; 4] {
     crc32fast::hash(data).to_le_bytes()
 }
 
-pub fn read_default_partitions(config_partition: &ConfigPartition) -> Anyhow<PartitionSet> {
-    let bootpart_env = UBootEnv::load(config_partition.path().join("bootpart.default.env"))?;
-    let Some(bootpart) = bootpart_env.get("bootpart") else {
-        bail!("Invalid bootpart environment.");
-    };
-    if bootpart == "2" {
-        Ok(PartitionSet::A)
-    } else if bootpart == "3" {
-        Ok(PartitionSet::B)
-    } else {
-        bail!("Invalid default `bootpart`.");
-    }
-}
-
-pub fn commit(system: &System) -> Anyhow<()> {
+pub fn set_spare_flag(system: &System) -> Anyhow<()> {
+    let mut boot_spare_env = UBootEnv::new();
+    boot_spare_env.set("boot_spare", "1");
     let config_partition = system.require_config_partition()?;
     config_partition.ensure_writable(|| {
-        let mut bootpart_env = UBootEnv::new();
-        match system.hot_partitions() {
-            PartitionSet::A => bootpart_env.set("bootpart", "2"),
-            PartitionSet::B => bootpart_env.set("bootpart", "3"),
-        }
-        let new_path = config_partition.path().join("bootpart.default.env.new");
-        bootpart_env.save(&new_path)?;
-        File::open(&new_path)?.sync_all()?;
-        std::fs::rename(
-            new_path,
-            config_partition.path().join("bootpart.default.env"),
-        )?;
+        // It is safe to directly write to the file here. If the file is corrupt,
+        // the system will simply boot from the default partition set.
+        boot_spare_env.save(config_partition.path().join("boot_spare.env"))?;
         Ok(())
     })?
 }
 
-pub fn set_spare_flag(system: &System) -> Anyhow<()> {
+pub fn clear_spare_flag(system: &System) -> Anyhow<()> {
     let mut boot_spare_env = UBootEnv::new();
-    boot_spare_env.set("boot_spare", "1");
+    boot_spare_env.set("boot_spare", "0");
     let config_partition = system.require_config_partition()?;
     config_partition.ensure_writable(|| {
         // It is safe to directly write to the file here. If the file is corrupt,

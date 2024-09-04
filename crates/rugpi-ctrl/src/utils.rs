@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use rugpi_common::{boot, system::System, Anyhow};
+use rugpi_common::Anyhow;
 use xscript::{run, Run};
 
 pub static DEFERRED_SPARE_REBOOT_FLAG: &str = "/run/rugpi/mounts/data/.rugpi/deferred-reboot-spare";
@@ -11,10 +11,7 @@ pub fn is_init_process() -> bool {
 }
 
 /// Reboot the system.
-pub fn reboot(system: &System, spare: bool) -> Anyhow<()> {
-    if spare {
-        boot::set_spare_flag(system)?;
-    }
+pub fn reboot() -> Anyhow<()> {
     if is_init_process() {
         // Make sure that no data is lost.
         nix::unistd::sync();

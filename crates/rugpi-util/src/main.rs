@@ -8,9 +8,11 @@ use std::{
 use clap::{Parser, Subcommand};
 use rugpi_common::{
     boot::grub::{grub_envblk_decode, grub_envblk_encode},
-    disk::{blkpg::update_kernel_partitions, repart, stream::ImgStream, PartitionTable},
+    disk::{
+        blkdev::is_block_device, blkpg::update_kernel_partitions, repart, stream::ImgStream,
+        PartitionTable,
+    },
     maybe_compressed::MaybeCompressed,
-    partitions::is_block_dev,
     Anyhow,
 };
 use xscript::{run, Run};
@@ -87,7 +89,7 @@ fn main() -> Anyhow<()> {
             if let Some(new_table) = repart::repart(&old_table, &schema)? {
                 if write {
                     new_table.write(&dev)?;
-                    if is_block_dev(&dev) {
+                    if is_block_device(&dev)? {
                         update_kernel_partitions(&dev, &old_table, &new_table)?;
                     }
                 }
