@@ -19,9 +19,9 @@ compile_error!("module `block_device` is only works on Linux");
 /// Block device.
 #[derive(Debug, Clone)]
 pub struct BlockDevice {
-    /// Number of the device (uniquely identifies the device).
+    /// Number of the block device (uniquely identifies the device).
     dev: nix::libc::dev_t,
-    /// UTF-8 path of a block device in `/dev`.
+    /// UTF-8 path of the block device in `/dev`.
     ///
     /// We can always reconstruct this path via Sysfs. We store it here to avoid
     /// allocations.
