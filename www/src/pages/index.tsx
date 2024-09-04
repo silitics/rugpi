@@ -14,7 +14,7 @@ import styles from "./index.module.css"
 const SupportedDistributions: React.FC<{}> = () => {
   return (
     <>
-      <h3 className="text-center">Supported Distributions</h3>
+      <h2 className="text-center">Supported Distributions</h2>
       <p className="text-center">
         Rugpi supports building images based on{" "}
         <a href="https://www.debian.org/" target="_blank">
@@ -40,7 +40,11 @@ const SupportedDistributions: React.FC<{}> = () => {
             target="_blank"
             className="flex items-center h-20"
           >
-            <AlpineLinuxLogo viewBox="0 0 665 162" className="h-12" width="200" />
+            <AlpineLinuxLogo
+              viewBox="0 0 665 162"
+              className="h-12"
+              width="200"
+            />
           </a>
           <a
             href="https://www.raspberrypi.com/"
@@ -70,6 +74,26 @@ const SupportedDistributions: React.FC<{}> = () => {
   )
 }
 
+const BuildingBlock: React.FC<{
+  emoji: string
+  title: string
+  description: string
+}> = ({ emoji, title, description }) => {
+  return (
+    <div
+      className="rounded-lg w-80 py-2 px-6"
+      style={{
+        border: "1px solid white",
+        background: "var(--ifm-background-color)",
+      }}
+    >
+      <div className="text-5xl my-4">{emoji}</div>
+      <h3 className="text-2xl font-normal my-4">{title}</h3>
+      <p>{description}</p>
+    </div>
+  )
+}
+
 function HomepageHeader() {
   return (
     <header
@@ -80,14 +104,14 @@ function HomepageHeader() {
           Robust Building Blocks for Embedded Linux Devices
         </h1>
         <p className="hero__subtitle">
-          Rugpi is an open-source platform empowering you to build innovative
+          Rugpi is a suite of open-source tools empowering you to build innovative
           devices around bespoke Linux distributions.
         </p>
 
         <p style={{ maxWidth: "80ch", margin: "1.5em auto" }}>
           Rugpi enables you to{" "}
           <strong>
-            build commercial-grade, customized variants of popular Linux
+            build commercial-grade, bespoke variants of popular Linux
             distributions{" "}
           </strong>
           for your devices. It boasts three core features designed to work
@@ -116,7 +140,7 @@ export default function Home(): JSX.Element {
     <Layout title="Home" description={siteConfig.tagline}>
       <HomepageHeader />
       <main>
-        <div style={{ maxWidth: "80ch", margin: "3rem auto" }}>
+      <div style={{ maxWidth: "80ch", margin: "3rem auto" }}>
           <Admonition type="info" title="Stability Guarantees">
             <p>
               While Rugpi is a young and evolving project, we understand that
@@ -128,15 +152,63 @@ export default function Home(): JSX.Element {
             </p>
           </Admonition>
         </div>
+        <div className="text-center my-14 text-white">
+          {/* <h2 className="bg-gradient-to-r from-si-blue to-si-blue-light inline-block text-transparent bg-clip-text uppercase text-3xl font-bold tracking-tight">The Rugpi Tool Suite</h2> */}
+          {/* <h2>The Rugpi Tool Suite</h2> */}
+          <div className="flex justify-center gap-x-14 mt-8">
+            <BuildingBlock
+              emoji="🚚"
+              title="Rugpi Core"
+              description="Tools for robust over-the-air system updates and state management."
+            />
+            <BuildingBlock
+              emoji="🍰"
+              title="Rugpi Bakery"
+              description="Tools for building bespoke variants of popular Linux distributions."
+            />
+            {/* <div
+              className="rounded-lg w-80 py-2 px-6 flex justify-center items-center opacity-50"
+              style={{
+                border: "1px solid white",
+                background: "var(--ifm-background-color)",
+              }}
+            >
+              <div className="text-2xl">•••</div>
+            </div> */}
+          </div>
+        </div>
         <SupportedDistributions />
         <div className="flex flex-col items-center mt-12">
-          <h3 className="text-center">Feature Highlights</h3>
+          <h2 className="text-center">Feature Highlights</h2>
           <ul className="list-none">
-            <li>✅ Supports <strong>any EFI-compatible system and all models of Raspberry Pi</strong>.</li>
-            <li>✅ Supports <strong>streaming of updates</strong> without intermediate storage.</li>
-            <li>✅ Enables <a href="docs/advanced/signed-updates">cryptographically <strong>signed and verified updates</strong></a>.</li>
-            <li>✅ Integrates well with <a href="docs/advanced/device-management">existing device management solutions</a>.</li>
-            <li>✅ Provides interfaces to built your own update workflow upon.</li>
+            <li>
+              ✅ Supports{" "}
+              <strong>
+                any EFI-compatible system and all models of Raspberry Pi
+              </strong>
+              .
+            </li>
+            <li>
+              ✅ Supports <strong>streaming of updates</strong> without
+              intermediate storage.
+            </li>
+            <li>
+              ✅ Enables{" "}
+              <a href="docs/advanced/signed-updates">
+                cryptographically <strong>signed and verified updates</strong>
+              </a>
+              .
+            </li>
+            <li>
+              ✅ Integrates well with{" "}
+              <a href="docs/advanced/device-management">
+                existing device management solutions
+              </a>
+              .
+            </li>
+            <li>
+              ✅ Provides interfaces to built your own update workflow upon.
+            </li>
             <li>✅ Provides built-in state management inspired by Docker.</li>
           </ul>
         </div>
