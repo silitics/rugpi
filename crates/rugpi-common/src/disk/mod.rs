@@ -195,7 +195,7 @@ impl PartitionTable {
                 next_free = partition.start + partition.size;
             }
         }
-        if next_free > last_usable {
+        if next_free - NumBlocks::from_raw(1) > last_usable {
             bail!("partitions extend beyond usable range ({next_free} > {last_usable})");
         }
         Ok(())
