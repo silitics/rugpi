@@ -6,7 +6,7 @@
 </h1>
 <h4 align="center">
     Rugpi is an open-source platform empowering you to build
-    <br>innovative devices around customized Linux distributions.
+    <br>innovative devices around bespoke Linux distributions.
 </h4>
 <p align="center">
   <a href="https://github.com/silitics/rugpi/releases"><img alt="Rugpi Version Badge" src="https://img.shields.io/github/v/tag/silitics/rugpi?label=version"></a>

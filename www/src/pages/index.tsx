@@ -77,12 +77,13 @@ function HomepageHeader() {
     >
       <div className="container">
         <h1 className="hero__title">
-          Robust Building Blocks for Linux-based Devices
+          Robust Building Blocks for Embedded Linux Devices
         </h1>
         <p className="hero__subtitle">
           Rugpi is an open-source platform empowering you to build innovative
-          devices around customized Linux distributions.
+          devices around bespoke Linux distributions.
         </p>
+
         <p style={{ maxWidth: "80ch", margin: "1.5em auto" }}>
           Rugpi enables you to{" "}
           <strong>
