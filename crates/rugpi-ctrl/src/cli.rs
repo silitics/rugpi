@@ -142,6 +142,18 @@ pub fn main() -> Anyhow<()> {
                 Boolean::True => set_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
                 Boolean::False => clear_flag(DEFERRED_SPARE_REBOOT_FLAG)?,
             },
+            UnstableCommand::PrintSystemInfo => {
+                println!("Config:");
+                println!("{:#?}", system.config());
+                println!("Root:");
+                println!("{:#?}", system.root());
+                println!("Slots:");
+                for (_, slot) in system.slots().iter() {
+                    println!("{:#?}", slot)
+                }
+                println!("Boot Entries");
+                println!("{:#?}", system.boot_entries());
+            }
         },
     }
     Ok(())
@@ -200,7 +212,6 @@ fn install_update_stream(
     image: &String,
     check_hash: Option<ImageHash>,
 ) -> Anyhow<()> {
-    let default_partitions = system.default_partitions();
     let spare_partitions = system.spare_partitions();
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
@@ -400,5 +411,8 @@ pub enum SystemCommand {
 #[derive(Debug, Parser)]
 pub enum UnstableCommand {
     /// Set deferred spare reboot flag.
-    SetDeferredSpareReboot { value: Boolean },
+    SetDeferredSpareReboot {
+        value: Boolean,
+    },
+    PrintSystemInfo,
 }

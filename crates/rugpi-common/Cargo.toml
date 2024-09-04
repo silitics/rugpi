@@ -27,9 +27,15 @@ tracing.workspace = true
 uuid = "1.8.0"
 xscript.workspace = true
 xz2 = "0.1.7"
+indexmap = { version = "2.5.0", features = ["serde"] }
 
 [dev-dependencies]
 clap.workspace = true
+
+[features]
+compat-rauc = []
+compat-mender = []
+default = ["compat-rauc", "compat-mender"]
 
 [lints]
 workspace = true

@@ -1,6 +1,11 @@
 //! Utilities for the Grub boot flow.
 
-use std::{collections::HashMap, fs::File, io::Write, path::Path};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::Write,
+    path::Path,
+};
 
 use anyhow::bail;
 use sha1::{Digest, Sha1};
@@ -100,9 +105,7 @@ pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, In
 }
 
 pub fn read_default_partitions(config_partition: &ConfigPartition) -> Anyhow<PartitionSet> {
-    let bootpart_env = grub_envblk_decode(&std::fs::read_to_string(
-        &config_partition.path().join("rugpi/primary.grubenv"),
-    )?)?;
+    let bootpart_env = load_grub_env(config_partition.path().join("rugpi/primary.grubenv"))?;
     let Some(bootpart) = bootpart_env.get(RUGPI_BOOTPART) else {
         bail!("Invalid bootpart environment.");
     };
@@ -157,6 +160,28 @@ pub fn grub_write_defaults(config_path: &Path) -> Anyhow<()> {
         grub_envblk_encode(&boot_spare)?,
     )?;
     Ok(())
+}
+
+pub type GrubEnv = HashMap<String, String>;
+
+pub fn load_grub_env<P: AsRef<Path>>(path: P) -> Anyhow<GrubEnv> {
+    fn inner(path: &Path) -> Anyhow<GrubEnv> {
+        Ok(grub_envblk_decode(&fs::read_to_string(path)?)?)
+    }
+    inner(path.as_ref())
+}
+
+pub fn save_grub_env<P: AsRef<Path>>(path: P, env: &GrubEnv) -> Anyhow<()> {
+    fn inner(path: &Path, env: &GrubEnv) -> Anyhow<()> {
+        let mut tmp_path = path.to_path_buf();
+        tmp_path.as_mut_os_string().push(".tmp");
+        let mut tmp_file = fs::File::create(&tmp_path)?;
+        tmp_file.write_all(grub_envblk_encode(env)?.as_bytes())?;
+        tmp_file.sync_all()?;
+        fs::rename(&tmp_path, path)?;
+        Ok(())
+    }
+    inner(path.as_ref(), env)
 }
 
 pub fn commit(system: &System) -> Anyhow<()> {

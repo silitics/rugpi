@@ -212,14 +212,6 @@ pub fn is_block_device<P: AsRef<Path>>(path: P) -> io::Result<bool> {
     inner(path.as_ref())
 }
 
-/// Get the size of a block device.
-///
-/// Directly use [`BlockDevice::size`] instead.
-#[deprecated]
-pub fn get_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
-    BlockDevice::new(path)?.size()
-}
-
 /// Find the block device where a given path resides on.
 ///
 /// Returns [`None`] when the path is not on a block device.
