@@ -308,7 +308,7 @@ impl ConfigPartition {
 
     /// Ensure that the partition is writable while the closure runs.
     pub fn ensure_writable<U, F: FnOnce() -> U>(&self, closure: F) -> Anyhow<U> {
-        let _ = self.acquire_write_guard()?;
+        let _guard = self.acquire_write_guard()?;
         Ok(closure())
     }
 
