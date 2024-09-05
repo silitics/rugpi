@@ -1,4 +1,4 @@
-//! Compatibility layer for Mender.
+//! Mender-compatible boot flows.
 
 /*
     Grub Notes:

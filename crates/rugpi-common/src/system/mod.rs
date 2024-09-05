@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{anyhow, bail};
 use boot_entries::{BootEntries, BootEntry, BootEntryIdx};
-use boot_flow::BootFlow;
+use boot_flows::BootFlow;
 use config::{load_system_config, PartitionConfig, SystemConfig};
 use slots::{SlotKind, SystemSlots};
 use tracing::warn;
@@ -21,8 +21,7 @@ use crate::{
 };
 
 pub mod boot_entries;
-pub mod boot_flow;
-pub mod compat;
+pub mod boot_flows;
 pub mod config;
 pub mod slots;
 
@@ -187,7 +186,7 @@ impl System {
         if active_boot_entry.is_none() {
             warn!("unable to determine active boot entry");
         }
-        let boot_flow = boot_flow::from_config(
+        let boot_flow = boot_flows::from_config(
             system_config.boot_flow.as_ref(),
             &config_partition,
             &boot_entries,

@@ -70,7 +70,7 @@ pub enum BootFlowConfig {
     UBoot,
     /// RAUC-compatible Grub boot flow.
     #[cfg(feature = "compat-rauc")]
-    RaucGrub(super::compat::rauc::RaucGrubBootFlowConfig),
+    RaucGrub(super::boot_flows::rauc::RaucGrubBootFlowConfig),
     /// RAUC-compatible U-Boot boot flow.
     #[cfg(feature = "compat-rauc")]
     RaucUBoot,

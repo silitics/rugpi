@@ -1,3 +1,5 @@
+//! Boot flows for atomic system updates.
+
 use std::{collections::HashMap, fmt::Debug, fs::File, io::Write};
 
 use anyhow::bail;
@@ -23,6 +25,11 @@ use crate::{
     utils::ascii_numbers,
     Anyhow,
 };
+
+#[cfg(feature = "compat-mender")]
+pub(super) mod mender;
+#[cfg(feature = "compat-rauc")]
+pub(super) mod rauc;
 
 /// Implementation of a boot flow.
 pub trait BootFlow: Debug {

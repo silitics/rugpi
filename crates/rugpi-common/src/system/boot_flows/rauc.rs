@@ -1,4 +1,4 @@
-//! Compatibility layer for RAUC.
+//! RAUC-compatible boot flows.
 
 use std::path::{Path, PathBuf};
 
@@ -8,7 +8,7 @@ use crate::{
     boot::grub::{load_grub_env, save_grub_env, GrubEnv},
     system::{
         boot_entries::BootEntryIdx,
-        boot_flow::{BootEntryStatus, BootFlow},
+        boot_flows::{BootEntryStatus, BootFlow},
         System,
     },
     Anyhow,

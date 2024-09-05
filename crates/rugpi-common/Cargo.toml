@@ -36,6 +36,7 @@ clap.workspace = true
 [features]
 compat-rauc = []
 compat-mender = []
+nightly = []
 default = ["compat-rauc", "compat-mender"]
 
 [lints]

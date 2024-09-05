@@ -1,4 +1,5 @@
 //! Common functionality shared between Rugpi Bakery and Rugpi Ctrl.
+#![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]
 
 use std::{collections::HashMap, fs, io, path::Path};
 
