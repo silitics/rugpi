@@ -388,6 +388,9 @@ impl<R: BufRead> Skip<R> for SkipRead {
     fn skip(reader: &mut R, mut skip: u64) -> io::Result<()> {
         while skip > 0 {
             let buffer = reader.fill_buf()?;
+            if buffer.is_empty() {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
             let consume = u64::try_from(buffer.len()).expect("should fit").min(skip);
             reader.consume(usize::try_from(consume).expect("must fit"));
             skip -= consume;
