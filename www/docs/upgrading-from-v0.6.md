@@ -21,6 +21,7 @@ Here are the changes you need to make compared to version 0.6:
 1. The image option `boot_flow` has been superseded by the `target` option. To use the new `target` option make the following changes depending your previous `boot_flow`:
     - `boot_flow = "u-boot"` ⇒ `target = "rpi-uboot"`
     - `boot_flow = "tryboot"` ⇒ `target = "rpi-tryboot"`
+    - no `boot_flow` option ⇒ `target = "rpi-tryboot"`
 2. The `include_firmware` option has been replaced with the `core/rpi-include-firmware` recipe. Please use that recipe and remove the old option.
 3. The `architecture` option is no longer optional. Set it to `arm64` for the previous default.
 4. The following core recipes have been renamed:
