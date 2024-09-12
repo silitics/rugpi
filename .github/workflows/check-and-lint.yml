@@ -16,7 +16,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v1
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features
+        run: cargo +nightly clippy --all-targets --all-features
       
       - name: Install Nightly Toolchain
         uses: dtolnay/rust-toolchain@nightly
