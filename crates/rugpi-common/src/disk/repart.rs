@@ -268,3 +268,95 @@ pub fn generic_efi_partition_schema(system_size: NumBytes) -> PartitionSchema {
         ],
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{generic_efi_partition_schema, generic_mbr_partition_schema, repart};
+    use crate::disk::{
+        gpt::{gpt_types, Guid},
+        mbr::{mbr_types, MbrId},
+        parse_size, DiskId, NumBlocks, Partition, PartitionTable,
+    };
+
+    #[test]
+    fn test_repart_mbr() {
+        let mut old_table = PartitionTable::new(
+            DiskId::Mbr(MbrId::new(0x123456)),
+            NumBlocks::from_raw(6 * 1024 * 1024 * 1024),
+        );
+        for (number, (start, size)) in [(2048, 524288), (526336, 262144), (788480, 26144)]
+            .into_iter()
+            .enumerate()
+        {
+            old_table.partitions.push(Partition {
+                number: (1 + number).try_into().unwrap(),
+                start: start.into(),
+                size: size.into(),
+                ty: mbr_types::FAT32_LBA,
+                name: None,
+                gpt_id: None,
+            })
+        }
+        old_table.partitions.push(Partition {
+            number: 4,
+            start: 1050624.into(),
+            size: old_table.disk_size - NumBlocks::from_raw(1050624),
+            ty: mbr_types::EXTENDED,
+            name: None,
+            gpt_id: None,
+        });
+        old_table.partitions.push(Partition {
+            number: 5,
+            start: 1052672.into(),
+            size: 2016836.into(),
+            ty: mbr_types::LINUX,
+            name: None,
+            gpt_id: None,
+        });
+        old_table.validate().unwrap();
+        repart(
+            &old_table,
+            &generic_mbr_partition_schema(parse_size("4G").unwrap()),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_repart_gpt() {
+        let mut old_table = PartitionTable::new(
+            DiskId::Gpt(Guid::from_random_bytes([0x42; 16])),
+            NumBlocks::from_raw(6 * 1024 * 1024 * 1024),
+        );
+        for (number, (start, size)) in [(2048, 524288), (526336, 262144), (788480, 26144)]
+            .into_iter()
+            .enumerate()
+        {
+            old_table.partitions.push(Partition {
+                number: (1 + number).try_into().unwrap(),
+                start: start.into(),
+                size: size.into(),
+                ty: if number == 0 {
+                    gpt_types::EFI
+                } else {
+                    gpt_types::LINUX
+                },
+                name: None,
+                gpt_id: None,
+            })
+        }
+        old_table.partitions.push(Partition {
+            number: 4,
+            start: 1050624.into(),
+            size: 2016836.into(),
+            ty: gpt_types::LINUX,
+            name: None,
+            gpt_id: None,
+        });
+        old_table.validate().unwrap();
+        repart(
+            &old_table,
+            &generic_efi_partition_schema(parse_size("4G").unwrap()),
+        )
+        .unwrap();
+    }
+}
