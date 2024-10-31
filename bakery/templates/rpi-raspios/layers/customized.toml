@@ -1,7 +1,7 @@
 # Use Raspberry Pi OS Bookworm as a basis for the custom image.
 #
 # Note that you can also declare your own base layer(s). For examples, see:
-# https://github.com/silitics/rugpi/tree/main/repositories/core/layers
+# https://github.com/silitics/rugpi/tree/main/bakery/repositories/core/layers
 parent = "core/raspios-bookworm"
 
 # Include recipes for the custom image.
