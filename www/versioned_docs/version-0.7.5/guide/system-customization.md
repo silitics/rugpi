@@ -135,6 +135,10 @@ When running steps, the following environment variables are set.
 - `RECIPE_DIR`: The directory of the recipe which is applied.
 - `RECIPE_STEP_PATH`: The path of the step being executed.
 
+### Boot Partition
+
+Rugpi Bakery does not mount the boot partition to `/boot` or `/boot/firmware`. To put files on the boot partition, they need to be moved/copied to `${RUGPI_BUNDLE_DIR}/roots/boot` by a recipe.
+
 ## Repositories
 
 *Repositories* provide additional recipes and layers.
