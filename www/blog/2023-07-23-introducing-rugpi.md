@@ -9,6 +9,8 @@ We are thrilled to introduce _Rugpi_, the first open-source platform that empowe
 At its core, Rugpi is designed to streamline the process of building commercial-grade, customized variants of [Raspberry Pi OS](https://www.raspberrypi.com/software/) for your projects.
 Developed out of the need for a reliable platform for our customers, Rugpi boasts three core features:
 
+<!-- truncate -->
+
 #### (1) Modern Build Workflow with Rugpi Bakery
 
 Instead of a manual golden-image workflow, Rugpi comes with a Docker-based toolchain, coined _Rugpi Bakery_, for building customized images based on a set of _recipes_.
