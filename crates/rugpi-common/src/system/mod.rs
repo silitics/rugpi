@@ -145,7 +145,7 @@ impl System {
             bail!("config partition cannot currently be disabled");
         };
         let slots = SystemSlots::from_config(&system_root, system_config.slots.as_ref())?;
-        let boot_entries = BootEntries::from_config(&slots, system_config.boot_entries.as_ref())?;
+        let boot_entries = BootEntries::from_config(&slots, system_config.boot_groups.as_ref())?;
         // Mark boot entries and slots active.
         let mut active_boot_entry = None;
         for (idx, entry) in boot_entries.iter() {

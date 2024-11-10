@@ -30,7 +30,7 @@ impl SystemSlots {
         match config {
             Some(config) => {
                 for (name, config) in config {
-                    let SlotConfigKind::Raw(raw) = &config.kind;
+                    let SlotConfigKind::Block(raw) = &config.kind;
                     let device = if let Some(device) = &raw.device {
                         BlockDevice::new(device)?
                     } else if let Some(partition) = &raw.partition {

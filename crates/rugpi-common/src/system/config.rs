@@ -34,7 +34,7 @@ pub struct SystemConfig {
     /// Configuration of the system's update slots.
     pub slots: Option<SlotsConfig>,
     /// Configuration of the system's boot entries.
-    pub boot_entries: Option<BootEntriesConfig>,
+    pub boot_groups: Option<BootEntriesConfig>,
 }
 
 /// Configuration of the system's update slots.
@@ -101,7 +101,7 @@ pub struct SlotConfig {
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum SlotConfigKind {
     /// Raw slot.
-    Raw(RawSlotConfig),
+    Block(BlockSlotConfig),
 }
 
 /// Raw slot configuration.
@@ -109,7 +109,7 @@ pub enum SlotConfigKind {
 /// A raw slot is simply a block device where a any image can be installed.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub struct RawSlotConfig {
+pub struct BlockSlotConfig {
     /// Path to a block device.
     pub device: Option<String>,
     /// Partition number of the root device's parent.
@@ -147,30 +147,30 @@ mod tests {
             type = "u-boot"
 
             [slots.boot-a]
-            type = "raw"
+            type = "block"
             partition = 2
 
             [slots.boot-b]
-            type = "raw"
+            type = "block"
             device = "/dev/sda3"
 
             [slots.system-a]
-            type = "raw"
+            type = "block"
             device = "/dev/sda4"
 
             [slots.system-b]
-            type = "raw"
+            type = "block"
             device = "/dev/sda5"
 
             [slots.app-config]
-            type = "raw"
+            type = "block"
             device = "/dev/sda6"
             protected = true
 
-            [boot-entries.a]
+            [boot-groups.a]
             slots = { boot = "boot-a", system = "system-a" }
 
-            [boot-entries.b]
+            [boot-groups.b]
             slots = { boot = "boot-b", system = "system-b" }
         "#})
         .unwrap();
