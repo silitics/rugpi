@@ -7,7 +7,7 @@ use anyhow::bail;
 use indexmap::IndexMap;
 
 use super::{
-    config::BootEntriesConfig,
+    config::BootGroupsConfig,
     slots::{SlotIdx, SystemSlots},
 };
 use crate::Anyhow;
@@ -25,7 +25,7 @@ pub struct BootEntries {
 }
 
 impl BootEntries {
-    pub fn from_config(slots: &SystemSlots, config: Option<&BootEntriesConfig>) -> Anyhow<Self> {
+    pub fn from_config(slots: &SystemSlots, config: Option<&BootGroupsConfig>) -> Anyhow<Self> {
         let mut entries = Vec::new();
         match config {
             Some(config) => {

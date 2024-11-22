@@ -31,6 +31,7 @@ partition = 7
 
 Setting `disabled = true` allows the config and data partitions to be disabled individually.
 The config partition is required for most bootloader integrations and for bootstrapping, while the data partition is required for state management.
+If the partitions are not managed and mounted by Rugpi itself, their path can be specified via the `path` setting.
 
 ## Slots and Boot Groups
 
@@ -87,5 +88,5 @@ Boot flows are configured via the `boot-flow` section, with the `type` setting i
 Currently, Rugpi supports the following boot flows:
 
 - `tryboot`: Uses Raspberry Pi's `tryboot` mechanism (A/B setups only).
-- `u-boot`: Uses an U-Boot environment to switch between partitions (A/B setups only).
-- `grub-efi`: Uses a Grub environment to switch between partitions (A/B setups only).
+- `u-boot`: Uses an U-Boot environment file to switch between partitions (A/B setups only).
+- `grub-efi`: Uses a Grub environment file to switch between partitions (A/B setups only).

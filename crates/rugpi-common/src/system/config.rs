@@ -2,6 +2,7 @@
 
 use std::{fs, path::Path};
 
+use anyhow::Context;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,10 @@ pub const SYSTEM_CONFIG_PATH: &str = "/etc/rugpi/system.toml";
 /// Load the system configuration.
 pub fn load_system_config() -> Anyhow<SystemConfig> {
     Ok(if Path::new(SYSTEM_CONFIG_PATH).exists() {
-        toml::from_str(&fs::read_to_string(SYSTEM_CONFIG_PATH)?)?
+        toml::from_str(
+            &fs::read_to_string(SYSTEM_CONFIG_PATH).context("reading system configuration file")?,
+        )
+        .context("parsing system configuration file")?
     } else {
         SystemConfig::default()
     })
@@ -34,14 +38,14 @@ pub struct SystemConfig {
     /// Configuration of the system's update slots.
     pub slots: Option<SlotsConfig>,
     /// Configuration of the system's boot entries.
-    pub boot_groups: Option<BootEntriesConfig>,
+    pub boot_groups: Option<BootGroupsConfig>,
 }
 
 /// Configuration of the system's update slots.
 pub type SlotsConfig = IndexMap<String, SlotConfig>;
 
-/// Configuration of the system's boot entries.
-pub type BootEntriesConfig = IndexMap<String, BootEntryConfig>;
+/// Configuration of the system's boot groups.
+pub type BootGroupsConfig = IndexMap<String, BootGroupConfig>;
 
 /// Partition configuration.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -52,7 +56,7 @@ pub struct PartitionConfig {
     pub disabled: bool,
     /// Path to the partition block device.
     pub device: Option<String>,
-    /// Partition number of the root device's parent.
+    /// Partition number of the root device.
     pub partition: Option<u32>,
     /// Path where the partition should be mounted.
     pub path: Option<String>,
@@ -68,18 +72,6 @@ pub enum BootFlowConfig {
     GrubEfi,
     /// Rugpi-native U-Boot boot flow.
     UBoot,
-    /// RAUC-compatible Grub boot flow.
-    #[cfg(feature = "compat-rauc")]
-    RaucGrub(super::boot_flows::rauc::RaucGrubBootFlowConfig),
-    /// RAUC-compatible U-Boot boot flow.
-    #[cfg(feature = "compat-rauc")]
-    RaucUBoot,
-    /// Mender-compatible Grub boot flow.
-    #[cfg(feature = "compat-mender")]
-    MenderGrub,
-    /// Mender-compatible U-Boot boot flow.
-    #[cfg(feature = "compat-mender")]
-    MenderUBoot,
 }
 
 /// Slot configuration.
@@ -100,13 +92,13 @@ pub struct SlotConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum SlotConfigKind {
-    /// Raw slot.
+    /// Block slot.
     Block(BlockSlotConfig),
 }
 
-/// Raw slot configuration.
+/// Block slot configuration.
 ///
-/// A raw slot is simply a block device where a any image can be installed.
+/// A block slot is simply a block device where a any image can be installed.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct BlockSlotConfig {
@@ -116,11 +108,11 @@ pub struct BlockSlotConfig {
     pub partition: Option<u32>,
 }
 
-/// Boot entry configuration.
+/// Boot group configuration.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub struct BootEntryConfig {
-    /// Slots used by the boot entry.
+pub struct BootGroupConfig {
+    /// Slots used by the boot group.
     ///
     /// The map introduces aliases for slots.
     pub slots: IndexMap<String, String>,
