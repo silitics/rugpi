@@ -67,11 +67,10 @@ fn init() -> Anyhow<()> {
     mount_essential_filesystems()?;
 
     let system_config = load_system_config()?;
-    let system_device = find_system_device();
-    let Some(root) = system_device
-        .as_ref()
-        .and_then(SystemRoot::from_system_device)
-    else {
+    let Some(system_device) = find_system_device() else {
+        bail!("unable to determine system device")
+    };
+    let Some(root) = SystemRoot::from_system_device(&system_device) else {
         bail!("unable to determine system root");
     };
 
@@ -145,7 +144,7 @@ fn init() -> Anyhow<()> {
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
-    run!([MOUNT, "-o", "ro", root.device.path(), MOUNT_POINT_SYSTEM])?;
+    run!([MOUNT, "-o", "ro", system_device.path(), MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([
         MOUNT,
