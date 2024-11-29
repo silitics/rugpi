@@ -389,7 +389,7 @@ pub enum UpdateCommand {
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,
-        /// Use the experimental streaming update mechanism.
+        /// Use the streaming update mechanism (deprecated).
         #[clap(long)]
         stream: bool,
         #[clap(long)]
