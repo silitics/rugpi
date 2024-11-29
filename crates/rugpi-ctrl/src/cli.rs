@@ -14,6 +14,7 @@ use rugpi_common::{
     stream_hasher::StreamHasher,
     system::{
         boot_entries::{BootEntry, BootEntryIdx},
+        info::SystemInfo,
         slots::SlotKind,
         System,
     },
@@ -142,17 +143,22 @@ pub fn main() -> Anyhow<()> {
             }
         }
         Command::System(sys_cmd) => match sys_cmd {
-            SystemCommand::Info => {
-                println!("Boot Flow: {}", system.boot_flow().name());
-                let hot = system.active_boot_entry().unwrap();
-                let default = system.boot_flow().get_default(&system)?;
-                let spare = system.spare_entry()?.unwrap().0;
-                let cold = if hot == default { spare } else { default };
-                let entries = system.boot_entries();
-                println!("Hot: {}", entries[hot].name());
-                println!("Cold: {}", entries[cold].name());
-                println!("Default: {}", entries[default].name());
-                println!("Spare: {}", entries[spare].name());
+            SystemCommand::Info { json } => {
+                if *json {
+                    let info = SystemInfo::from(&system);
+                    serde_json::to_writer_pretty(std::io::stdout(), &info)?;
+                } else {
+                    println!("Boot Flow: {}", system.boot_flow().name());
+                    let hot = system.active_boot_entry().unwrap();
+                    let default = system.boot_flow().get_default(&system)?;
+                    let spare = system.spare_entry()?.unwrap().0;
+                    let cold = if hot == default { spare } else { default };
+                    let entries = system.boot_entries();
+                    println!("Hot: {}", entries[hot].name());
+                    println!("Cold: {}", entries[cold].name());
+                    println!("Default: {}", entries[default].name());
+                    println!("Spare: {}", entries[spare].name());
+                }
             }
             SystemCommand::Commit => {
                 if system.needs_commit()? {
@@ -397,7 +403,11 @@ pub enum UpdateRebootType {
 
 #[derive(Debug, Parser)]
 pub enum SystemCommand {
-    Info,
+    Info {
+        /// Output system information as JSON.
+        #[clap(long)]
+        json: bool,
+    },
     /// Make the hot system the default.
     Commit,
     /// Reboot the system.

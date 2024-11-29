@@ -12,6 +12,7 @@ use crate::{disk::blkdev::BlockDevice, Anyhow};
 pub mod boot_entries;
 pub mod boot_flows;
 pub mod config;
+pub mod info;
 pub mod partitions;
 pub mod paths;
 pub mod root;
