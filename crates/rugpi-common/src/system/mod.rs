@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail};
-use boot_entries::{BootEntries, BootEntry, BootEntryIdx};
 use boot_flows::BootFlow;
+use boot_groups::{BootGroup, BootGroupIdx, BootGroups};
 use config::{load_system_config, SystemConfig};
 use partitions::ConfigPartition;
 use root::{find_system_device, SystemRoot};
@@ -9,8 +9,8 @@ use tracing::warn;
 
 use crate::{disk::blkdev::BlockDevice, Anyhow};
 
-pub mod boot_entries;
 pub mod boot_flows;
+pub mod boot_groups;
 pub mod config;
 pub mod info;
 pub mod partitions;
@@ -24,8 +24,8 @@ pub struct System {
     pub root: Option<SystemRoot>,
 
     slots: SystemSlots,
-    boot_entries: BootEntries,
-    active_boot_entry: Option<BootEntryIdx>,
+    boot_entries: BootGroups,
+    active_boot_entry: Option<BootGroupIdx>,
     boot_flow: Box<dyn BootFlow>,
     config_partition: Option<ConfigPartition>,
 }
@@ -43,7 +43,7 @@ impl System {
             bail!("config partition cannot currently be disabled");
         };
         let slots = SystemSlots::from_config(system_root.as_ref(), system_config.slots.as_ref())?;
-        let boot_entries = BootEntries::from_config(&slots, system_config.boot_groups.as_ref())?;
+        let boot_entries = BootGroups::from_config(&slots, system_config.boot_groups.as_ref())?;
         // Mark boot entries and slots active.
         let mut active_boot_entry = None;
         for (idx, entry) in boot_entries.iter() {
@@ -113,16 +113,16 @@ impl System {
         &self.slots
     }
 
-    pub fn boot_entries(&self) -> &BootEntries {
+    pub fn boot_entries(&self) -> &BootGroups {
         &self.boot_entries
     }
 
-    pub fn active_boot_entry(&self) -> Option<BootEntryIdx> {
+    pub fn active_boot_entry(&self) -> Option<BootGroupIdx> {
         self.active_boot_entry
     }
 
     /// First entry that is not the default.
-    pub fn spare_entry(&self) -> Anyhow<Option<(BootEntryIdx, &BootEntry)>> {
+    pub fn spare_entry(&self) -> Anyhow<Option<(BootGroupIdx, &BootGroup)>> {
         let default = self.boot_flow.get_default(self)?;
         Ok(self.boot_entries().iter().find(|(idx, _)| *idx != default))
     }

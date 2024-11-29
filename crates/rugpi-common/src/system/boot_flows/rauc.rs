@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     boot::grub::{load_grub_env, save_grub_env, GrubEnv},
     system::{
-        boot_entries::BootEntryIdx,
-        boot_flows::{BootEntryStatus, BootFlow},
+        boot_flows::{BootFlow, BootGroupStatus},
+        boot_groups::BootGroupIdx,
         System,
     },
     Anyhow,
@@ -56,7 +56,7 @@ impl RaucGrubBootFlow {
 
 #[allow(unused_variables)]
 impl BootFlow for RaucGrubBootFlow {
-    fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         // RAUC's Grub integration does not allow setting oneshot entries. We make the
         // the requested entry the primary. If anything goes wrong, the system will revert
         // to the current system anyway as it is still in the boot order.
@@ -67,23 +67,23 @@ impl BootFlow for RaucGrubBootFlow {
         todo!()
     }
 
-    fn get_default(&self, system: &System) -> Anyhow<BootEntryIdx> {
+    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx> {
         todo!()
     }
 
-    fn remaining_attempts(&self, system: &System, entry: BootEntryIdx) -> Anyhow<Option<u64>> {
+    fn remaining_attempts(&self, system: &System, entry: BootGroupIdx) -> Anyhow<Option<u64>> {
         todo!()
     }
 
-    fn get_status(&self, system: &System, entry: BootEntryIdx) -> Anyhow<BootEntryStatus> {
+    fn get_status(&self, system: &System, entry: BootGroupIdx) -> Anyhow<BootGroupStatus> {
         todo!()
     }
 
-    fn mark_good(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn mark_good(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         todo!()
     }
 
-    fn mark_bad(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn mark_bad(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         todo!()
     }
 

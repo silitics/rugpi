@@ -12,90 +12,90 @@ use super::{
 };
 use crate::Anyhow;
 
-/// Unique index of a boot entry of a system.
+/// Unique index of a boot group of a system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BootEntryIdx {
-    /// Index into the boot entry vector.
+pub struct BootGroupIdx {
+    /// Index into the boot group vector.
     idx: usize,
 }
 
 #[derive(Debug)]
-pub struct BootEntries {
-    entries: Vec<BootEntry>,
+pub struct BootGroups {
+    groups: Vec<BootGroup>,
 }
 
-impl BootEntries {
+impl BootGroups {
     pub fn from_config(slots: &SystemSlots, config: Option<&BootGroupsConfig>) -> Anyhow<Self> {
-        let mut entries = Vec::new();
+        let mut groups = Vec::new();
         match config {
             Some(config) => {
-                for (entry_name, entry_config) in config {
+                for (group_name, group_config) in config {
                     let mut map = IndexMap::new();
-                    for (alias, name) in &entry_config.slots {
+                    for (alias, name) in &group_config.slots {
                         let Some((idx, _)) = slots.find_by_name(name) else {
                             bail!("slot {name} does not exist");
                         };
                         map.insert(alias.to_owned(), idx);
                     }
-                    entries.push(BootEntry {
-                        name: entry_name.to_owned(),
+                    groups.push(BootGroup {
+                        name: group_name.to_owned(),
                         slots: map,
                         active: AtomicBool::new(false),
                     })
                 }
             }
             None => {
-                // Create Rugpi default boot entries.
-                for (entry_name, entry_slots) in [
+                // Create Rugpi default boot groups.
+                for (group_name, group_slots) in [
                     ("a", [("boot", "boot-a"), ("system", "system-a")]),
                     ("b", [("boot", "boot-b"), ("system", "system-b")]),
                 ] {
                     let mut map = IndexMap::new();
-                    for (alias, name) in entry_slots {
+                    for (alias, name) in group_slots {
                         let Some((idx, _)) = slots.find_by_name(name) else {
                             bail!("slot {name} does not exist");
                         };
                         map.insert(alias.to_owned(), idx);
                     }
-                    entries.push(BootEntry {
-                        name: entry_name.to_owned(),
+                    groups.push(BootGroup {
+                        name: group_name.to_owned(),
                         slots: map,
                         active: AtomicBool::new(false),
                     })
                 }
             }
         }
-        Ok(Self { entries })
+        Ok(Self { groups })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (BootEntryIdx, &BootEntry)> {
-        self.entries
+    pub fn iter(&self) -> impl Iterator<Item = (BootGroupIdx, &BootGroup)> {
+        self.groups
             .iter()
             .enumerate()
-            .map(|(idx, entry)| (BootEntryIdx { idx }, entry))
+            .map(|(idx, group)| (BootGroupIdx { idx }, group))
     }
 
-    pub fn find_by_name(&self, name: &str) -> Option<(BootEntryIdx, &BootEntry)> {
-        self.iter().find(|(_, entry)| entry.name == name)
+    pub fn find_by_name(&self, name: &str) -> Option<(BootGroupIdx, &BootGroup)> {
+        self.iter().find(|(_, group)| group.name == name)
     }
 }
 
-impl Index<BootEntryIdx> for BootEntries {
-    type Output = BootEntry;
+impl Index<BootGroupIdx> for BootGroups {
+    type Output = BootGroup;
 
-    fn index(&self, index: BootEntryIdx) -> &Self::Output {
-        &self.entries[index.idx]
+    fn index(&self, index: BootGroupIdx) -> &Self::Output {
+        &self.groups[index.idx]
     }
 }
 
 #[derive(Debug)]
-pub struct BootEntry {
+pub struct BootGroup {
     name: String,
     slots: IndexMap<String, SlotIdx>,
     active: AtomicBool,
 }
 
-impl BootEntry {
+impl BootGroup {
     pub fn name(&self) -> &str {
         &self.name
     }

@@ -3,10 +3,11 @@
 use std::{collections::HashMap, fmt::Debug, fs::File, io::Write};
 
 use anyhow::bail;
+use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
 
 use super::{
-    boot_entries::{BootEntries, BootEntryIdx},
+    boot_groups::{BootGroupIdx, BootGroups},
     config::BootFlowConfig,
     slots::SlotIdx,
     ConfigPartition, System,
@@ -33,70 +34,77 @@ pub(super) mod rauc;
 
 /// Implementation of a boot flow.
 pub trait BootFlow: Debug {
+    /// Name of the boot flow.
     fn name(&self) -> &str;
 
-    /// Set the entry to try on the next boot.
+    /// Set the boot group to try on the next boot.
     ///
     /// If booting fails, the bootloader should fallback to the previous default.
     ///
-    /// Note that this function may change the default entry.
-    fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()>;
+    /// Note that this function may change the default boot group.
+    fn set_try_next(&self, system: &System, group: BootGroupIdx) -> Anyhow<()>;
 
-    /// Get the default entry.
-    fn get_default(&self, system: &System) -> Anyhow<BootEntryIdx>;
+    /// Get the default boot group.
+    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx>;
 
-    /// Make the active entry the default.
+    /// Make the active boot group the default.
     fn commit(&self, system: &System) -> Anyhow<()>;
 
-    /// Called prior to installing an update for the given entry.
+    /// Called prior to installing an update to the given boot group.
     #[allow(unused_variables)]
-    fn pre_install(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn pre_install(&self, system: &System, group: BootGroupIdx) -> Anyhow<()> {
         Ok(())
     }
 
-    /// Called after installing an update for the given entry.
+    /// Called after installing an update to the given boot group.
     #[allow(unused_variables)]
-    fn post_install(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn post_install(&self, system: &System, group: BootGroupIdx) -> Anyhow<()> {
         Ok(())
     }
 
-    /// Get the number of remaining attempts for the given entry.
+    /// Get the number of remaining attempts for the given boot group.
     ///
     /// Returns [`None`] in case there is an unlimited number of attempts.
     #[allow(unused_variables)]
-    fn remaining_attempts(&self, system: &System, entry: BootEntryIdx) -> Anyhow<Option<u64>> {
+    fn remaining_attempts(&self, system: &System, group: BootGroupIdx) -> Anyhow<Option<u64>> {
         Ok(None)
     }
 
-    /// Get the status of the boot entry.
+    /// Get the status of the boot group.
     #[allow(unused_variables)]
-    fn get_status(&self, system: &System, entry: BootEntryIdx) -> Anyhow<BootEntryStatus> {
-        Ok(BootEntryStatus::Unknown)
+    fn get_status(&self, system: &System, group: BootGroupIdx) -> Anyhow<BootGroupStatus> {
+        Ok(BootGroupStatus::Unknown)
     }
 
-    /// Mark an entry as good.
+    /// Mark a boot group as good.
     #[allow(unused_variables)]
-    fn mark_good(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn mark_good(&self, system: &System, group: BootGroupIdx) -> Anyhow<()> {
         Ok(())
     }
 
-    /// Mark an entry as bad.
+    /// Mark a boot group as bad.
     #[allow(unused_variables)]
-    fn mark_bad(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn mark_bad(&self, system: &System, group: BootGroupIdx) -> Anyhow<()> {
         Ok(())
     }
 }
 
-pub enum BootEntryStatus {
+/// Boot group status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+pub enum BootGroupStatus {
+    /// Status is unknown.
+    #[default]
     Unknown,
+    /// Boot group is known to be good (bootable and working).
     Good,
+    /// Boot group is known to be bad (should not be booted).
     Bad,
 }
 
 pub fn from_config(
     config: Option<&BootFlowConfig>,
     config_partition: &ConfigPartition,
-    boot_entries: &BootEntries,
+    boot_entries: &BootGroups,
 ) -> Anyhow<Box<dyn BootFlow>> {
     assert!(config.is_none(), "config not supported yet");
     let mut entries = boot_entries.iter();
@@ -148,8 +156,8 @@ pub fn from_config(
 
 #[derive(Debug)]
 struct RugpiBootFlow {
-    entry_a: BootEntryIdx,
-    entry_b: BootEntryIdx,
+    entry_a: BootGroupIdx,
+    entry_b: BootGroupIdx,
     boot_a: SlotIdx,
     boot_b: SlotIdx,
     system_a: SlotIdx,
@@ -162,7 +170,7 @@ struct Tryboot {
 }
 
 impl BootFlow for Tryboot {
-    fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         if entry != self.get_default(system)? {
             tryboot::set_spare_flag()?;
         } else {
@@ -197,7 +205,7 @@ impl BootFlow for Tryboot {
         })?
     }
 
-    fn get_default(&self, system: &System) -> Anyhow<BootEntryIdx> {
+    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx> {
         let autoboot_txt = std::fs::read_to_string(
             system
                 .require_config_partition()?
@@ -221,7 +229,7 @@ impl BootFlow for Tryboot {
         bail!("unable to determine partition set from `autoboot.txt`");
     }
 
-    fn post_install(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn post_install(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         tryboot_uboot_post_install(&self.inner, system, entry)
     }
 
@@ -236,7 +244,7 @@ struct UBoot {
 }
 
 impl BootFlow for UBoot {
-    fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         if entry != self.get_default(system)? {
             uboot::set_spare_flag(system)?;
         } else {
@@ -267,7 +275,7 @@ impl BootFlow for UBoot {
         })?
     }
 
-    fn get_default(&self, system: &System) -> Anyhow<BootEntryIdx> {
+    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx> {
         let config_partition = system.require_config_partition()?;
         let bootpart_env = UBootEnv::load(config_partition.path().join("bootpart.default.env"))?;
         let Some(bootpart) = bootpart_env.get("bootpart") else {
@@ -282,7 +290,7 @@ impl BootFlow for UBoot {
         }
     }
 
-    fn post_install(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn post_install(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         tryboot_uboot_post_install(&self.inner, system, entry)
     }
 
@@ -294,7 +302,7 @@ impl BootFlow for UBoot {
 fn tryboot_uboot_post_install(
     inner: &RugpiBootFlow,
     system: &System,
-    entry: BootEntryIdx,
+    entry: BootGroupIdx,
 ) -> Anyhow<()> {
     let temp_dir_spare = tempdir()?;
     let temp_dir_spare = temp_dir_spare.path();
@@ -335,7 +343,7 @@ struct GrubEfi {
 }
 
 impl BootFlow for GrubEfi {
-    fn set_try_next(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         if entry != self.get_default(system)? {
             grub::set_spare_flag(system)?;
         } else {
@@ -344,7 +352,7 @@ impl BootFlow for GrubEfi {
         Ok(())
     }
 
-    fn get_default(&self, system: &System) -> Anyhow<BootEntryIdx> {
+    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx> {
         let config_partition = system.require_config_partition()?;
         let bootpart_env = load_grub_env(config_partition.path().join("rugpi/primary.grubenv"))?;
         let Some(bootpart) = bootpart_env.get(RUGPI_BOOTPART) else {
@@ -384,7 +392,7 @@ impl BootFlow for GrubEfi {
         })?
     }
 
-    fn post_install(&self, system: &System, entry: BootEntryIdx) -> Anyhow<()> {
+    fn post_install(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
         let temp_dir_spare = tempdir()?;
         let temp_dir_spare = temp_dir_spare.path();
         let (boot_slot, system_slot) = if entry == self.inner.entry_a {

@@ -13,7 +13,7 @@ use rugpi_common::{
     maybe_compressed::MaybeCompressed,
     stream_hasher::StreamHasher,
     system::{
-        boot_entries::{BootEntry, BootEntryIdx},
+        boot_groups::{BootGroup, BootGroupIdx},
         info::SystemInfo,
         slots::SlotKind,
         System,
@@ -249,8 +249,8 @@ fn install_update_stream(
     system: &System,
     image: &String,
     check_hash: Option<ImageHash>,
-    entry_idx: BootEntryIdx,
-    entry: &BootEntry,
+    entry_idx: BootGroupIdx,
+    entry: &BootGroup,
 ) -> Anyhow<()> {
     system.boot_flow().pre_install(system, entry_idx)?;
 
