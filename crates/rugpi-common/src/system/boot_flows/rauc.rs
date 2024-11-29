@@ -31,6 +31,7 @@ pub struct RaucGrubBootFlow {
 
 impl RaucGrubBootFlow {
     /// Create boot flow from the given configuration.
+    #[allow(dead_code)]
     pub fn from_config(config: &RaucGrubBootFlowConfig) -> Anyhow<Self> {
         let grub_env_path = config
             .grub_env

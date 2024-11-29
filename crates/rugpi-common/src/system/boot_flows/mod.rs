@@ -307,16 +307,16 @@ fn tryboot_uboot_post_install(
     };
     let boot_slot = &system.slots()[boot_slot];
     let _system_slot = &system.slots()[system_slot];
-    let SlotKind::Raw(boot_raw) = boot_slot.kind();
+    let SlotKind::Block(boot_raw) = boot_slot.kind();
     let _mounted_boot = Mounted::mount(boot_raw.device(), temp_dir_spare)?;
-    let Some(parent) = &system.root.parent else {
+    let Some(root) = &system.root else {
         bail!("no parent block device");
     };
-    let Some(table) = &system.root.table else {
+    let Some(table) = &root.table else {
         bail!("no partition table");
     };
     let root = if table.is_mbr() {
-        let disk_id = get_disk_id(parent)?;
+        let disk_id = get_disk_id(&root.device)?;
         if entry == inner.entry_a {
             format!("PARTUUID={disk_id}-05")
         } else {
@@ -396,9 +396,9 @@ impl BootFlow for GrubEfi {
         };
         let boot_slot = &system.slots()[boot_slot];
         let _system_slot = &system.slots()[system_slot];
-        let SlotKind::Raw(boot_raw) = boot_slot.kind();
+        let SlotKind::Block(boot_raw) = boot_slot.kind();
         let _mounted_boot = Mounted::mount(boot_raw.device(), temp_dir_spare)?;
-        let Some(table) = &system.root.table else {
+        let Some(table) = system.root.as_ref().and_then(|root| root.table.as_ref()) else {
             bail!("no partition table");
         };
         let root_part = if entry == self.inner.entry_a {

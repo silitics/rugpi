@@ -12,12 +12,13 @@ use rugpi_common::{
         PartitionTable,
     },
     partitions::mkfs_ext4,
-    paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
     system::{
         config::{load_system_config, PartitionConfig},
-        detect_config_partition, detect_data_partition,
+        partitions::{resolve_config_partition, resolve_data_partition},
+        paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
+        root::{find_system_device, SystemRoot},
         slots::SlotKind,
-        System, SystemRoot,
+        System,
     },
     Anyhow,
 };
@@ -66,7 +67,13 @@ fn init() -> Anyhow<()> {
     mount_essential_filesystems()?;
 
     let system_config = load_system_config()?;
-    let root = SystemRoot::detect();
+    let system_device = find_system_device();
+    let Some(root) = system_device
+        .as_ref()
+        .and_then(SystemRoot::from_system_device)
+    else {
+        bail!("unable to determine system root");
+    };
 
     let has_data_partition = if let Some(device) = &system_config.data_partition.device {
         if system_config.data_partition.partition.is_some() {
@@ -88,7 +95,7 @@ fn init() -> Anyhow<()> {
                 }
             }
         };
-        root.resolve_partition(partition)?.is_some()
+        root.resolve_partition(partition).is_some()
     };
 
     if !has_data_partition {
@@ -107,7 +114,7 @@ fn init() -> Anyhow<()> {
         }
         if let Some(partition_schema) = partition_schema {
             bootstrap_partitions(
-                root.parent.as_ref().unwrap().path(),
+                root.device.as_ref(),
                 &partition_schema,
                 &root,
                 &system_config.data_partition,
@@ -115,15 +122,14 @@ fn init() -> Anyhow<()> {
         }
     }
 
-    let Some(config_partition) = detect_config_partition(&root, &system_config.config_partition)?
+    let Some(config_partition) =
+        resolve_config_partition(Some(&root), &system_config.config_partition)
     else {
         bail!("Rugpi pre-init requires a config partition");
     };
-    let Some(data_partition) = detect_data_partition(&root, &system_config.data_partition)? else {
+    let Some(data_partition) = resolve_data_partition(Some(&root), &system_config.data_partition)
+    else {
         bail!("Rugpi pre-init requires a data partition");
-    };
-    let Some(root_device) = &root.device else {
-        bail!("Rugpi pre-init requires a root device");
     };
 
     // 3️⃣ Check and mount the data partition.
@@ -139,7 +145,7 @@ fn init() -> Anyhow<()> {
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
-    run!([MOUNT, "-o", "ro", root_device.path(), MOUNT_POINT_SYSTEM])?;
+    run!([MOUNT, "-o", "ro", root.device.path(), MOUNT_POINT_SYSTEM])?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([
         MOUNT,
@@ -225,7 +231,7 @@ fn bootstrap_partitions(
         run!([SYNC])?;
         // Inform the kernel about new partitions.
         update_kernel_partitions(dev, &old_table, &new_table)?;
-        if let Some(data_partition) = detect_data_partition(root, data_partition_config)? {
+        if let Some(data_partition) = resolve_data_partition(Some(root), data_partition_config) {
             mkfs_ext4(data_partition, "data")?;
         }
         // We do not need to patch the partition ID in the configuration files as we
@@ -263,7 +269,7 @@ fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) ->
     ])?;
     run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
     if let Some(boot_slot) = active_boot_entry.get_slot("boot") {
-        let SlotKind::Raw(boot_slot) = system.slots()[boot_slot].kind();
+        let SlotKind::Block(boot_slot) = system.slots()[boot_slot].kind();
         run!([
             MOUNT,
             "-o",

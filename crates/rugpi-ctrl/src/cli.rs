@@ -251,8 +251,8 @@ fn install_update_stream(
     let boot_slot = entry.get_slot("boot").unwrap();
     let system_slot = entry.get_slot("system").unwrap();
 
-    let SlotKind::Raw(raw_boot_slot) = system.slots()[boot_slot].kind();
-    let SlotKind::Raw(raw_system_slot) = system.slots()[system_slot].kind();
+    let SlotKind::Block(raw_boot_slot) = system.slots()[boot_slot].kind();
+    let SlotKind::Block(raw_system_slot) = system.slots()[system_slot].kind();
 
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()

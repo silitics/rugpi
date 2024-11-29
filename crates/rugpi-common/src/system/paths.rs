@@ -1,6 +1,6 @@
 //! Constants for paths.
 
-/// Path where the system's root partition is mounted.
+/// Path where the system partition is mounted.
 pub const MOUNT_POINT_SYSTEM: &str = "/run/rugpi/mounts/system";
 
 /// Path where the data partition is mounted.

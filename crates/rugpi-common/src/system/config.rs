@@ -58,8 +58,10 @@ pub struct PartitionConfig {
     pub device: Option<String>,
     /// Partition number of the root device.
     pub partition: Option<u32>,
-    /// Path where the partition should be mounted.
+    /// Path where the partition is or should be mounted.
     pub path: Option<String>,
+    /// Indicates whether the partition is write-protected.
+    pub protected: Option<bool>,
 }
 
 /// Boot flow configuration.

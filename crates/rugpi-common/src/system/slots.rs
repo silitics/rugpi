@@ -1,13 +1,10 @@
-use std::{
-    ops::Index,
-    sync::atomic::{self, AtomicBool},
-};
+use std::{ops::Index, sync::Mutex};
 
 use anyhow::bail;
 
 use super::{
-    config::{SlotConfigKind, SlotsConfig},
-    SystemRoot,
+    config::{BlockSlotConfig, SlotConfig, SlotConfigKind, SlotsConfig},
+    root::SystemRoot,
 };
 use crate::{disk::blkdev::BlockDevice, Anyhow};
 
@@ -25,29 +22,45 @@ pub struct SystemSlots {
 }
 
 impl SystemSlots {
-    pub fn from_config(root: &SystemRoot, config: Option<&SlotsConfig>) -> Anyhow<Self> {
+    fn from_iter<'i, I>(root: Option<&SystemRoot>, iter: I) -> Anyhow<Self>
+    where
+        I: Iterator<Item = (&'i str, &'i SlotConfig)>,
+    {
         let mut slots = Vec::new();
+        for (name, config) in iter {
+            let SlotConfigKind::Block(raw) = &config.kind;
+            let device = if let Some(device) = &raw.device {
+                BlockDevice::new(device)?
+            } else if let Some(partition) = &raw.partition {
+                let Some(root) = root else {
+                    bail!("no system root")
+                };
+                let Some(device) = root.resolve_partition(*partition) else {
+                    bail!("partition {partition} for slot {name:?} not found");
+                };
+                device
+            } else {
+                bail!("invalid configuration: no device and partition for {name}");
+            };
+            slots.push(Slot::new(
+                name.to_owned(),
+                SlotKind::Block(BlockSlot { device }),
+                config.clone(),
+            ))
+        }
+        Ok(Self { slots })
+    }
+
+    pub fn from_config(root: Option<&SystemRoot>, config: Option<&SlotsConfig>) -> Anyhow<Self> {
         match config {
-            Some(config) => {
-                for (name, config) in config {
-                    let SlotConfigKind::Block(raw) = &config.kind;
-                    let device = if let Some(device) = &raw.device {
-                        BlockDevice::new(device)?
-                    } else if let Some(partition) = &raw.partition {
-                        let Some(device) = root.resolve_partition(*partition)? else {
-                            bail!("partition {partition} for slot {name:?} not found");
-                        };
-                        device
-                    } else {
-                        bail!("invalid configuration: no device and partition for {name}");
-                    };
-                    slots.push(
-                        Slot::new(name.clone(), SlotKind::Raw(RawSlot { device }))
-                            .with_protected(config.protected),
-                    )
-                }
-            }
+            Some(config) => Self::from_iter(
+                root,
+                config.iter().map(|(name, config)| (name.as_str(), config)),
+            ),
             None => {
+                let Some(root) = root else {
+                    bail!("no system root")
+                };
                 let Some(table) = &root.table else {
                     bail!("unable to determine slots: no table");
                 };
@@ -56,18 +69,12 @@ impl SystemSlots {
                 } else {
                     DEFAULT_GPT_SLOTS
                 };
-                for (name, partition) in default_slots {
-                    let Some(device) = root.resolve_partition(*partition)? else {
-                        bail!("partition {partition} for slot {name:?} not found");
-                    };
-                    slots.push(Slot::new(
-                        (*name).to_owned(),
-                        SlotKind::Raw(RawSlot { device }),
-                    ));
-                }
+                Self::from_iter(
+                    Some(root),
+                    default_slots.iter().map(|(name, config)| (*name, config)),
+                )
             }
         }
-        Ok(Self { slots })
     }
 
     /// Find a slot by its name.
@@ -97,78 +104,91 @@ impl Index<SlotIdx> for SystemSlots {
 pub struct Slot {
     name: String,
     kind: SlotKind,
-    protected: bool,
-    active: AtomicBool,
+    config: SlotConfig,
+    active: Mutex<bool>,
 }
 
 impl Slot {
-    pub fn new(name: String, kind: SlotKind) -> Self {
+    /// Create a new slot.
+    fn new(name: String, kind: SlotKind, config: SlotConfig) -> Self {
         Self {
             name,
             kind,
-            protected: false,
-            active: AtomicBool::new(false),
+            config,
+            active: Mutex::new(false),
         }
     }
 
-    pub fn with_protected(mut self, protected: bool) -> Self {
-        self.protected = protected;
-        self
-    }
-
+    /// Name of the slot.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Kind of the slot.
     pub fn kind(&self) -> &SlotKind {
         &self.kind
     }
 
+    /// Indicates whether the slot is protected.
     pub fn protected(&self) -> bool {
-        self.protected
+        self.config.protected
     }
 
+    /// Indicates whether the slot is active.
     pub fn active(&self) -> bool {
-        self.active.load(atomic::Ordering::Acquire)
+        *self.active.lock().unwrap()
     }
 
-    pub fn is_raw(&self) -> bool {
-        matches!(self.kind, SlotKind::Raw(_))
+    /// Indicates whether the slot is of type `block`.
+    pub fn is_block(&self) -> bool {
+        matches!(self.kind, SlotKind::Block(_))
     }
 
+    /// Mark the slot as active.
     pub fn mark_active(&self) {
-        self.active.store(true, atomic::Ordering::Release);
+        *self.active.lock().unwrap() = true;
     }
 }
 
 #[derive(Debug)]
 pub enum SlotKind {
-    Raw(RawSlot),
+    Block(BlockSlot),
 }
 
 #[derive(Debug)]
-pub struct RawSlot {
+pub struct BlockSlot {
     device: BlockDevice,
 }
 
-impl RawSlot {
+impl BlockSlot {
     pub fn device(&self) -> &BlockDevice {
         &self.device
     }
 }
 
-/// Default slots of an MBR-partitioned disk.
-const DEFAULT_MBR_SLOTS: &[(&str, u32)] = &[
-    ("boot-a", 2),
-    ("boot-b", 3),
-    ("system-a", 5),
-    ("system-b", 6),
+/// Default slots of an MBR-partitioned root device.
+const DEFAULT_MBR_SLOTS: &[(&str, SlotConfig)] = &[
+    ("boot-a", default_slot_config(2)),
+    ("boot-b", default_slot_config(3)),
+    ("system-a", default_slot_config(5)),
+    ("system-b", default_slot_config(6)),
 ];
 
-/// Default slots of a GPT-partitioned disk.
-const DEFAULT_GPT_SLOTS: &[(&str, u32)] = &[
-    ("boot-a", 2),
-    ("boot-b", 3),
-    ("system-a", 4),
-    ("system-b", 5),
+/// Default slots of a GPT-partitioned root device.
+const DEFAULT_GPT_SLOTS: &[(&str, SlotConfig)] = &[
+    ("boot-a", default_slot_config(2)),
+    ("boot-b", default_slot_config(3)),
+    ("system-a", default_slot_config(4)),
+    ("system-b", default_slot_config(5)),
 ];
+
+/// Configuration of default slots for the given partition.
+const fn default_slot_config(partition: u32) -> SlotConfig {
+    SlotConfig {
+        kind: SlotConfigKind::Block(BlockSlotConfig {
+            device: None,
+            partition: Some(partition),
+        }),
+        protected: false,
+    }
+}
