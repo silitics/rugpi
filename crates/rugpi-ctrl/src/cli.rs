@@ -267,8 +267,6 @@ fn install_update_stream(
         None => MaybeStreamHasher::NoHash { reader },
     };
     println!("Copying partitions...");
-    // let boot_label = format!("BOOT-{}", spare_partitions.as_str().to_uppercase());
-    // let system_label = format!("system-{}", spare_partitions.as_str());
     let mut img_stream = ImgStream::new(MaybeCompressed::new(reader)?)?;
     let mut partition_idx = 0;
     while let Some(mut partition) = img_stream.next_partition()? {
@@ -291,22 +289,12 @@ fn install_update_stream(
                     &mut partition,
                     &mut fs::File::create(raw_boot_slot.device())?,
                 )?;
-                // run!([
-                //     "fatlabel",
-                //     spare_partitions.boot_dev(partitions).unwrap(),
-                //     &boot_label
-                // ])?;
             }
             3 => {
                 io::copy(
                     &mut partition,
                     &mut fs::File::create(raw_system_slot.device())?,
                 )?;
-                // run!([
-                //     "e2label",
-                //     spare_partitions.system_dev(partitions),
-                //     &system_label
-                // ])?;
             }
             _ => { /* Nothing to do! */ }
         }
