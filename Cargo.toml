@@ -12,12 +12,13 @@ homepage = "https://oss.silitics.com/rugpi/"
 [workspace.dependencies]
 bytes = "1.7.1"
 anyhow = "1.0.71"
-clap = { version = "4.3", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
-nix = { version = "0.28", features = ["ioctl", "fs", "mount", "process"] }
+nix = { version = "0.29", features = ["ioctl", "fs", "mount", "process"] }
 xscript = "0.3.0"
 tracing = "0.1"
 rugpi-common = { path = "crates/rugpi-common" }
+reportify = { path = "crates/reportify" }
 
 [workspace.lints.clippy]
 needless_borrows_for_generic_args = "allow"
