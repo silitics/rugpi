@@ -184,7 +184,7 @@ pub struct PartitionStream<'stream, R> {
     entry: PartitionEntry,
 }
 
-impl<'stream, R> PartitionStream<'stream, R> {
+impl<R> PartitionStream<'_, R> {
     /// The entry of the partition.
     pub fn entry(&self) -> &PartitionEntry {
         &self.entry
@@ -196,7 +196,7 @@ impl<'stream, R> PartitionStream<'stream, R> {
     }
 }
 
-impl<'stream, R: Read> Read for PartitionStream<'stream, R> {
+impl<R: Read> Read for PartitionStream<'_, R> {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         if self.remaining < buf.len() as u64 {
             if self.remaining == 0 {

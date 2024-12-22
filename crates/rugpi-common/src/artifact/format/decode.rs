@@ -27,18 +27,18 @@ pub enum DecodeError {
 pub trait Decode: Sized {
     /// Try to decode the structure from a segment.
     #[allow(unused_variables)]
-    fn decode_segment<'r, R: BufRead>(segment: SegmentDecoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode_segment<R: BufRead>(segment: SegmentDecoder<'_, R>) -> Result<Self, DecodeError> {
         todo!("cannot be decoded from segment")
     }
 
     /// Try to decode the structure from a value.
     #[allow(unused_variables)]
-    fn decode_value<'r, R: BufRead>(value: ValueDecoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode_value<R: BufRead>(value: ValueDecoder<'_, R>) -> Result<Self, DecodeError> {
         todo!("cannot be decoded from value")
     }
 
     /// Try to decode the structure from either a segment or a value.
-    fn decode<'r, R: BufRead>(decoder: Decoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode<R: BufRead>(decoder: Decoder<'_, R>) -> Result<Self, DecodeError> {
         match decoder {
             Decoder::Segment(segment) => Self::decode_segment(segment),
             Decoder::Value(value) => Self::decode_value(value),
@@ -46,10 +46,7 @@ pub trait Decode: Sized {
     }
 
     #[allow(unused_variables)]
-    fn decode_extension<'r, R: BufRead>(
-        &mut self,
-        decoder: Decoder<'r, R>,
-    ) -> Result<(), DecodeError> {
+    fn decode_extension<R: BufRead>(&mut self, decoder: Decoder<'_, R>) -> Result<(), DecodeError> {
         todo!(
             "cannot decode extension of {}",
             std::any::type_name::<Self>()
@@ -62,14 +59,11 @@ pub trait Decode: Sized {
 }
 
 impl<T: Decode> Decode for Option<T> {
-    fn decode<'r, R: BufRead>(decoder: Decoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode<R: BufRead>(decoder: Decoder<'_, R>) -> Result<Self, DecodeError> {
         Ok(Some(decoder.decode()?))
     }
 
-    fn decode_extension<'r, R: BufRead>(
-        &mut self,
-        decoder: Decoder<'r, R>,
-    ) -> Result<(), DecodeError> {
+    fn decode_extension<R: BufRead>(&mut self, decoder: Decoder<'_, R>) -> Result<(), DecodeError> {
         match self {
             Some(inner) => inner.decode_extension(decoder),
             None => {
@@ -85,14 +79,11 @@ impl<T: Decode> Decode for Option<T> {
 }
 
 impl<T: Decode> Decode for Vec<T> {
-    fn decode<'r, R: BufRead>(decoder: Decoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode<R: BufRead>(decoder: Decoder<'_, R>) -> Result<Self, DecodeError> {
         Ok(vec![decoder.decode()?])
     }
 
-    fn decode_extension<'r, R: BufRead>(
-        &mut self,
-        decoder: Decoder<'r, R>,
-    ) -> Result<(), DecodeError> {
+    fn decode_extension<R: BufRead>(&mut self, decoder: Decoder<'_, R>) -> Result<(), DecodeError> {
         self.push(decoder.decode()?);
         Ok(())
     }
@@ -103,19 +94,19 @@ impl<T: Decode> Decode for Vec<T> {
 }
 
 impl Decode for String {
-    fn decode_value<'r, R: BufRead>(mut value: ValueDecoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode_value<R: BufRead>(mut value: ValueDecoder<'_, R>) -> Result<Self, DecodeError> {
         String::from_utf8(value.consume_bytes()?).map_err(|_| todo!("handle invalid UTF-8"))
     }
 }
 
 impl Decode for Bytes {
-    fn decode_value<'r, R: BufRead>(mut value: ValueDecoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode_value<R: BufRead>(mut value: ValueDecoder<'_, R>) -> Result<Self, DecodeError> {
         Ok(value.consume_bytes()?.into())
     }
 }
 
 impl Decode for bool {
-    fn decode_value<'r, R: BufRead>(mut value: ValueDecoder<'r, R>) -> Result<Self, DecodeError> {
+    fn decode_value<R: BufRead>(mut value: ValueDecoder<'_, R>) -> Result<Self, DecodeError> {
         Ok(value.consume_array::<1>()?[0] != 0)
     }
 }
@@ -124,7 +115,7 @@ macro_rules! impl_decode_for_int {
     ($($int:ty),*) => {
         $(
             impl Decode for $int {
-                fn decode_value<'r, R: BufRead>(mut value: ValueDecoder<'r, R>) -> Result<Self, DecodeError> {
+                fn decode_value<R: BufRead>(mut value: ValueDecoder<'_, R>) -> Result<Self, DecodeError> {
                     Ok(Self::from_be_bytes(value.consume_array()?))
                 }
             }
@@ -134,9 +125,7 @@ macro_rules! impl_decode_for_int {
 
 impl_decode_for_int! { i8, u8, i16, u16, i32, u32, i64, u64, i128, u128 }
 
-pub fn start_decoder<'r, R: BufRead>(
-    reader: &'r mut R,
-) -> Result<Option<Decoder<'r, R>>, DecodeError> {
+pub fn start_decoder<R: BufRead>(reader: &mut R) -> Result<Option<Decoder<'_, R>>, DecodeError> {
     let Some(head) = read_atom_head(reader)? else {
         return Ok(None);
     };
@@ -191,6 +180,7 @@ impl<'r, R: BufRead> SegmentDecoder<'r, R> {
         Ok(())
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<Option<Decoder<'_, R>>, DecodeError> {
         if self.completed {
             return Ok(None);
@@ -227,7 +217,7 @@ pub enum Decoder<'r, R> {
     Value(ValueDecoder<'r, R>),
 }
 
-impl<'r, R: BufRead> Decoder<'r, R> {
+impl<R: BufRead> Decoder<'_, R> {
     pub fn skip(self) -> Result<(), DecodeError> {
         match self {
             Decoder::Segment(mut segment) => segment.skip(),
@@ -254,7 +244,7 @@ pub struct ValueDecoder<'r, R> {
     remaining: u64,
 }
 
-impl<'r, R: BufRead> ValueDecoder<'r, R> {
+impl<R: BufRead> ValueDecoder<'_, R> {
     pub fn tag(&self) -> Tag {
         self.head.tag()
     }
@@ -285,7 +275,7 @@ impl<'r, R: BufRead> ValueDecoder<'r, R> {
     }
 }
 
-impl<'r, R: Seek> ValueDecoder<'r, R> {
+impl<R: Seek> ValueDecoder<'_, R> {
     pub fn skip_seek(&mut self) -> io::Result<()> {
         self.reader.seek_relative(self.remaining as i64)?;
         self.remaining = 0;

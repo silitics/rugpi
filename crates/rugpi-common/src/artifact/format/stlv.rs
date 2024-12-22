@@ -501,7 +501,7 @@ struct DisplayTag<'r> {
     resolver: Option<&'r dyn TagNameResolver>,
 }
 
-impl<'r> fmt::Display for DisplayTag<'r> {
+impl fmt::Display for DisplayTag<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.resolver {
             Some(resolver) => fmt::Write::write_fmt(

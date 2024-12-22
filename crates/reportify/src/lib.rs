@@ -840,7 +840,6 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 
     #[track_caller]
-    #[must_use]
     fn whatever<F, C>(self, description: C) -> Result<T, Report<F>>
     where
         F: Whatever,
@@ -854,7 +853,6 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 
     #[track_caller]
-    #[must_use]
     fn whatever_with<F, C, X>(self, description: X) -> Result<T, Report<F>>
     where
         F: Whatever,

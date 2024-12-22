@@ -18,8 +18,8 @@ macro_rules! define_struct {
         }
 
         impl $crate::artifact::format::decode::Decode for $name {
-            fn decode_segment<'r, R: std::io::BufRead>(
-                mut segment: $crate::artifact::format::decode::SegmentDecoder<'r, R>,
+            fn decode_segment<R: std::io::BufRead>(
+                mut segment: $crate::artifact::format::decode::SegmentDecoder<'_, R>,
             ) -> Result<Self, $crate::artifact::format::decode::DecodeError> {
                 $(
                     let mut $field_name = <$field_type>::initial_value();
@@ -74,8 +74,8 @@ macro_rules! define_enum {
         }
 
         impl Decode for $name {
-            fn decode_segment<'r, R: BufRead>(
-                mut segment: SegmentDecoder<'r, R>,
+            fn decode_segment<R: BufRead>(
+                mut segment: SegmentDecoder<'_, R>,
             ) -> Result<Self, DecodeError> {
                 let mut variant = None;
                 while let Some(decoder) = segment.next()? {

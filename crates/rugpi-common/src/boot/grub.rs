@@ -162,10 +162,10 @@ pub type GrubEnv = HashMap<String, String>;
 
 pub fn load_grub_env<P: AsRef<Path>>(path: P) -> Result<GrubEnv, Report<GrubEnvError>> {
     fn inner(path: &Path) -> Result<GrubEnv, Report<GrubEnvError>> {
-        Ok(grub_envblk_decode(
+        grub_envblk_decode(
             &fs::read_to_string(path).whatever("unable to read Grub environment")?,
         )
-        .whatever("unable to decode Grub environment")?)
+        .whatever("unable to decode Grub environment")
     }
     inner(path.as_ref())
 }

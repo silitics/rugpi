@@ -23,7 +23,7 @@ pub fn reboot() -> SystemResult<()> {
                 nix::libc::LINUX_REBOOT_MAGIC1,
                 nix::libc::LINUX_REBOOT_MAGIC2,
                 nix::libc::LINUX_REBOOT_CMD_RESTART2,
-                b"\0".as_ptr(),
+                c"",
             );
         }
     } else {

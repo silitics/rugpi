@@ -18,7 +18,7 @@ pub fn resolve_data_partition(
     config: &PartitionConfig,
 ) -> Option<BlockDevice> {
     resolve_partition(root, config, || {
-        match root.map(|root| root.table.as_ref()).flatten() {
+        match root.and_then(|root| root.table.as_ref()) {
             Some(table) => Ok(if table.is_mbr() { 7 } else { 6 }),
             None => {
                 bail!("no root device partition table")
@@ -71,7 +71,7 @@ fn resolve_partition(
             bail!("unable to resolve partition {partition}: no root device")
         }
     };
-    Ok(Some(device.into()))
+    Ok(Some(device))
 }
 
 /// Config partition of the system.
@@ -145,7 +145,7 @@ impl ConfigPartition {
 #[derive(Debug)]
 struct ConfigPartitionWriteGuard<'p>(&'p ConfigPartition);
 
-impl<'p> Drop for ConfigPartitionWriteGuard<'p> {
+impl Drop for ConfigPartitionWriteGuard<'_> {
     fn drop(&mut self) {
         let mut writer_count = self.0.writer_count.lock().unwrap();
         if self.0.protected && *writer_count == 1 {

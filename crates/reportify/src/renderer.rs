@@ -117,7 +117,7 @@ enum ReportTreeNode<'report> {
     },
 }
 
-impl<'report> TreeNode for ReportTreeNode<'report> {
+impl TreeNode for ReportTreeNode<'_> {
     fn render(&self, renderer: &mut Renderer) -> fmt::Result {
         use std::fmt::Write;
         match self {

@@ -1,7 +1,7 @@
 //! Macros for dealing with limitations of constant functions.
-#[allow(unused_macros)]
 
 /// Constant unwrapping of options.
+#[expect(unused_macros, reason = "not currently used")]
 macro_rules! const_unwrap_option {
     ($value:expr) => {
         match $value {

@@ -44,7 +44,7 @@ impl BlockDevice {
                 String::from_utf8(path.into_os_string().into_encoded_bytes()).map_err(|_| {
                     io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        format!("device path must be valid UTF-8"),
+                        "device path must be valid UTF-8".to_string(),
                     )
                 })?;
             let stat = nix::sys::stat::stat(path.as_str())?;
