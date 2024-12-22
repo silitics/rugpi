@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::Context;
+use reportify::{bail, whatever, ResultExt};
 use rugpi_common::{
     disk::{
         gpt::gpt_types, mbr::mbr_types, parse_size, DiskId, NumBlocks, Partition, PartitionTable,
@@ -15,7 +15,6 @@ use rugpi_common::{
     fsutils::{allocate_file, copy_recursive, copy_sparse},
     grub_patch_env, rpi_patch_boot, rpi_patch_config,
     utils::{ascii_numbers, units::NumBytes},
-    Anyhow,
 };
 use tempfile::tempdir;
 use xscript::{run, Run};
@@ -27,10 +26,11 @@ use crate::{
     },
     project::images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
     utils::prelude::*,
+    BakeryResult,
 };
 
-pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> {
-    let work_dir = tempdir()?;
+pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResult<()> {
+    let work_dir = tempdir().whatever("unable to create temporary directory")?;
     let bundle_dir = work_dir.path();
 
     if let Some(parent) = image.parent() {
@@ -39,17 +39,17 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
 
     // Initialize system root directory from provided TAR file.
     info!("Extracting layer.");
-    run!(["tar", "-xf", src, "-C", &bundle_dir])?;
+    run!(["tar", "-xf", src, "-C", &bundle_dir]).whatever("unable to extract layer")?;
 
     let system_dir = bundle_dir.join("roots/system");
-    fs::create_dir_all(&system_dir)?;
+    fs::create_dir_all(&system_dir).whatever("unable to create system directory")?;
 
     // Create directories for config and boot partitions.
     info!("Creating config and boot directories.");
     let config_dir = bundle_dir.join("roots/config");
-    fs::create_dir_all(&config_dir)?;
+    fs::create_dir_all(&config_dir).whatever("unable to create config directory")?;
     let boot_dir = bundle_dir.join("roots/boot");
-    fs::create_dir_all(&boot_dir)?;
+    fs::create_dir_all(&boot_dir).whatever("unable to create boot directory")?;
 
     // Initialize config and boot partitions based the selected on boot flow.
     info!("Initialize boot flow.");
@@ -73,7 +73,8 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
         copy_recursive(
             "/usr/share/rugpi/boot/u-boot/bin/second.scr",
             boot_dir.join("second.scr"),
-        )?;
+        )
+        .whatever("unable to copy second stage uboot script")?;
     }
 
     // At this point, everything is initialized and we can compute the partition table.
@@ -88,26 +89,28 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                 Target::Unknown => None,
             })
         })
-        .ok_or_else(|| anyhow!("image layout needs to be specified"))?;
+        .ok_or_else(|| whatever!("image layout needs to be specified"))?;
 
     info!("Computing partition table.");
-    let table = compute_partition_table(&layout, &bundle_dir.join("roots"))
-        .context("computing partition table")?;
+    let table = compute_partition_table(&layout, &bundle_dir.join("roots"))?;
 
     let size_bytes = table.blocks_to_bytes(table.disk_size);
 
     info!("Allocating image file.");
     if let Some(size) = &config.size {
-        let size = parse_size(size)?;
-        allocate_file(image, size.into_raw())?
+        let size = parse_size(size).whatever("error parsing image size")?;
+        allocate_file(image, size.into_raw())
     } else {
-        allocate_file(image, size_bytes.into_raw())?;
+        allocate_file(image, size_bytes.into_raw())
     }
+    .whatever("error allocating image file")?;
 
     info!("Writing image partition table.");
-    table.write(image)?;
+    table
+        .write(image)
+        .whatever("error writing image partition table")?;
 
-    let table = PartitionTable::read(image)?;
+    let table = PartitionTable::read(image).whatever("error reading image partition table")?;
 
     if let Some(target) = &config.target {
         if matches!(target, Target::RpiTryboot | Target::RpiUboot) {
@@ -116,9 +119,11 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                 _ => bail!("unsupported GPT partition layout"),
             };
             info!("Patching boot configuration.");
-            rpi_patch_boot(&boot_dir, format!("PARTUUID={disk_id:08X}-05"))?;
+            rpi_patch_boot(&boot_dir, format!("PARTUUID={disk_id:08X}-05"))
+                .whatever("unable to patch boot configuration")?;
             info!("Patching `config.txt`.");
-            rpi_patch_config(boot_dir.join("config.txt"))?;
+            rpi_patch_config(boot_dir.join("config.txt"))
+                .whatever("unable to patch `config.txt`")?;
         }
         if matches!(target, Target::GenericGrubEfi) {
             let root_part = &table.partitions[3];
@@ -126,7 +131,8 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                 .gpt_id
                 .unwrap()
                 .to_hex_str(ascii_numbers::Case::Lower);
-            grub_patch_env(boot_dir, part_uuid)?;
+            grub_patch_env(boot_dir, part_uuid)
+                .whatever("unable to patch Grub boot environment")?;
         }
     }
 
@@ -146,36 +152,46 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
             images::Filesystem::Ext4 => {
                 let size = table.blocks_to_bytes(image_partition.size);
                 let fs_image = bundle_dir.join("ext4.img");
-                allocate_file(&fs_image, size.into_raw())?;
+                allocate_file(&fs_image, size.into_raw())
+                    .whatever("unable to allocate filesystem file")?;
                 if let Some(path) = &layout_partition.root {
                     run!([
                         "mkfs.ext4",
                         "-d",
                         bundle_dir.join("roots").join(path),
                         &fs_image
-                    ])?;
+                    ])
                 } else {
-                    run!(["mkfs.ext4", &fs_image])?;
+                    run!(["mkfs.ext4", &fs_image])
                 }
-                let mut src = File::open(&fs_image)?;
-                let mut dst = File::options().write(true).open(&image)?;
+                .whatever("unable to create EXT4 filesystem")?;
+                let mut src =
+                    File::open(&fs_image).whatever("unable to open filesystem image file")?;
+                let mut dst = File::options()
+                    .write(true)
+                    .open(&image)
+                    .whatever("unable to open image file")?;
                 copy_sparse(
                     &mut src,
                     &mut dst,
                     0,
                     table.blocks_to_bytes(image_partition.start).into_raw(),
                     table.blocks_to_bytes(image_partition.size).into_raw(),
-                )?;
+                )
+                .whatever("error copying filesystem into image")?;
             }
             images::Filesystem::Fat32 => {
                 let size = table.blocks_to_bytes(image_partition.size);
                 let fs_image = bundle_dir.join("fat32.img");
-                allocate_file(&fs_image, size.into_raw())?;
-                run!(["mkfs.vfat", &fs_image])?;
+                allocate_file(&fs_image, size.into_raw())
+                    .whatever("error allocating filesystem image")?;
+                run!(["mkfs.vfat", &fs_image]).whatever("error creating FAT32 filesystem")?;
                 if let Some(path) = &layout_partition.root {
                     let fs_path = bundle_dir.join("roots").join(path);
-                    for entry in fs::read_dir(&fs_path)? {
-                        let entry = entry?;
+                    for entry in
+                        fs::read_dir(&fs_path).whatever("error reading filesystem content")?
+                    {
+                        let entry = entry.whatever("error reading filesystem entry")?;
                         run!([
                             "/usr/bin/mcopy",
                             "-i",
@@ -183,18 +199,24 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Anyhow<()> 
                             "-snop",
                             entry.path(),
                             "::"
-                        ])?;
+                        ])
+                        .whatever("error copying files into image")?;
                     }
                 }
-                let mut src = File::open(&fs_image)?;
-                let mut dst = File::options().write(true).open(&image)?;
+                let mut src =
+                    File::open(&fs_image).whatever("unable to open filesystem image file")?;
+                let mut dst = File::options()
+                    .write(true)
+                    .open(&image)
+                    .whatever("unable to open image file")?;
                 copy_sparse(
                     &mut src,
                     &mut dst,
                     0,
                     table.blocks_to_bytes(image_partition.start).into_raw(),
                     table.blocks_to_bytes(image_partition.size).into_raw(),
-                )?;
+                )
+                .whatever("error copying filesystem into image")?;
             }
         }
     }
@@ -213,7 +235,7 @@ fn bytes_to_blocks(bytes: NumBytes) -> NumBlocks {
 }
 
 /// Compute the partition table for an image based on the provided layout.
-fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<PartitionTable> {
+fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> BakeryResult<PartitionTable> {
     let table_type = layout.ty;
     let mut partitions = Vec::new();
     let mut next_usable = ALIGNMENT;
@@ -258,7 +280,9 @@ fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<Par
             // Space for the EBR is automatically added prior to the next partition.
         } else {
             let size = match &partition.size {
-                Some(size) => bytes_to_blocks(parse_size(size)?),
+                Some(size) => {
+                    bytes_to_blocks(parse_size(size).whatever("unable to parse partition size")?)
+                }
                 None => {
                     let Some(path) = &partition.root else {
                         bail!("partitions without a fixed size must have a root path");
@@ -298,22 +322,24 @@ fn compute_partition_table(layout: &ImageLayout, roots_dir: &Path) -> Anyhow<Par
     };
     let mut table = PartitionTable::new(table_id, image_size);
     table.partitions = partitions;
-    table.validate()?;
+    table
+        .validate()
+        .whatever("unable to validate image partitions")?;
     Ok(table)
 }
 
 /// Compute the required size for a filesystem based on the given root path.
-fn compute_fs_size(root: PathBuf) -> Anyhow<NumBlocks> {
+fn compute_fs_size(root: PathBuf) -> BakeryResult<NumBlocks> {
     let mut size = NumBytes::from_raw(0);
     let mut stack = vec![root];
     while let Some(top) = stack.pop() {
         // We do not want to follow symlinks here as we are interested in the size of
         // the symlink and not the size of the symlink's target.
-        let metadata = fs::symlink_metadata(&top)?;
+        let metadata = fs::symlink_metadata(&top).whatever("unable to get file metadata")?;
         size += NumBytes::from_raw(metadata.size());
         if metadata.is_dir() {
-            for entry in fs::read_dir(&top)? {
-                stack.push(entry?.path());
+            for entry in fs::read_dir(&top).whatever("unable to read directory")? {
+                stack.push(entry.whatever("unable to read directory entry")?.path());
             }
         }
     }

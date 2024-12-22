@@ -7,13 +7,13 @@ use std::{
     path::Path,
 };
 
+use reportify::{Report, ResultExt};
 use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use crate::{
     system::System,
     utils::ascii_numbers::{self, bytes_to_ascii_hex},
-    Anyhow,
 };
 
 /// Signature of Grub environment blocks.
@@ -102,29 +102,40 @@ pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, In
     Ok(encoded)
 }
 
+reportify::new_whatever_type! {
+    GrubEnvError
+}
+
 pub fn write_with_hash(
     values: &HashMap<String, String>,
     path: &Path,
     abs_path: &str,
-) -> Anyhow<()> {
-    let encoded = grub_envblk_encode(values)?;
+) -> Result<(), Report<GrubEnvError>> {
+    let encoded = grub_envblk_encode(values).whatever("unable to encode Grub environment")?;
     let mut path_new = path.to_path_buf().into_os_string();
     path_new.push(".new");
-    let mut bootpart_new = File::create(&path_new)?;
-    bootpart_new.write_all(encoded.as_bytes())?;
-    bootpart_new.flush()?;
-    bootpart_new.sync_all()?;
+    let mut bootpart_new = File::create(&path_new).whatever("unable to create new environment")?;
+    bootpart_new
+        .write_all(encoded.as_bytes())
+        .whatever("unable to write new environment")?;
+    bootpart_new
+        .flush()
+        .whatever("unable to flush new environment")?;
+    bootpart_new
+        .sync_all()
+        .whatever("unable to sync new environment")?;
     let mut path_sha1 = path.to_path_buf().into_os_string();
     path_sha1.push(".sha1");
     let mut hash = Sha1::new();
     hash.update(encoded);
     let digest = bytes_to_ascii_hex(&hash.finalize(), ascii_numbers::Case::Lower);
-    std::fs::write(&path_sha1, format!("{digest}  {abs_path}"))?;
-    std::fs::rename(path_new, path)?;
+    std::fs::write(&path_sha1, format!("{digest}  {abs_path}"))
+        .whatever("unable to write digest file")?;
+    std::fs::rename(path_new, path).whatever("unable to rename Grub environment")?;
     Ok(())
 }
 
-pub fn grub_write_defaults(config_path: &Path) -> Anyhow<()> {
+pub fn grub_write_defaults(config_path: &Path) -> Result<(), Report<GrubEnvError>> {
     let mut bootpart = HashMap::new();
     bootpart.insert(RUGPI_BOOTPART.to_owned(), "2".to_owned());
     write_with_hash(
@@ -141,63 +152,88 @@ pub fn grub_write_defaults(config_path: &Path) -> Anyhow<()> {
     boot_spare.insert(RUGPI_BOOT_SPARE.to_owned(), "false".to_owned());
     std::fs::write(
         config_path.join("rugpi/boot_spare.grubenv"),
-        grub_envblk_encode(&boot_spare)?,
-    )?;
+        grub_envblk_encode(&boot_spare).whatever("unable to encode Grub environment")?,
+    )
+    .whatever("unable to write Grub environment")?;
     Ok(())
 }
 
 pub type GrubEnv = HashMap<String, String>;
 
-pub fn load_grub_env<P: AsRef<Path>>(path: P) -> Anyhow<GrubEnv> {
-    fn inner(path: &Path) -> Anyhow<GrubEnv> {
-        Ok(grub_envblk_decode(&fs::read_to_string(path)?)?)
+pub fn load_grub_env<P: AsRef<Path>>(path: P) -> Result<GrubEnv, Report<GrubEnvError>> {
+    fn inner(path: &Path) -> Result<GrubEnv, Report<GrubEnvError>> {
+        Ok(grub_envblk_decode(
+            &fs::read_to_string(path).whatever("unable to read Grub environment")?,
+        )
+        .whatever("unable to decode Grub environment")?)
     }
     inner(path.as_ref())
 }
 
-pub fn save_grub_env<P: AsRef<Path>>(path: P, env: &GrubEnv) -> Anyhow<()> {
-    fn inner(path: &Path, env: &GrubEnv) -> Anyhow<()> {
+pub fn save_grub_env<P: AsRef<Path>>(path: P, env: &GrubEnv) -> Result<(), Report<GrubEnvError>> {
+    fn inner(path: &Path, env: &GrubEnv) -> Result<(), Report<GrubEnvError>> {
         let mut tmp_path = path.to_path_buf();
         tmp_path.as_mut_os_string().push(".tmp");
-        let mut tmp_file = fs::File::create(&tmp_path)?;
-        tmp_file.write_all(grub_envblk_encode(env)?.as_bytes())?;
-        tmp_file.sync_all()?;
-        fs::rename(&tmp_path, path)?;
+        let mut tmp_file = fs::File::create(&tmp_path)
+            .whatever("unable to create temporary Grub environment file")?;
+        tmp_file
+            .write_all(
+                grub_envblk_encode(env)
+                    .whatever("unable to encode Grub environment")?
+                    .as_bytes(),
+            )
+            .whatever("unable to write to temporary Grub environment file")?;
+        tmp_file
+            .sync_all()
+            .whatever("unable to sync temporary Grub environment file")?;
+        fs::rename(&tmp_path, path).whatever("unable to replace Grub environment file")?;
         Ok(())
     }
     inner(path.as_ref(), env)
 }
 
-pub fn set_spare_flag(system: &System) -> Anyhow<()> {
+pub fn set_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
     let mut envblk = HashMap::new();
     envblk.insert(RUGPI_BOOT_SPARE.to_owned(), "true".to_owned());
-    let envblk = grub_envblk_encode(&envblk)?;
-    let config_partition = system.require_config_partition()?;
-    config_partition.ensure_writable(|| {
-        // It is safe to directly write to the file here. If the file is corrupt,
-        // the system will simply boot from the default partition set.
-        std::fs::write(
-            config_partition.path().join("rugpi/boot_spare.grubenv"),
-            envblk,
-        )?;
-        Ok(())
-    })?
+    let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;
+    let config_partition = system
+        .require_config_partition()
+        .whatever("unable to get config partition")?;
+    config_partition
+        .ensure_writable(|| -> Result<(), Report<GrubEnvError>> {
+            // It is safe to directly write to the file here. If the file is corrupt,
+            // the system will simply boot from the default partition set.
+            std::fs::write(
+                config_partition.path().join("rugpi/boot_spare.grubenv"),
+                envblk,
+            )
+            .whatever("unable to write Grub environment")?;
+            Ok(())
+        })
+        .whatever("unable to make config partition writable")??;
+    Ok(())
 }
 
-pub fn clear_spare_flag(system: &System) -> Anyhow<()> {
+pub fn clear_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
     let mut envblk = HashMap::new();
     envblk.insert(RUGPI_BOOT_SPARE.to_owned(), "false".to_owned());
-    let envblk = grub_envblk_encode(&envblk)?;
-    let config_partition = system.require_config_partition()?;
-    config_partition.ensure_writable(|| {
-        // It is safe to directly write to the file here. If the file is corrupt,
-        // the system will simply boot from the default partition set.
-        std::fs::write(
-            config_partition.path().join("rugpi/boot_spare.grubenv"),
-            envblk,
-        )?;
-        Ok(())
-    })?
+    let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;
+    let config_partition = system
+        .require_config_partition()
+        .whatever("unable to get config partition")?;
+    config_partition
+        .ensure_writable(|| -> Result<(), Report<GrubEnvError>> {
+            // It is safe to directly write to the file here. If the file is corrupt,
+            // the system will simply boot from the default partition set.
+            std::fs::write(
+                config_partition.path().join("rugpi/boot_spare.grubenv"),
+                envblk,
+            )
+            .whatever("unable to write Grub environment")?;
+            Ok(())
+        })
+        .whatever("unable to make config partition writable")??;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -8,15 +8,16 @@ use std::{
 };
 
 use indicatif::{ProgressBar, ProgressStyle};
+use reportify::{bail, ResultExt};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use url::Url;
 
-use crate::utils::prelude::*;
+use crate::{utils::prelude::*, BakeryResult};
 
-pub fn download(url: &Url) -> Anyhow<PathBuf> {
+pub fn download(url: &Url) -> BakeryResult<PathBuf> {
     let Some(file_name) = url.path_segments().and_then(|segments| segments.last()) else {
-        anyhow::bail!("unable to obtain file name from URL");
+        bail!("unable to obtain file name from URL");
     };
     let file_extension = file_name.split_once('.').map(|(_, extension)| extension);
     let mut url_hasher = Sha1::new();
@@ -30,8 +31,8 @@ pub fn download(url: &Url) -> Anyhow<PathBuf> {
     let cache_file_path = Path::new(".rugpi/cache").join(cache_file_name);
     if !cache_file_path.exists() {
         info!("downloading `{url}`");
-        std::fs::create_dir_all(".rugpi/cache")?;
-        let mut response = reqwest::blocking::get(url.clone())?;
+        std::fs::create_dir_all(".rugpi/cache").whatever("error creating cache directory")?;
+        let mut response = reqwest::blocking::get(url.clone()).whatever("error retrieving URL")?;
         if response.status().is_success() {
             let Some(size) = response.content_length() else {
                 bail!("server did not send `Content-Length` header");
@@ -42,12 +43,16 @@ pub fn download(url: &Url) -> Anyhow<PathBuf> {
                 )
                 .unwrap(),
             );
-            let mut file = fs::File::create(&cache_file_path)?;
+            let mut file =
+                fs::File::create(&cache_file_path).whatever("error creating hash file")?;
             let mut buffer = vec![0u8; 8096];
             loop {
-                let chunk_size = response.read(&mut buffer)?;
+                let chunk_size = response
+                    .read(&mut buffer)
+                    .whatever("error reading from response")?;
                 if chunk_size > 0 {
-                    file.write_all(&buffer[..chunk_size])?;
+                    file.write_all(&buffer[..chunk_size])
+                        .whatever("error writing to cache file")?;
                     progress.inc(chunk_size as u64);
                 } else {
                     break;

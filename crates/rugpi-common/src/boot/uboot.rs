@@ -1,9 +1,10 @@
 use std::{collections::HashMap, io, path::Path};
 
+use reportify::{Report, ResultExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{system::System, Anyhow};
+use crate::system::{boot_flows::BootFlowError, System};
 
 /// A U-Boot environment.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -110,28 +111,42 @@ fn crc32(data: &[u8]) -> [u8; 4] {
     crc32fast::hash(data).to_le_bytes()
 }
 
-pub fn set_spare_flag(system: &System) -> Anyhow<()> {
+pub fn set_spare_flag(system: &System) -> Result<(), Report<BootFlowError>> {
     let mut boot_spare_env = UBootEnv::new();
     boot_spare_env.set("boot_spare", "1");
-    let config_partition = system.require_config_partition()?;
-    config_partition.ensure_writable(|| {
-        // It is safe to directly write to the file here. If the file is corrupt,
-        // the system will simply boot from the default partition set.
-        boot_spare_env.save(config_partition.path().join("boot_spare.env"))?;
-        Ok(())
-    })?
+    let config_partition = system
+        .require_config_partition()
+        .whatever("unable to get config partition")?;
+    config_partition
+        .ensure_writable(|| -> Result<(), Report<BootFlowError>> {
+            // It is safe to directly write to the file here. If the file is corrupt,
+            // the system will simply boot from the default partition set.
+            boot_spare_env
+                .save(config_partition.path().join("boot_spare.env"))
+                .whatever("unable to save uboot environment")?;
+            Ok(())
+        })
+        .whatever("unable to make config partition writable")??;
+    Ok(())
 }
 
-pub fn clear_spare_flag(system: &System) -> Anyhow<()> {
+pub fn clear_spare_flag(system: &System) -> Result<(), Report<BootFlowError>> {
     let mut boot_spare_env = UBootEnv::new();
     boot_spare_env.set("boot_spare", "0");
-    let config_partition = system.require_config_partition()?;
-    config_partition.ensure_writable(|| {
-        // It is safe to directly write to the file here. If the file is corrupt,
-        // the system will simply boot from the default partition set.
-        boot_spare_env.save(config_partition.path().join("boot_spare.env"))?;
-        Ok(())
-    })?
+    let config_partition = system
+        .require_config_partition()
+        .whatever("unable to get config partition")?;
+    config_partition
+        .ensure_writable(|| -> Result<(), Report<BootFlowError>> {
+            // It is safe to directly write to the file here. If the file is corrupt,
+            // the system will simply boot from the default partition set.
+            boot_spare_env
+                .save(config_partition.path().join("boot_spare.env"))
+                .whatever("unable to save uboot environment")?;
+            Ok(())
+        })
+        .whatever("unable to make config partition writable")??;
+    Ok(())
 }
 
 #[cfg(test)]

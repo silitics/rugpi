@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::anyhow;
+use reportify::{whatever, Report, ResultExt};
 use serde::Deserialize;
 use xscript::{read_str, run, Run};
 
@@ -13,18 +13,26 @@ use super::{
     blkdev::BlockDevice, gpt::Guid, mbr, DiskId, NumBlocks, Partition, PartitionTable,
     PartitionType,
 };
-use crate::{utils::units::NumBytes, Anyhow};
+use crate::{partitions::DiskError, utils::units::NumBytes};
 
 /// Path to the `sfdisk` executable.
 const SFDISK: &str = "/usr/sbin/sfdisk";
 
-pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
-    let json_table =
-        serde_json::from_str::<SfdiskJson>(&read_str!([SFDISK, "--dump", "--json", dev])?)?
-            .partition_table;
-    let metadata = dev.metadata()?;
+pub(crate) fn sfdisk_read(dev: &Path) -> Result<PartitionTable, Report<DiskError>> {
+    let json_table = serde_json::from_str::<SfdiskJson>(
+        &read_str!([SFDISK, "--dump", "--json", dev]).whatever("unable to read partition table")?,
+    )
+    .whatever("unable to parse partition table")?
+    .partition_table;
+    let metadata = dev.metadata().whatever("unable to read device metadata")?;
     let size = if metadata.file_type().is_block_device() {
-        NumBlocks::from_raw(BlockDevice::new(dev)?.size()? / json_table.sector_size)
+        NumBlocks::from_raw(
+            BlockDevice::new(dev)
+                .whatever("device is not a block device")?
+                .size()
+                .whatever("unable to read size of block device")?
+                / json_table.sector_size,
+        )
     } else {
         NumBlocks::from_raw(metadata.size() / json_table.sector_size)
     };
@@ -35,14 +43,14 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
                 .get(2..)
                 .and_then(|id| u32::from_str_radix(id, 16).ok().map(mbr::MbrId::new))
                 .ok_or_else(|| {
-                    anyhow!(
+                    whatever!(
                         "invalid MBR disk id {:?} returned by `sfdisk`",
-                        json_table.id
+                        json_table.id,
                     )
                 })?,
         ),
         SfdiskJsonLabel::Gpt => DiskId::Gpt(json_table.id.parse().map_err(|_| {
-            anyhow!(
+            whatever!(
                 "invalid GPT disk id {:?} returned from `sfdisk`",
                 json_table.id
             )
@@ -57,16 +65,19 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
                 .rsplit_once(|c: char| !c.is_ascii_digit())
                 .and_then(|(_, suffix)| u8::from_str(suffix).ok())
                 .ok_or_else(|| {
-                    anyhow!(
+                    whatever!(
                         "invalid partition name {:?} returned from `sfdisk`",
                         partition.node
                     )
                 })?;
             let ty = match id {
-                DiskId::Mbr(_) => PartitionType::Mbr(u8::from_str_radix(&partition.ty, 16)?),
+                DiskId::Mbr(_) => PartitionType::Mbr(
+                    u8::from_str_radix(&partition.ty, 16)
+                        .whatever("unable to parse partition type from `sfdisk` output")?,
+                ),
                 DiskId::Gpt(_) => {
                     PartitionType::Gpt(Guid::from_hex_str(&partition.ty).map_err(|_| {
-                        anyhow!(
+                        whatever!(
                             "invalid GPT partition type {:?} returned from `sfdisk`",
                             partition.ty
                         )
@@ -77,7 +88,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
                 .uuid
                 .map(|guid| {
                     Guid::from_hex_str(&guid).map_err(|_| {
-                        anyhow!("invalid partition GUID {:?} returned from `sfdisk`", guid)
+                        whatever!("invalid partition GUID {:?} returned from `sfdisk`", guid)
                     })
                 })
                 .transpose()?;
@@ -90,7 +101,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
                 gpt_id,
             })
         })
-        .collect::<Anyhow<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, Report<DiskError>>>()?;
     partitions.sort_by(|x, y| x.start.cmp(&y.start));
     Ok(PartitionTable {
         disk_id: id,
@@ -100,7 +111,7 @@ pub(crate) fn sfdisk_read(dev: &Path) -> Anyhow<PartitionTable> {
     })
 }
 
-pub(crate) fn sfdisk_write(table: &PartitionTable, dev: &Path) -> Anyhow<()> {
+pub(crate) fn sfdisk_write(table: &PartitionTable, dev: &Path) -> Result<(), Report<DiskError>> {
     let mut script = String::new();
     match table.disk_id {
         DiskId::Mbr(_) => script.push_str("label: dos\n"),
@@ -125,7 +136,8 @@ pub(crate) fn sfdisk_write(table: &PartitionTable, dev: &Path) -> Anyhow<()> {
 
     println!("{script}");
 
-    run!([SFDISK, "--no-reread", dev].with_stdin(script))?;
+    run!([SFDISK, "--no-reread", dev].with_stdin(script))
+        .whatever("unable to write partition table")?;
     Ok(())
 }
 

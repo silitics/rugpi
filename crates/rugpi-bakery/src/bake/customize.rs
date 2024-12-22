@@ -8,6 +8,7 @@ use std::{
     sync::Arc,
 };
 
+use reportify::{bail, ResultExt};
 use rugpi_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
 use xscript::{cmd, run, vars, ParentEnv, Run};
@@ -25,6 +26,7 @@ use crate::{
         caching::{mtime, mtime_recursive},
         prelude::*,
     },
+    BakeryResult,
 };
 
 pub fn customize(
@@ -34,7 +36,7 @@ pub fn customize(
     src: Option<&Path>,
     target: &Path,
     layer_path: &Path,
-) -> Anyhow<()> {
+) -> BakeryResult<()> {
     let library = project.library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
@@ -49,12 +51,15 @@ pub fn customize(
         .unwrap()
         .max(layer.modified);
     if let Some(src) = src {
-        last_modified = last_modified.max(mtime(src)?);
+        last_modified = last_modified.max(mtime(src).whatever("unable to determine mtime")?);
     }
     let mut force_run = false;
     let used_files = project.dir.join(layer_path.join("rebuild-if-changed.txt"));
     if used_files.exists() {
-        for line in std::fs::read_to_string(used_files)?.lines() {
+        for line in std::fs::read_to_string(used_files)
+            .whatever("unable to read used files")?
+            .lines()
+        {
             if let Ok(modified) = mtime_recursive(&project.dir.join(line)) {
                 last_modified = last_modified.max(modified)
             } else {
@@ -63,23 +68,27 @@ pub fn customize(
             }
         }
     }
-    if target.exists() && last_modified < mtime(target)? && !force_run {
+    if target.exists()
+        && last_modified < mtime(target).whatever("unable to read `mtime` of target")?
+        && !force_run
+    {
         return Ok(());
     }
-    let bundle_dir = tempdir()?;
+    let bundle_dir = tempdir().whatever("unable to create temporary directory")?;
     let bundle_dir = bundle_dir.path();
     if let Some(src) = src {
         info!("Extracting layer.");
-        run!(["tar", "-x", "-f", &src, "-C", bundle_dir])?;
+        run!(["tar", "-x", "-f", &src, "-C", bundle_dir]).whatever("unable to extract layer")?;
     } else {
         info!("Creating empty layer.");
-        std::fs::create_dir_all(&bundle_dir)?;
+        std::fs::create_dir_all(&bundle_dir).whatever("unable ot create layer directory")?;
     }
     let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
     apply_recipes(project, arch, &jobs, bundle_dir, &root_dir, layer_path)?;
     info!("packing system files");
-    run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])?;
+    run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
+        .whatever("unable to package system files")?;
     Ok(())
 }
 
@@ -92,12 +101,12 @@ fn recipe_schedule(
     repo: RepositoryIdx,
     layer: &LayerConfig,
     library: &Library,
-) -> Anyhow<Vec<RecipeJob>> {
+) -> BakeryResult<Vec<RecipeJob>> {
     let mut stack = layer
         .recipes
         .iter()
         .map(|name| library.try_lookup(repo, name.deref()))
-        .collect::<Anyhow<Vec<_>>>()?;
+        .collect::<BakeryResult<Vec<_>>>()?;
     let mut enabled = stack.iter().cloned().collect::<HashSet<_>>();
     while let Some(idx) = stack.pop() {
         let recipe = &library.recipes[idx];
@@ -122,7 +131,7 @@ fn recipe_schedule(
             }
             Ok((recipe, parameters))
         })
-        .collect::<Anyhow<HashMap<_, _>>>()?;
+        .collect::<BakeryResult<HashMap<_, _>>>()?;
     let mut recipes = enabled
         .into_iter()
         .map(|idx| {
@@ -166,33 +175,44 @@ fn apply_recipes(
     bundle_dir: &Path,
     root_dir_path: &Path,
     layer_path: &Path,
-) -> Anyhow<()> {
+) -> BakeryResult<()> {
     let mut mount_stack = MountStack::new();
 
-    fn mount_all(project: &Project, root_dir_path: &Path, stack: &mut MountStack) -> Anyhow<()> {
-        stack.push(Mounted::bind("/dev", root_dir_path.join("dev"))?);
-        stack.push(Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))?);
-        stack.push(Mounted::bind("/sys", root_dir_path.join("sys"))?);
-        stack.push(Mounted::mount_fs(
-            "proc",
-            "proc",
-            root_dir_path.join("proc"),
-        )?);
-        stack.push(Mounted::mount_fs(
-            "tmpfs",
-            "tmpfs",
-            root_dir_path.join("run"),
-        )?);
-        stack.push(Mounted::mount_fs(
-            "tmpfs",
-            "tmpfs",
-            root_dir_path.join("tmp"),
-        )?);
+    fn mount_all(
+        project: &Project,
+        root_dir_path: &Path,
+        stack: &mut MountStack,
+    ) -> BakeryResult<()> {
+        stack.push(
+            Mounted::bind("/dev", root_dir_path.join("dev")).whatever("unable to mount /dev")?,
+        );
+        stack.push(
+            Mounted::bind("/dev/pts", root_dir_path.join("dev/pts"))
+                .whatever("unable to mount /dev/pts")?,
+        );
+        stack.push(
+            Mounted::bind("/sys", root_dir_path.join("sys")).whatever("unable to mount /sys")?,
+        );
+        stack.push(
+            Mounted::mount_fs("proc", "proc", root_dir_path.join("proc"))
+                .whatever("unable to mount /proc")?,
+        );
+        stack.push(
+            Mounted::mount_fs("tmpfs", "tmpfs", root_dir_path.join("run"))
+                .whatever("unable to mount /run")?,
+        );
+        stack.push(
+            Mounted::mount_fs("tmpfs", "tmpfs", root_dir_path.join("tmp"))
+                .whatever("unable to mount /tmp")?,
+        );
 
         let project_dir = root_dir_path.join("run/rugpi/bakery/project");
-        fs::create_dir_all(&project_dir)?;
+        fs::create_dir_all(&project_dir).whatever("unable to create project directory")?;
 
-        stack.push(Mounted::bind(&project.dir, &project_dir)?);
+        stack.push(
+            Mounted::bind(&project.dir, &project_dir)
+                .whatever("unable to bind mount project directory")?,
+        );
 
         Ok(())
     }
@@ -238,9 +258,11 @@ fn apply_recipes(
                             }
                         };
                         cmd.extend_args(packages);
-                        ParentEnv.run(cmd.with_vars(vars! {
-                            DEBIAN_FRONTEND = "noninteractive"
-                        }))?;
+                        ParentEnv
+                            .run(cmd.with_vars(vars! {
+                                DEBIAN_FRONTEND = "noninteractive"
+                            }))
+                            .whatever("unable to install packages")?;
                     }
                 }
                 StepKind::Install => {
@@ -248,11 +270,15 @@ fn apply_recipes(
                         mount_all(project, root_dir_path, &mut mount_stack)?;
                     }
                     let bakery_recipe_path = root_dir_path.join("run/rugpi/bakery/recipe");
-                    fs::create_dir_all(&bakery_recipe_path)?;
-                    let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)?;
+                    fs::create_dir_all(&bakery_recipe_path)
+                        .whatever("unable to create recipe directory")?;
+                    let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)
+                        .whatever("unable to bind mount recipe")?;
                     let chroot_layer_dir = root_dir_path.join("run/rugpi/bakery/bundle/");
-                    fs::create_dir_all(&chroot_layer_dir)?;
-                    let _mounted_layer_dir = Mounted::bind(&bundle_dir, &chroot_layer_dir)?;
+                    fs::create_dir_all(&chroot_layer_dir)
+                        .whatever("unable to create layer bundle directory")?;
+                    let _mounted_layer_dir = Mounted::bind(&bundle_dir, &chroot_layer_dir)
+                        .whatever("unable to bind mount layer bundle")?;
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
@@ -270,7 +296,8 @@ fn apply_recipes(
                     run!(["chroot", root_dir_path, &script]
                         .with_stdout(xscript::Out::Inherit)
                         .with_stderr(xscript::Out::Inherit)
-                        .with_vars(vars))?;
+                        .with_vars(vars))
+                    .whatever("unable to run `chroot`")?;
                 }
                 StepKind::Run => {
                     let script = recipe.path.join("steps").join(&step.filename);
@@ -290,7 +317,8 @@ fn apply_recipes(
                     run!([&script]
                         .with_stdout(xscript::Out::Inherit)
                         .with_stderr(xscript::Out::Inherit)
-                        .with_vars(vars))?;
+                        .with_vars(vars))
+                    .whatever("unable to run script")?;
                 }
             }
         }

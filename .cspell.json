@@ -81,6 +81,7 @@
     "rbind",
     "readwrite",
     "repart",
+    "reportify",
     "repr",
     "resolv",
     "rootfs",

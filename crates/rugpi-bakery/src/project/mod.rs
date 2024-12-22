@@ -6,11 +6,10 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Context;
-use rugpi_common::Anyhow;
+use reportify::ResultExt;
 
 use self::{config::BakeryConfig, library::Library, repositories::ProjectRepositories};
-use crate::utils::prelude::*;
+use crate::{utils::prelude::*, BakeryResult};
 
 pub mod config;
 pub mod images;
@@ -33,20 +32,20 @@ pub struct Project {
 
 impl Project {
     /// The repositories of the project.
-    pub fn repositories(&self) -> Anyhow<&Arc<ProjectRepositories>> {
+    pub fn repositories(&self) -> BakeryResult<&Arc<ProjectRepositories>> {
         self.lazy
             .repositories
             .try_get_or_init(|| ProjectRepositories::load(self).map(Arc::new))
-            .with_context(|| "loading repositories")
+            .whatever("loading repositories")
     }
 
     /// The library of the project.
-    pub fn library(&self) -> Anyhow<&Arc<Library>> {
+    pub fn library(&self) -> BakeryResult<&Arc<Library>> {
         self.lazy.library.try_get_or_init(|| {
             let repositories = self.repositories()?.clone();
             Library::load(repositories)
                 .map(Arc::new)
-                .with_context(|| "loading library")
+                .whatever("loading library")
         })
     }
 }
@@ -79,8 +78,10 @@ impl ProjectLoader {
     }
 
     /// Construct a new project loader from the current working directory.
-    pub fn current_dir() -> Anyhow<Self> {
-        Ok(Self::new(&std::env::current_dir()?))
+    pub fn current_dir() -> BakeryResult<Self> {
+        Ok(Self::new(
+            &std::env::current_dir().whatever("unable to determine current directory")?,
+        ))
     }
 
     /// Set the configuration file path relative to the project directory.
@@ -99,7 +100,7 @@ impl ProjectLoader {
     }
 
     /// Load the project.
-    pub fn load(self) -> Anyhow<Project> {
+    pub fn load(self) -> BakeryResult<Project> {
         let config = BakeryConfig::load(&self.config_path())?;
         Ok(Project {
             dir: self.project_dir,

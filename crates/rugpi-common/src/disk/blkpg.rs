@@ -12,16 +12,21 @@ use std::{
 };
 
 use nix::libc::{c_char, c_int, c_longlong};
+use reportify::{Report, ResultExt};
 
 use super::PartitionTable;
-use crate::{disk::NumBlocks, utils::units::NumBytes, Anyhow};
+use crate::{disk::NumBlocks, utils::units::NumBytes};
+
+reportify::new_whatever_type! {
+    BlkpgError
+}
 
 pub fn update_kernel_partitions(
     dev: &Path,
     old_table: &PartitionTable,
     new_table: &PartitionTable,
-) -> Anyhow<()> {
-    let file = File::open(dev)?;
+) -> Result<(), Report<BlkpgError>> {
+    let file = File::open(dev).whatever("unable to open block device")?;
 
     for (idx, partition) in new_table.partitions.iter().enumerate() {
         let start = new_table.blocks_to_bytes(partition.start);
@@ -59,7 +64,11 @@ pub fn update_kernel_partitions(
     Ok(())
 }
 
-fn blkpg_command(fd: RawFd, cmd: c_int, partition: &BlkpgPartition) -> Anyhow<()> {
+fn blkpg_command(
+    fd: RawFd,
+    cmd: c_int,
+    partition: &BlkpgPartition,
+) -> Result<(), Report<BlkpgError>> {
     let ioctl_arg = BlkpgIoctlArg {
         op: cmd,
         flags: 0,
@@ -67,7 +76,7 @@ fn blkpg_command(fd: RawFd, cmd: c_int, partition: &BlkpgPartition) -> Anyhow<()
         data: partition as *const _ as *const c_void,
     };
     unsafe {
-        ioctl_blkpg(fd, &ioctl_arg)?;
+        ioctl_blkpg(fd, &ioctl_arg).whatever("unable to issue blkpg ioctl")?;
     }
     Ok(())
 }

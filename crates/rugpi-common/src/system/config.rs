@@ -2,22 +2,23 @@
 
 use std::{fs, path::Path};
 
-use anyhow::Context;
 use indexmap::IndexMap;
+use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 
-use crate::Anyhow;
+use super::SystemResult;
 
 /// Path of the system configuration file.
 pub const SYSTEM_CONFIG_PATH: &str = "/etc/rugpi/system.toml";
 
 /// Load the system configuration.
-pub fn load_system_config() -> Anyhow<SystemConfig> {
+pub fn load_system_config() -> SystemResult<SystemConfig> {
     Ok(if Path::new(SYSTEM_CONFIG_PATH).exists() {
         toml::from_str(
-            &fs::read_to_string(SYSTEM_CONFIG_PATH).context("reading system configuration file")?,
+            &fs::read_to_string(SYSTEM_CONFIG_PATH)
+                .whatever("unable to read system configuration file")?,
         )
-        .context("parsing system configuration file")?
+        .whatever("unable to parse system configuration file")?
     } else {
         SystemConfig::default()
     })

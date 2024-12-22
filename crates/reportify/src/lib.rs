@@ -524,7 +524,7 @@ impl<E: Error> Report<E> {
     }
 
     /// Add freeform context information to the report.
-    pub fn with_context<I: Printable>(mut self, info: I) -> Self {
+    pub fn with_info<I: Printable>(mut self, info: I) -> Self {
         self.add_info(info);
         self
     }
@@ -748,12 +748,17 @@ impl<E: private::ReportOrError> ErrorExt for E {
 }
 
 #[track_caller]
-pub fn whatever<E, C>(ctx: C) -> Report<E>
+pub fn whatever<E, C>(description: C) -> Report<E>
 where
     E: Whatever,
     C: Printable,
 {
-    Report::new(E::new()).with_context(ctx)
+    ReportBuilder::new()
+        .with_backtrace()
+        .with_location()
+        .with_description(description)
+        .with_error(E::new())
+        .build()
 }
 
 ///
@@ -772,6 +777,22 @@ where
 macro_rules! bail {
     ($($args:tt)*) => {
         return Err($crate::whatever(format!($($args)*)))
+    };
+}
+
+#[macro_export]
+macro_rules! whatever {
+    ($($args:tt)*) => {
+        $crate::whatever(format!($($args)*))
+    };
+}
+
+#[macro_export]
+macro_rules! ensure {
+    ($cond:expr, $($args:tt)*) => {
+        if !$cond {
+            $crate::bail!($($args)*)
+        }
     };
 }
 
@@ -819,6 +840,7 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 
     #[track_caller]
+    #[must_use]
     fn whatever<F, C>(self, description: C) -> Result<T, Report<F>>
     where
         F: Whatever,
@@ -832,6 +854,7 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 
     #[track_caller]
+    #[must_use]
     fn whatever_with<F, C, X>(self, description: X) -> Result<T, Report<F>>
     where
         F: Whatever,

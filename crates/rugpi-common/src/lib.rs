@@ -4,6 +4,7 @@
 use std::{collections::HashMap, fs, io, path::Path};
 
 use boot::grub::grub_envblk_encode;
+use reportify::{Report, ResultExt};
 
 use crate::boot::uboot::UBootEnv;
 
@@ -23,10 +24,14 @@ pub mod stream_hasher;
 pub mod system;
 pub mod utils;
 
-/// The [`anyhow`] result type.
-pub type Anyhow<T> = anyhow::Result<T>;
+reportify::new_whatever_type! {
+    BootPatchError
+}
 
-pub fn grub_patch_env(boot_dir: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
+pub fn grub_patch_env(
+    boot_dir: impl AsRef<Path>,
+    root: impl AsRef<str>,
+) -> Result<(), Report<BootPatchError>> {
     const RUGPI_BOOTARGS: &str = "rugpi_bootargs";
     let mut env = HashMap::new();
     env.insert(
@@ -36,16 +41,21 @@ pub fn grub_patch_env(boot_dir: impl AsRef<Path>, root: impl AsRef<str>) -> Anyh
             root.as_ref()
         ),
     );
-    let encoded = grub_envblk_encode(&env)?;
-    std::fs::write(boot_dir.as_ref().join("boot.grubenv"), encoded.as_bytes())?;
+    let encoded = grub_envblk_encode(&env).whatever("unable to encode boot environment")?;
+    std::fs::write(boot_dir.as_ref().join("boot.grubenv"), encoded.as_bytes())
+        .whatever("unable to write grub environment file")?;
     Ok(())
 }
 
 /// Patches `cmdline.txt` to use the given root device and `rugpi-ctrl` as init process.
-pub fn rpi_patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<()> {
-    fn _patch_cmdline(path: &Path, root: &str) -> Anyhow<()> {
+pub fn rpi_patch_boot(
+    path: impl AsRef<Path>,
+    root: impl AsRef<str>,
+) -> Result<(), Report<BootPatchError>> {
+    fn _patch_cmdline(path: &Path, root: &str) -> Result<(), Report<BootPatchError>> {
         let cmdline_path = path.join("cmdline.txt");
-        let cmdline = fs::read_to_string(&cmdline_path)?;
+        let cmdline = fs::read_to_string(&cmdline_path)
+            .whatever("unable to read `cmdline.txt` from boot partition")?;
         let mut parts = cmdline
             .split_ascii_whitespace()
             .filter(|part| {
@@ -60,15 +70,17 @@ pub fn rpi_patch_boot(path: impl AsRef<Path>, root: impl AsRef<str>) -> Anyhow<(
         parts.push(format!("root={root}"));
         parts.push("init=/usr/bin/rugpi-ctrl".to_owned());
         let cmdline_value = parts.join(" ");
-        fs::write(&cmdline_path, &cmdline_value)?;
+        fs::write(&cmdline_path, &cmdline_value)
+            .whatever("unable to write `cmdline.txt` to boot partition")?;
         let boot_env_path = path.join("boot.env");
         let mut env = if boot_env_path.exists() {
-            UBootEnv::load(&boot_env_path)?
+            UBootEnv::load(&boot_env_path).whatever("unable to load U-Boot environment")?
         } else {
             UBootEnv::new()
         };
         env.set("bootargs", &cmdline_value);
-        env.save(boot_env_path)?;
+        env.save(boot_env_path)
+            .whatever("unable to save U-Boot environment")?;
         Ok(())
     }
     _patch_cmdline(path.as_ref(), root.as_ref())

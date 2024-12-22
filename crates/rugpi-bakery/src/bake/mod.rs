@@ -5,8 +5,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail};
-use rugpi_common::{loop_dev::LoopDevice, mount::Mounted, Anyhow};
+use reportify::{bail, whatever, ResultExt};
+use rugpi_common::{loop_dev::LoopDevice, mount::Mounted};
 use tempfile::tempdir;
 use url::Url;
 use xscript::{run, Run};
@@ -17,18 +17,19 @@ use crate::{
         caching::{download, Hasher},
         prelude::*,
     },
+    BakeryResult,
 };
 
 pub mod customize;
 pub mod image;
 pub mod targets;
 
-pub fn bake_image(project: &Project, image: &str, output: &Path) -> Anyhow<()> {
+pub fn bake_image(project: &Project, image: &str, output: &Path) -> BakeryResult<()> {
     let image_config = project
         .config
         .images
         .get(image)
-        .ok_or_else(|| anyhow!("unable to find image {image}"))?;
+        .ok_or_else(|| whatever!("unable to find image {image}"))?;
     info!("baking image `{image}`");
     let layer_bakery = LayerBakery::new(project, image_config.architecture);
     let baked_layer = layer_bakery.bake_root(&image_config.layer)?;
@@ -45,7 +46,7 @@ impl<'p> LayerBakery<'p> {
         Self { project, arch }
     }
 
-    pub fn bake_root(&self, layer: &str) -> Anyhow<PathBuf> {
+    pub fn bake_root(&self, layer: &str) -> BakeryResult<PathBuf> {
         let library = self.project.library()?;
         let Some(layer) = library.lookup_layer(library.repositories.root_repository, layer) else {
             bail!("unable to find layer {layer}");
@@ -53,7 +54,7 @@ impl<'p> LayerBakery<'p> {
         self.bake(layer)
     }
 
-    pub fn bake(&self, layer: LayerIdx) -> Anyhow<PathBuf> {
+    pub fn bake(&self, layer: LayerIdx) -> BakeryResult<PathBuf> {
         let repositories = &self.project.repositories()?.repositories;
         let library = self.project.library()?;
         let layer = &library.layers[layer];
@@ -109,8 +110,10 @@ impl<'p> LayerBakery<'p> {
     }
 }
 
-fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> {
-    let image_url = image_url.parse::<Url>()?;
+fn extract(project: &Project, image_url: &str, layer_path: &Path) -> BakeryResult<()> {
+    let image_url = image_url
+        .parse::<Url>()
+        .whatever("unable to parse image URL")?;
     let mut image_path = match image_url.scheme() {
         "file" => {
             let mut image_path = project.dir.to_path_buf();
@@ -123,7 +126,7 @@ fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> 
         let decompressed_image_path = image_path.with_extension("");
         if !decompressed_image_path.is_file() {
             info!("decompressing XZ image");
-            run!(["xz", "-d", "-k", image_path])?;
+            run!(["xz", "-d", "-k", image_path]).whatever("unable to decompress image")?;
         }
         image_path = decompressed_image_path;
     }
@@ -131,33 +134,36 @@ fn extract(project: &Project, image_url: &str, layer_path: &Path) -> Anyhow<()> 
         let decompressed_image_path = image_path.with_extension("");
         if !decompressed_image_path.is_file() {
             info!("decompressing GZ image");
-            run!(["gzip", "-d", "-k", image_path])?;
+            run!(["gzip", "-d", "-k", image_path]).whatever("unable to decompress image")?;
         }
         image_path = decompressed_image_path;
     }
     if let Some(parent) = layer_path.parent() {
         if !parent.exists() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).whatever("unable to create layer path")?;
         }
     }
-    let temp_dir = tempdir()?;
+    let temp_dir = tempdir().whatever("unable to create temporary directory")?;
     let temp_dir_path = temp_dir.path();
     let system_dir = temp_dir_path.join("roots/system");
     let boot_dir = temp_dir_path.join("roots/boot");
-    std::fs::create_dir_all(&system_dir)?;
-    std::fs::create_dir_all(&boot_dir)?;
+    std::fs::create_dir_all(&system_dir).whatever("unable to create system directory")?;
+    std::fs::create_dir_all(&boot_dir).whatever("unable to create boot directory")?;
     if image_path.extension() == Some("tar".as_ref()) {
         info!("Copying root filesystem {image_path:?}");
-        run!(["tar", "-x", "-f", &image_path, "-C", system_dir])?;
-        run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])?;
+        run!(["tar", "-x", "-f", &image_path, "-C", system_dir])
+            .whatever("unable to extract root file system")?;
+        run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])
+            .whatever("unable to create layer tar file")?;
     } else {
         info!("creating `.tar` archive with system files");
-        let loop_dev = LoopDevice::attach(image_path)?;
-        let _mounted_root = Mounted::mount(loop_dev.partition(2), &system_dir)?;
-        let _mounted_boot =
-            Mounted::mount(loop_dev.partition(1), temp_dir_path.join("roots/boot"))?;
-        run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])?;
+        let loop_dev = LoopDevice::attach(image_path).whatever("unable to setup loop device")?;
+        let _mounted_root = Mounted::mount(loop_dev.partition(2), &system_dir)
+            .whatever("unable to mount system partition")?;
+        let _mounted_boot = Mounted::mount(loop_dev.partition(1), temp_dir_path.join("roots/boot"))
+            .whatever("unable to mount boot partition")?;
     }
-
+    run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])
+        .whatever("unable to create layer tar file")?;
     Ok(())
 }

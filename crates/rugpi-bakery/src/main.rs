@@ -6,20 +6,26 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::bail;
 use bake::{image::make_image, LayerBakery};
 use clap::Parser;
 use colored::Colorize;
 use project::{
     config::Architecture, images::ImageConfig, repositories::Source, Project, ProjectLoader,
 };
-use rugpi_common::{fsutils::copy_recursive, Anyhow};
+use reportify::{bail, Report, ResultExt};
+use rugpi_common::fsutils::copy_recursive;
 use serde::Deserialize;
 use utils::logging::init_logging;
 
 pub mod bake;
 pub mod project;
 pub mod utils;
+
+reportify::new_whatever_type! {
+    BakeryError
+}
+
+pub type BakeryResult<T> = Result<T, Report<BakeryError>>;
 
 /// Command line arguments.
 #[derive(Debug, Parser)]
@@ -107,7 +113,7 @@ pub struct InitCommand {
 }
 
 /// Entrypoint of the CLI.
-fn main() -> Anyhow<()> {
+fn main() -> BakeryResult<()> {
     init_logging();
 
     let args = Args::parse();
@@ -132,7 +138,8 @@ fn main() -> Anyhow<()> {
         Command::Update(task) => {
             let version = task.version.as_deref().unwrap_or("v0");
             println!("Switch Rugpi Bakery to version `{version}`...");
-            std::fs::write("run-bakery", interpolate_run_bakery(version))?;
+            std::fs::write("run-bakery", interpolate_run_bakery(version))
+                .whatever("error writing `run-bakery`")?;
         }
         Command::Pull => {
             let project = load_project(&args)?;
@@ -172,15 +179,20 @@ fn main() -> Anyhow<()> {
                 source,
                 image,
             } => {
-                let config: ImageConfig = toml::from_str(&fs::read_to_string(&config)?)?;
+                let config: ImageConfig = toml::from_str(
+                    &fs::read_to_string(&config).whatever("error reading image config")?,
+                )
+                .whatever("error parsing image config")?;
                 make_image(&config, source, image)?;
             }
         },
         Command::Init(cmd) => {
             let Some(template) = &cmd.template else {
                 let templates: HashMap<String, TemplateInfo> = toml::from_str(
-                    &std::fs::read_to_string("/usr/share/rugpi/templates/templates.toml")?,
-                )?;
+                    &std::fs::read_to_string("/usr/share/rugpi/templates/templates.toml")
+                        .whatever("error reading templates list")?,
+                )
+                .whatever("error parsing templates list")?;
                 println!("{}\n", "Available Templates:".bold());
                 let mut names = templates.keys().collect::<Vec<_>>();
                 names.sort();
@@ -198,7 +210,8 @@ fn main() -> Anyhow<()> {
                 bail!("Project has already been initialized.");
             }
             let template_dir = Path::new("/usr/share/rugpi/templates").join(template);
-            copy_recursive(template_dir, "/project")?;
+            copy_recursive(template_dir, "/project")
+                .whatever("error copying template to project directory")?;
         }
         Command::List(cmd) => {
             let project = load_project(&args)?;
@@ -219,15 +232,15 @@ fn interpolate_run_bakery(version: &str) -> String {
     include_str!("../assets/run-bakery").replace("%%DEFAULT_VERSION%%", version)
 }
 
-fn load_project(args: &Args) -> Anyhow<Project> {
+fn load_project(args: &Args) -> BakeryResult<Project> {
     ProjectLoader::current_dir()?
         .with_config_file(args.config.as_deref())
         .load()
 }
 
-fn exec_shell() -> Anyhow<Infallible> {
+fn exec_shell() -> BakeryResult<Infallible> {
     let zsh = CString::new("/bin/zsh").unwrap();
-    Ok(nix::unistd::execv::<&CStr>(&zsh, &[])?)
+    nix::unistd::execv::<&CStr>(&zsh, &[]).whatever("error executing shell")
 }
 
 #[derive(Debug, Clone, Deserialize)]

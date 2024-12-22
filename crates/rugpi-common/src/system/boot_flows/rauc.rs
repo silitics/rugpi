@@ -2,8 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 
+use super::BootFlowResult;
 use crate::{
     boot::grub::{load_grub_env, save_grub_env, GrubEnv},
     system::{
@@ -11,7 +13,6 @@ use crate::{
         boot_groups::BootGroupIdx,
         System,
     },
-    Anyhow,
 };
 
 /// RAUC-compatible Grub boot flow configuration.
@@ -32,7 +33,7 @@ pub struct RaucGrubBootFlow {
 impl RaucGrubBootFlow {
     /// Create boot flow from the given configuration.
     #[allow(dead_code)]
-    pub fn from_config(config: &RaucGrubBootFlowConfig) -> Anyhow<Self> {
+    pub fn from_config(config: &RaucGrubBootFlowConfig) -> BootFlowResult<Self> {
         let grub_env_path = config
             .grub_env
             .as_deref()
@@ -44,46 +45,50 @@ impl RaucGrubBootFlow {
         Ok(this)
     }
 
-    fn load_grub_env(&self) -> Anyhow<GrubEnv> {
-        load_grub_env(&self.grub_env_path)
+    fn load_grub_env(&self) -> BootFlowResult<GrubEnv> {
+        load_grub_env(&self.grub_env_path).whatever("unable to load Grub environment")
     }
 
     #[allow(dead_code)]
-    fn save_grub_env(&self, env: &GrubEnv) -> Anyhow<()> {
-        save_grub_env(&self.grub_env_path, env)
+    fn save_grub_env(&self, env: &GrubEnv) -> BootFlowResult<()> {
+        save_grub_env(&self.grub_env_path, env).whatever("unable to save Grub environment")
     }
 }
 
 #[allow(unused_variables)]
 impl BootFlow for RaucGrubBootFlow {
-    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
+    fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<()> {
         // RAUC's Grub integration does not allow setting oneshot entries. We make the
         // the requested entry the primary. If anything goes wrong, the system will revert
         // to the current system anyway as it is still in the boot order.
         todo!()
     }
 
-    fn commit(&self, system: &System) -> Anyhow<()> {
+    fn commit(&self, system: &System) -> BootFlowResult<()> {
         todo!()
     }
 
-    fn get_default(&self, system: &System) -> Anyhow<BootGroupIdx> {
+    fn get_default(&self, system: &System) -> BootFlowResult<BootGroupIdx> {
         todo!()
     }
 
-    fn remaining_attempts(&self, system: &System, entry: BootGroupIdx) -> Anyhow<Option<u64>> {
+    fn remaining_attempts(
+        &self,
+        system: &System,
+        entry: BootGroupIdx,
+    ) -> BootFlowResult<Option<u64>> {
         todo!()
     }
 
-    fn get_status(&self, system: &System, entry: BootGroupIdx) -> Anyhow<BootGroupStatus> {
+    fn get_status(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<BootGroupStatus> {
         todo!()
     }
 
-    fn mark_good(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
+    fn mark_good(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<()> {
         todo!()
     }
 
-    fn mark_bad(&self, system: &System, entry: BootGroupIdx) -> Anyhow<()> {
+    fn mark_bad(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<()> {
         todo!()
     }
 

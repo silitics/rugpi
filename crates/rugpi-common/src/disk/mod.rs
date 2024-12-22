@@ -2,18 +2,18 @@
 
 use std::path::Path;
 
-use anyhow::bail;
 use rand::Rng;
+use reportify::{bail, Report};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use self::gpt::{Guid, GPT_TABLE_BLOCKS, GUID_STRING_LENGTH};
 use crate::{
+    partitions::DiskError,
     utils::{
         ascii_numbers::parse_ascii_decimal_digit,
         units::{NumBytes, Quantity, Unit},
     },
-    Anyhow,
 };
 
 pub mod blkdev;
@@ -85,7 +85,7 @@ impl PartitionTable {
     }
 
     /// Read the partition table from a device or image.
-    pub fn read(dev: impl AsRef<Path>) -> Anyhow<Self> {
+    pub fn read(dev: impl AsRef<Path>) -> Result<Self, Report<DiskError>> {
         sfdisk::sfdisk_read(dev.as_ref())
     }
 
@@ -138,7 +138,7 @@ impl PartitionTable {
     }
 
     /// Write the partition table to a device or image.
-    pub fn write(&self, dev: impl AsRef<Path>) -> Anyhow<()> {
+    pub fn write(&self, dev: impl AsRef<Path>) -> Result<(), Report<DiskError>> {
         // Make sure that we never write an invalid partition table.
         self.validate()?;
         sfdisk::sfdisk_write(self, dev.as_ref())
@@ -150,7 +150,7 @@ impl PartitionTable {
     /// - Partitions are sorted based on their number and starting block.
     /// - Partitions do not overlap except for the extended MBR partition.
     /// - Partitions are within the usable range of the disk.
-    pub fn validate(&self) -> Anyhow<()> {
+    pub fn validate(&self) -> Result<(), Report<DiskError>> {
         let mut last_usable = self.last_usable_block();
         let mut next_free = self.first_usable_block();
         let mut next_number = 1;

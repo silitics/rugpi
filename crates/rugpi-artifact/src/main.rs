@@ -4,20 +4,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::anyhow;
 use clap::Parser;
-use rugpi_common::{
-    artifact::format::{
-        encode::{self, Encode},
-        stlv::{
-            self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek,
-        },
-        tags::{self, TagNameResolver},
-        ArtifactHeader, FragmentHeader, FragmentInfo, Hash,
-    },
-    Anyhow,
+use reportify::{whatever, Report, ResultExt};
+use rugpi_common::artifact::format::{
+    encode::{self, Encode},
+    stlv::{self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek},
+    tags::{self, TagNameResolver},
+    ArtifactHeader, FragmentHeader, FragmentInfo, Hash,
 };
 use sha2::Digest;
+
+reportify::new_whatever_type! {
+    CliError
+}
 
 #[derive(Debug, Clone, Parser)]
 pub struct Args {
@@ -46,17 +45,19 @@ pub struct PackCmd {
     directory: PathBuf,
 }
 
-pub fn main() -> Anyhow<()> {
+pub fn main() -> Result<(), Report<CliError>> {
     let args = Args::parse();
     match args.cmd {
         Cmd::Pack(cmd) => {
             let mut fragment_ids = Vec::new();
-            for entry in std::fs::read_dir(cmd.directory.join("fragments"))? {
-                let entry = entry?;
+            for entry in std::fs::read_dir(cmd.directory.join("fragments"))
+                .whatever("unable to read fragments from directory")?
+            {
+                let entry = entry.whatever("unable to obtain fragment directory entry")?;
                 let file_name = entry.file_name();
                 let id = file_name
                     .to_str()
-                    .ok_or_else(|| anyhow!("invalid UTF-8 in fragment id"))?
+                    .ok_or_else(|| whatever!("invalid UTF-8 in fragment id"))?
                     .to_owned();
                 if id.chars().any(|c| !c.is_ascii_digit()) {
                     eprintln!("ignoring fragments/{id}");
@@ -71,12 +72,17 @@ pub fn main() -> Anyhow<()> {
             for fragment in &fragment_ids {
                 let fragment_path = cmd.directory.join("fragments").join(fragment);
                 let payload_path = fragment_path.join("payload");
-                let payload_size = payload_path.metadata()?.len();
+                let payload_size = payload_path
+                    .metadata()
+                    .whatever("unable to read metadata of fragment payload")?
+                    .len();
                 let header = FragmentHeader {};
                 let mut hasher = sha2::Sha512_256::new();
-                let mut reader = BufReader::new(File::open(&payload_path)?);
+                let mut reader = BufReader::new(
+                    File::open(&payload_path).whatever("unable to open payload file")?,
+                );
                 loop {
-                    let buffer = reader.fill_buf()?;
+                    let buffer = reader.fill_buf().whatever("unable to fill buffer")?;
                     if buffer.is_empty() {
                         break;
                     }
@@ -98,9 +104,11 @@ pub fn main() -> Anyhow<()> {
 
                 fragment_infos.push(FragmentInfo {
                     // metadata: Metadata::default(),
-                    filename: read_optional_string(&fragment_path.join("filename"))?,
+                    filename: read_optional_string(&fragment_path.join("filename"))
+                        .whatever("unable to read fragment filename")?,
                     offset: Some(offset),
-                    slot: read_optional_string(&fragment_path.join("slot"))?,
+                    slot: read_optional_string(&fragment_path.join("slot"))
+                        .whatever("unable to read fragment slot")?,
                     header_hash,
                     payload_hash,
                 });
@@ -113,30 +121,48 @@ pub fn main() -> Anyhow<()> {
             let header = ArtifactHeader {
                 fragments: fragment_infos,
             };
-            let mut writer = BufWriter::new(File::create(&cmd.artifact)?);
-            write_open_segment(&mut writer, tags::ARTIFACT)?;
-            header.encode(&mut writer, tags::ARTIFACT_HEADER)?;
-            write_open_segment(&mut writer, tags::FRAGMENTS)?;
+            let mut writer = BufWriter::new(
+                File::create(&cmd.artifact).whatever("unable to create artifact file")?,
+            );
+
+            fn report_write_result<T>(result: Result<T, io::Error>) -> Result<T, Report<CliError>> {
+                result.whatever("unable to write to artifact file")
+            }
+
+            report_write_result(write_open_segment(&mut writer, tags::ARTIFACT))?;
+            report_write_result(header.encode(&mut writer, tags::ARTIFACT_HEADER))?;
+            report_write_result(write_open_segment(&mut writer, tags::FRAGMENTS))?;
             for (idx, fragment) in fragment_ids.iter().enumerate() {
-                write_open_segment(&mut writer, tags::FRAGMENT)?;
-                writer.write_all(&fragment_headers[idx])?;
+                report_write_result(write_open_segment(&mut writer, tags::FRAGMENT))?;
+                report_write_result(writer.write_all(&fragment_headers[idx]))?;
                 let payload = cmd
                     .directory
                     .join("fragments")
                     .join(fragment)
                     .join("payload");
-                let size = payload.metadata()?.len();
-                write_atom_head(&mut writer, AtomHead::value(tags::FRAGMENT_PAYLOAD, size))?;
-                io::copy(&mut File::open(&payload)?, &mut writer)?;
-                write_close_segment(&mut writer, tags::FRAGMENT)?;
+                let size = payload
+                    .metadata()
+                    .whatever("unable to get payload metadata")?
+                    .len();
+                report_write_result(write_atom_head(
+                    &mut writer,
+                    AtomHead::value(tags::FRAGMENT_PAYLOAD, size),
+                ))?;
+                io::copy(
+                    &mut File::open(&payload).whatever("unable to open fragment payload")?,
+                    &mut writer,
+                )
+                .whatever("unable to copy fragment payload")?;
+                report_write_result(write_close_segment(&mut writer, tags::FRAGMENT))?;
             }
-            write_close_segment(&mut writer, tags::FRAGMENTS)?;
-            write_close_segment(&mut writer, tags::ARTIFACT)?;
+            report_write_result(write_close_segment(&mut writer, tags::FRAGMENTS))?;
+            report_write_result(write_close_segment(&mut writer, tags::ARTIFACT))?;
         }
         Cmd::Print(cmd) => {
-            let file = fs::File::open(&cmd.artifact)?;
+            let file = fs::File::open(&cmd.artifact).whatever("unable to open artifact file")?;
             let mut reader = BufReader::new(file);
-            stlv::pretty_print::<_, SkipSeek>(&mut reader, Some(&TagNameResolver))?;
+            stlv::pretty_print::<_, SkipSeek>(&mut reader, Some(&TagNameResolver))
+                .whatever("unable to pretty print artifact file")?;
         }
     }
     Ok(())

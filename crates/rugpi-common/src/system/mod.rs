@@ -1,13 +1,13 @@
-use anyhow::{anyhow, bail};
 use boot_flows::BootFlow;
 use boot_groups::{BootGroup, BootGroupIdx, BootGroups};
 use config::{load_system_config, SystemConfig};
 use partitions::ConfigPartition;
+use reportify::{bail, whatever, Report, ResultExt};
 use root::{find_system_device, SystemRoot};
 use slots::{SlotKind, SystemSlots};
 use tracing::warn;
 
-use crate::{disk::blkdev::BlockDevice, Anyhow};
+use crate::disk::blkdev::BlockDevice;
 
 pub mod boot_flows;
 pub mod boot_groups;
@@ -17,6 +17,12 @@ pub mod partitions;
 pub mod paths;
 pub mod root;
 pub mod slots;
+
+reportify::new_whatever_type! {
+    SystemError
+}
+
+pub type SystemResult<T> = Result<T, Report<SystemError>>;
 
 pub struct System {
     pub config: SystemConfig,
@@ -31,7 +37,7 @@ pub struct System {
 }
 
 impl System {
-    pub fn initialize() -> Anyhow<Self> {
+    pub fn initialize() -> SystemResult<Self> {
         let system_config = load_system_config()?;
         let system_device = find_system_device();
         let system_root = system_device
@@ -88,7 +94,8 @@ impl System {
             system_config.boot_flow.as_ref(),
             &config_partition,
             &boot_entries,
-        )?;
+        )
+        .whatever("unable to create boot flow from config")?;
         Ok(Self {
             config: system_config,
             device: system_device,
@@ -122,13 +129,21 @@ impl System {
     }
 
     /// First entry that is not the default.
-    pub fn spare_entry(&self) -> Anyhow<Option<(BootGroupIdx, &BootGroup)>> {
-        let default = self.boot_flow.get_default(self)?;
+    pub fn spare_entry(&self) -> SystemResult<Option<(BootGroupIdx, &BootGroup)>> {
+        let default = self
+            .boot_flow
+            .get_default(self)
+            .whatever("unable to determine default boot group")?;
         Ok(self.boot_entries().iter().find(|(idx, _)| *idx != default))
     }
 
-    pub fn needs_commit(&self) -> Anyhow<bool> {
-        Ok(self.active_boot_entry != Some(self.boot_flow.get_default(self)?))
+    pub fn needs_commit(&self) -> SystemResult<bool> {
+        Ok(self.active_boot_entry
+            != Some(
+                self.boot_flow
+                    .get_default(self)
+                    .whatever("unable to determine default boot group")?,
+            ))
     }
 
     pub fn boot_flow(&self) -> &dyn BootFlow {
@@ -139,12 +154,14 @@ impl System {
         self.config_partition.as_ref()
     }
 
-    pub fn require_config_partition(&self) -> Anyhow<&ConfigPartition> {
+    pub fn require_config_partition(&self) -> SystemResult<&ConfigPartition> {
         self.config_partition()
-            .ok_or_else(|| anyhow!("config partition is required"))
+            .ok_or_else(|| whatever("config partition is required"))
     }
 
-    pub fn commit(&self) -> Anyhow<()> {
-        self.boot_flow.commit(self)
+    pub fn commit(&self) -> SystemResult<()> {
+        self.boot_flow
+            .commit(self)
+            .whatever("unable to commit to active boot group")
     }
 }

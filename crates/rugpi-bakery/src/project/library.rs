@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ffi::OsStr, fs, ops::Deref, path::Path, str::FromStr, sync::Arc};
 
-use rugpi_common::Anyhow;
+use reportify::{whatever, ResultExt};
 
 use super::{
     config::Architecture,
@@ -8,10 +8,12 @@ use super::{
     recipes::{Recipe, RecipeLoader},
     repositories::{ProjectRepositories, RepositoryIdx},
 };
-use crate::utils::{
-    caching::mtime,
-    idx_vec::{new_idx_type, IdxVec},
-    prelude::*,
+use crate::{
+    utils::{
+        caching::mtime,
+        idx_vec::{new_idx_type, IdxVec},
+    },
+    BakeryResult,
 };
 
 #[derive(Debug)]
@@ -25,20 +27,22 @@ pub struct Library {
 
 impl Library {
     #[allow(clippy::assigning_clones)]
-    pub fn load(repositories: Arc<ProjectRepositories>) -> Anyhow<Self> {
+    pub fn load(repositories: Arc<ProjectRepositories>) -> BakeryResult<Self> {
         let mut recipes = IdxVec::new();
         let tables = IdxVec::<RepositoryIdx, _>::from_vec(
             repositories
                 .repositories
                 .iter()
-                .map(|(idx, repository)| -> Anyhow<_> {
+                .map(|(idx, repository)| -> BakeryResult<_> {
                     let mut table = HashMap::new();
                     let loader =
                         RecipeLoader::new(idx).with_default(idx == repositories.root_repository);
                     let recipes_dir = repository.source.dir.join("recipes");
                     if recipes_dir.is_dir() {
-                        for entry in fs::read_dir(repository.source.dir.join("recipes"))? {
-                            let entry = entry?;
+                        for entry in fs::read_dir(repository.source.dir.join("recipes"))
+                            .whatever("error reading recipes from directory")?
+                        {
+                            let entry = entry.whatever("error reading recipe directory entry")?;
                             let path = entry.path();
                             if !path.is_dir() || should_ignore_path(&path) {
                                 continue;
@@ -50,21 +54,23 @@ impl Library {
                     }
                     Ok(table)
                 })
-                .collect::<Anyhow<_>>()?,
+                .collect::<BakeryResult<_>>()?,
         );
         let mut layers = IdxVec::new();
         let layer_tables = IdxVec::<RepositoryIdx, _>::from_vec(
             repositories
                 .repositories
                 .iter()
-                .map(|(repo, repository)| -> Anyhow<_> {
+                .map(|(repo, repository)| -> BakeryResult<_> {
                     let mut table = HashMap::new();
                     let layers_dir = repository.source.dir.join("layers");
                     if !layers_dir.exists() {
                         return Ok(table);
                     }
-                    for entry in fs::read_dir(layers_dir)? {
-                        let entry = entry?;
+                    for entry in
+                        fs::read_dir(layers_dir).whatever("unable to read layers from directory")?
+                    {
+                        let entry = entry.whatever("unable to read layer directory entry")?;
                         let path = entry.path();
                         if !path.is_file() || should_ignore_path(&path) {
                             continue;
@@ -75,10 +81,13 @@ impl Library {
                         let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
                         let mut arch = None;
                         if let Some((layer_name, arch_str)) = name.split_once('.') {
-                            arch = Some(Architecture::from_str(arch_str)?);
+                            arch = Some(
+                                Architecture::from_str(arch_str)
+                                    .whatever("unable to parse architecture")?,
+                            );
                             name = layer_name.to_owned();
                         }
-                        let modified = mtime(&path)?;
+                        let modified = mtime(&path).whatever("unable to obtain layer mtime")?;
                         let layer_config = LayerConfig::load(&path)?;
                         let layer_idx = *table
                             .entry(name.clone())
@@ -95,7 +104,7 @@ impl Library {
                     }
                     Ok(table)
                 })
-                .collect::<Anyhow<_>>()?,
+                .collect::<BakeryResult<_>>()?,
         );
         Ok(Self {
             repositories,
@@ -120,9 +129,9 @@ impl Library {
         }
     }
 
-    pub fn try_lookup(&self, repo: RepositoryIdx, name: &str) -> Anyhow<RecipeIdx> {
+    pub fn try_lookup(&self, repo: RepositoryIdx, name: &str) -> BakeryResult<RecipeIdx> {
         self.lookup(repo, name)
-            .ok_or_else(|| anyhow!("unable to find recipe {name}"))
+            .ok_or_else(|| whatever!("unable to find recipe {name}"))
     }
 
     pub fn lookup_layer(&self, repo: RepositoryIdx, name: &str) -> Option<LayerIdx> {

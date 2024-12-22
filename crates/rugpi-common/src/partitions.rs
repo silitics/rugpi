@@ -1,20 +1,25 @@
 use std::path::Path;
 
+use reportify::{Report, ResultExt};
 use xscript::{read_str, run, Run};
-
-use crate::Anyhow;
 
 pub fn is_dir(path: impl AsRef<Path>) -> bool {
     path.as_ref().is_dir()
+}
+
+reportify::new_whatever_type! {
+    DiskError
 }
 
 /// The `sfdisk` executable.
 const SFDISK: &str = "/usr/sbin/sfdisk";
 
 /// Returns the disk id of the provided image or device.
-pub fn get_disk_id(path: impl AsRef<Path>) -> Anyhow<String> {
-    fn _disk_id(path: &Path) -> Anyhow<String> {
-        let disk_id = read_str!([SFDISK, "--disk-id", path])?;
+pub fn get_disk_id(path: impl AsRef<Path>) -> Result<String, Report<DiskError>> {
+    fn _disk_id(path: &Path) -> Result<String, Report<DiskError>> {
+        let disk_id = read_str!([SFDISK, "--disk-id", path])
+            .whatever("unable to retrieve disk id")
+            .with_info(|_| format!("disk: {path:?}"))?;
         if let Some(dos_id) = disk_id.strip_prefix("0x") {
             Ok(dos_id.to_owned())
         } else {
@@ -30,13 +35,15 @@ const MKFS_ETX4: &str = "/usr/sbin/mkfs.ext4";
 const MKFS_VFAT: &str = "/usr/sbin/mkfs.vfat";
 
 /// Formats a boot partition with FAT32.
-pub fn mkfs_vfat(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
-    run!([MKFS_VFAT, "-n", label.as_ref(), dev.as_ref()])?;
+pub fn mkfs_vfat(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Result<(), Report<DiskError>> {
+    run!([MKFS_VFAT, "-n", label.as_ref(), dev.as_ref()])
+        .whatever("unable to create FAT32 filesystem")?;
     Ok(())
 }
 
 /// Formats a system partition with EXT4.
-pub fn mkfs_ext4(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Anyhow<()> {
-    run!([MKFS_ETX4, "-F", "-L", label.as_ref(), dev.as_ref()])?;
+pub fn mkfs_ext4(dev: impl AsRef<Path>, label: impl AsRef<str>) -> Result<(), Report<DiskError>> {
+    run!([MKFS_ETX4, "-F", "-L", label.as_ref(), dev.as_ref()])
+        .whatever("unable to create ETX4 filesystem")?;
     Ok(())
 }

@@ -3,23 +3,29 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use reportify::{Report, ResultExt};
 use tracing::info;
 use xscript::{run, Run};
 
-use crate::Anyhow;
+reportify::new_whatever_type! {
+    MountError
+}
 
 pub struct Mounted {
     path: PathBuf,
 }
 
 impl Mounted {
-    pub fn mount(dev: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
+    pub fn mount(dev: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<Self, Report<MountError>> {
         let dst = dst.as_ref();
         let dev = dev.as_ref();
         info!("Mounting {dev:?} to {dst:?}.");
         // FIXME: The `mount` command works without specifying the filesystem type,
         // which is not the case for `nix::mount::mount`.
-        run!(["/usr/bin/mount", dev, dst])?;
+        run!(["/usr/bin/mount", dev, dst])
+            .whatever("unable to mount filesystem")
+            .with_info(|_| format!("dev: {dev:?}"))
+            .with_info(|_| format!("dst: {dst:?}"))?;
         Ok(Mounted { path: dst.into() })
     }
 
@@ -31,7 +37,7 @@ impl Mounted {
         fstype: impl AsRef<str>,
         src: impl AsRef<Path>,
         dst: impl AsRef<Path>,
-    ) -> Anyhow<Self> {
+    ) -> Result<Self, Report<MountError>> {
         let dst = dst.as_ref();
         let src = src.as_ref();
         let fstype = fstype.as_ref();
@@ -42,11 +48,15 @@ impl Mounted {
             Some(fstype),
             nix::mount::MsFlags::empty(),
             None as Option<&OsStr>,
-        )?;
+        )
+        .whatever("unable to mount filesystem")
+        .with_info(|_| format!("src: {src:?}"))
+        .with_info(|_| format!("dst: {dst:?}"))
+        .with_info(|_| format!("fstype: {fstype}"))?;
         Ok(Mounted { path: dst.into() })
     }
 
-    pub fn bind(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Anyhow<Self> {
+    pub fn bind(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<Self, Report<MountError>> {
         let dst = dst.as_ref();
         let src = src.as_ref();
         info!("Mounting {src:?} to {dst:?}.");
@@ -56,7 +66,10 @@ impl Mounted {
             None as Option<&OsStr>,
             nix::mount::MsFlags::MS_BIND,
             None as Option<&OsStr>,
-        )?;
+        )
+        .whatever("unable to bind mount")
+        .with_info(|_| format!("src: {src:?}"))
+        .with_info(|_| format!("dst: {dst:?}"))?;
         Ok(Mounted { path: dst.into() })
     }
 }

@@ -6,8 +6,8 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, bail};
 use clap::{Parser, ValueEnum};
+use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugpi_common::{
     disk::stream::ImgStream,
     maybe_compressed::MaybeCompressed,
@@ -16,9 +16,8 @@ use rugpi_common::{
         boot_groups::{BootGroup, BootGroupIdx},
         info::SystemInfo,
         slots::SlotKind,
-        System,
+        System, SystemResult,
     },
-    Anyhow,
 };
 
 use crate::{
@@ -26,27 +25,49 @@ use crate::{
     utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG},
 };
 
-pub fn main() -> Anyhow<()> {
+fn create_rugpi_state_directory() -> SystemResult<()> {
+    fs::create_dir_all("/run/rugpi/state/.rugpi")
+        .whatever("unable to create `/run/rugpi/state/.rugpi`")
+}
+
+fn set_rugpi_state_flag(name: &str) -> SystemResult<()> {
+    fs::write(Path::new("/run/rugpi/state/.rugpi").join(name), "")
+        .whatever("unable to write state flag")
+        .with_info(|_| format!("name: {name}"))
+}
+
+fn clear_rugpi_state_flag(name: &str) -> SystemResult<()> {
+    let path = Path::new("/run/rugpi/state/.rugpi").join(name);
+    fs::remove_file(&path).or_else(|error| match error.kind() {
+        io::ErrorKind::NotFound => Ok(()),
+        _ => Err(error
+            .whatever("unable to clear state flag")
+            .with_info(format!("name: {name}"))),
+    })?;
+    if path.exists() {
+        return Err(whatever!("unable to clear state flag").with_info(format!("name: {name}")));
+    }
+    Ok(())
+}
+
+pub fn main() -> SystemResult<()> {
     let args = Args::parse();
     let system = System::initialize()?;
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {
-                fs::create_dir_all("/run/rugpi/state/.rugpi")?;
-                fs::write("/run/rugpi/state/.rugpi/reset-state", "")?;
+                create_rugpi_state_directory()?;
+                set_rugpi_state_flag("reset-state")?;
                 reboot()?;
             }
             StateCommand::Overlay(overlay_cmd) => match overlay_cmd {
                 OverlayCommand::ForcePersist { persist } => match persist {
                     Boolean::True => {
-                        fs::create_dir_all("/run/rugpi/state/.rugpi")?;
-                        fs::write("/run/rugpi/state/.rugpi/force-persist-overlay", "")?;
+                        create_rugpi_state_directory()?;
+                        set_rugpi_state_flag("force-persist-overlay")?;
                     }
                     Boolean::False => {
-                        fs::remove_file("/run/rugpi/state/.rugpi/force-persist-overlay").ok();
-                        if Path::new("/run/rugpi/state/.rugpi/force-persist-overlay").exists() {
-                            bail!("Unable to unset `overlay-persist`.");
-                        }
+                        clear_rugpi_state_flag("force-persist-overlay")?;
                     }
                 },
             },
@@ -67,16 +88,16 @@ pub fn main() -> Anyhow<()> {
                     }
 
                     let check_hash = check_hash.as_deref()
-                        .map(|encoded_hash| -> Anyhow<ImageHash> {
+                        .map(|encoded_hash| -> SystemResult<ImageHash> {
                             let (algorithm, hash) = encoded_hash
                                 .split_once(':')
                                 .ok_or_else(||
-                                    anyhow!("Invalid format of hash. Format must be `sha256:<HEX-ENCODED-HASH>`.")
+                                    whatever!("Invalid format of hash. Format must be `sha256:<HEX-ENCODED-HASH>`.")
                                 )?;
                             if algorithm != "sha256" {
                                 bail!("Algorithm must be SHA256.");
                             }
-                            let decoded_hash = hex::decode(hash)?;
+                            let decoded_hash = hex::decode(hash).whatever("unable to decode image hash")?;
                             Ok(ImageHash::Sha256(decoded_hash))
                     }).transpose()?;
 
@@ -131,7 +152,10 @@ pub fn main() -> Anyhow<()> {
 
                     match reboot_type {
                         UpdateRebootType::Yes => {
-                            system.boot_flow().set_try_next(&system, entry_idx)?;
+                            system
+                                .boot_flow()
+                                .set_try_next(&system, entry_idx)
+                                .whatever("unable to set next boot entry")?;
                             reboot()?;
                         }
                         UpdateRebootType::No => { /* nothing to do */ }
@@ -146,11 +170,15 @@ pub fn main() -> Anyhow<()> {
             SystemCommand::Info { json } => {
                 if *json {
                     let info = SystemInfo::from(&system);
-                    serde_json::to_writer_pretty(std::io::stdout(), &info)?;
+                    serde_json::to_writer_pretty(std::io::stdout(), &info)
+                        .whatever("unable to write system info to stdout")?;
                 } else {
                     println!("Boot Flow: {}", system.boot_flow().name());
                     let hot = system.active_boot_entry().unwrap();
-                    let default = system.boot_flow().get_default(&system)?;
+                    let default = system
+                        .boot_flow()
+                        .get_default(&system)
+                        .whatever("unable to get default boot group")?;
                     let spare = system.spare_entry()?.unwrap().0;
                     let cold = if hot == default { spare } else { default };
                     let entries = system.boot_entries();
@@ -170,7 +198,10 @@ pub fn main() -> Anyhow<()> {
             SystemCommand::Reboot { spare } => {
                 if *spare {
                     if let Some((spare, _)) = system.spare_entry()? {
-                        system.boot_flow().set_try_next(&system, spare)?;
+                        system
+                            .boot_flow()
+                            .set_try_next(&system, spare)
+                            .whatever("unable to set next boot group")?;
                     }
                 }
                 reboot()?;
@@ -214,13 +245,13 @@ pub enum MaybeStreamHasher<R> {
 }
 
 impl<R> MaybeStreamHasher<R> {
-    pub fn verify(self) -> Anyhow<()> {
+    pub fn verify(self) -> SystemResult<()> {
         match self {
             MaybeStreamHasher::NoHash { .. } => Ok(()),
             MaybeStreamHasher::Sha256 { hasher, expected } => {
                 let found = hasher.finalize();
                 if expected.as_slice() != found.as_slice() {
-                    bail!(indoc::formatdoc! {
+                    return Err(whatever(indoc::formatdoc! {
                         r#"
                             **Image Hash Mismatch:**
                             Expected: {}
@@ -228,7 +259,7 @@ impl<R> MaybeStreamHasher<R> {
                         "#,
                         hex::encode(expected),
                         hex::encode(found)
-                    })
+                    }));
                 }
                 Ok(())
             }
@@ -251,8 +282,11 @@ fn install_update_stream(
     check_hash: Option<ImageHash>,
     entry_idx: BootGroupIdx,
     entry: &BootGroup,
-) -> Anyhow<()> {
-    system.boot_flow().pre_install(system, entry_idx)?;
+) -> SystemResult<()> {
+    system
+        .boot_flow()
+        .pre_install(system, entry_idx)
+        .whatever("error executing pre-install step")?;
 
     let boot_slot = entry.get_slot("boot").unwrap();
     let system_slot = entry.get_slot("system").unwrap();
@@ -263,7 +297,7 @@ fn install_update_stream(
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
     } else {
-        &mut File::open(image)?
+        &mut File::open(image).whatever("error opening image")?
     };
     let reader = match check_hash {
         Some(ImageHash::Sha256(expected)) => MaybeStreamHasher::Sha256 {
@@ -273,9 +307,14 @@ fn install_update_stream(
         None => MaybeStreamHasher::NoHash { reader },
     };
     println!("Copying partitions...");
-    let mut img_stream = ImgStream::new(MaybeCompressed::new(reader)?)?;
+    let mut img_stream =
+        ImgStream::new(MaybeCompressed::new(reader).whatever("error decompressing image")?)
+            .whatever("error reading image partitions")?;
     let mut partition_idx = 0;
-    while let Some(mut partition) = img_stream.next_partition()? {
+    while let Some(mut partition) = img_stream
+        .next_partition()
+        .whatever("error reading next partition")?
+    {
         let partition_name = match partition_idx {
             0 => "CONFIG",
             1 => "BOOT-A",
@@ -293,14 +332,18 @@ fn install_update_stream(
             1 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(raw_boot_slot.device())?,
-                )?;
+                    &mut fs::File::create(raw_boot_slot.device())
+                        .whatever("error opening boot partition file")?,
+                )
+                .whatever("error copying boot partition")?;
             }
             3 => {
                 io::copy(
                     &mut partition,
-                    &mut fs::File::create(raw_system_slot.device())?,
-                )?;
+                    &mut fs::File::create(raw_system_slot.device())
+                        .whatever("error opening system partition file")?,
+                )
+                .whatever("error copying system partition")?;
             }
             _ => { /* Nothing to do! */ }
         }
@@ -313,13 +356,20 @@ fn install_update_stream(
     // may not be match the file.
     loop {
         let mut buffer = vec![0; 4096];
-        if hashed_stream.read_to_end(&mut buffer)? == 0 {
+        if hashed_stream
+            .read_to_end(&mut buffer)
+            .whatever("error reading image")?
+            == 0
+        {
             break;
         }
     }
     hashed_stream.verify()?;
 
-    system.boot_flow().post_install(system, entry_idx)?;
+    system
+        .boot_flow()
+        .post_install(system, entry_idx)
+        .whatever("error running post-install step")?;
     Ok(())
 }
 

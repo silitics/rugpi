@@ -1,11 +1,12 @@
 use std::{fs, path::Path};
 
+use reportify::{Report, ResultExt};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     disk::{parse_size, repart::PartitionSchema},
+    system::SystemError,
     utils::units::NumBytes,
-    Anyhow,
 };
 
 pub const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
@@ -28,8 +29,8 @@ impl Config {
     }
 
     /// The size of the system partition(s) in bytes.
-    pub fn system_size_bytes(&self) -> Anyhow<NumBytes> {
-        Ok(parse_size(self.system_size())?)
+    pub fn system_size_bytes(&self) -> Result<NumBytes, Report<SystemError>> {
+        parse_size(self.system_size()).whatever("unable to parse system size")
     }
 }
 
@@ -42,10 +43,13 @@ pub enum Overlay {
 }
 
 /// Loads the Rugpi Ctrl configuration.
-pub fn load_config(path: impl AsRef<Path>) -> Anyhow<Config> {
+pub fn load_config(path: impl AsRef<Path>) -> Result<Config, Report<SystemError>> {
     let path = path.as_ref();
     if path.exists() {
-        Ok(toml::from_str(&fs::read_to_string(path)?)?)
+        Ok(
+            toml::from_str(&fs::read_to_string(path).whatever("unable to read config")?)
+                .whatever("unable to parse config")?,
+        )
     } else {
         Ok(Config::default())
     }

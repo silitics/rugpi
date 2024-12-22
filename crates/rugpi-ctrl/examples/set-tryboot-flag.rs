@@ -6,13 +6,13 @@ use nix::{
     libc::{c_char, c_int},
     sys::stat,
 };
-use rugpi_common::Anyhow;
+use reportify::Report;
 
 const RPI_FIRMWARE_GET_REBOOT_FLAGS: u32 = 0x00030064_u32;
 const RPI_FIRMWARE_SET_REBOOT_FLAGS: u32 = 0x00038064_u32;
 
 /// Sets the tryboot flag by directly interacting with Raspberry Pi's firmware.
-pub fn main() -> Anyhow<()> {
+pub fn main() -> Result<(), Report<io::Error>> {
     let vcio = Vcio::open()?;
     let mut buffer = encode_request(RPI_FIRMWARE_GET_REBOOT_FLAGS, 0);
     unsafe { vcio.ioctl_property(&mut buffer)? };

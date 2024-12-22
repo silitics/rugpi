@@ -1,7 +1,7 @@
 use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
 
-use anyhow::{bail, ensure};
 use nix::mount::MntFlags;
+use reportify::{bail, ensure, ResultExt};
 use rugpi_common::{
     ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH},
     disk::{
@@ -18,9 +18,8 @@ use rugpi_common::{
         paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
         root::{find_system_device, SystemRoot},
         slots::SlotKind,
-        System,
+        System, SystemResult,
     },
-    Anyhow,
 };
 use xscript::{run, Run};
 
@@ -29,7 +28,7 @@ use crate::{
     utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG},
 };
 
-pub fn main() -> Anyhow<()> {
+pub fn main() -> SystemResult<()> {
     ensure!(is_init_process(), "process must be the init process");
     let result = init();
     match &result {
@@ -38,7 +37,7 @@ pub fn main() -> Anyhow<()> {
         }
         Err(error) => {
             eprintln!("error during initialization");
-            eprintln!("{error}");
+            eprintln!("{error:?}");
         }
     }
     eprintln!("waiting for 30 seconds...");
@@ -59,7 +58,7 @@ const SYSTEMD_MACHINE_ID_SETUP: &str = "/usr/bin/systemd-machine-id-setup";
 
 const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
-fn init() -> Anyhow<()> {
+fn init() -> SystemResult<()> {
     println!(include_str!("../assets/BANNER.txt"));
     let config = load_config(CTRL_CONFIG_PATH)?;
 
@@ -132,7 +131,7 @@ fn init() -> Anyhow<()> {
     };
 
     // 3️⃣ Check and mount the data partition.
-    run!([FSCK, "-y", data_partition.path()])?;
+    run!([FSCK, "-y", data_partition.path()]).whatever("unable to check filesystem")?;
     fs::create_dir_all(MOUNT_POINT_DATA).ok();
     run!([
         MOUNT,
@@ -140,11 +139,13 @@ fn init() -> Anyhow<()> {
         "noatime",
         data_partition.path(),
         MOUNT_POINT_DATA
-    ])?;
+    ])
+    .whatever("unable to mount data partition")?;
 
     // 4️⃣ Setup remaining mount points in `/run/rugpi/mounts`.
     fs::create_dir_all(MOUNT_POINT_SYSTEM).ok();
-    run!([MOUNT, "-o", "ro", system_device.path(), MOUNT_POINT_SYSTEM])?;
+    run!([MOUNT, "-o", "ro", system_device.path(), MOUNT_POINT_SYSTEM])
+        .whatever("unable to mount system partition")?;
     fs::create_dir_all(MOUNT_POINT_CONFIG).ok();
     run!([
         MOUNT,
@@ -152,7 +153,8 @@ fn init() -> Anyhow<()> {
         "ro",
         config_partition.path(),
         MOUNT_POINT_CONFIG
-    ])?;
+    ])
+    .whatever("unable to mount config partition")?;
 
     let system = System::initialize()?;
 
@@ -169,7 +171,8 @@ fn init() -> Anyhow<()> {
     }
     fs::create_dir_all(state_profile).ok();
     fs::create_dir_all(STATE_DIR).ok();
-    run!([MOUNT, "--bind", &state_profile, STATE_DIR])?;
+    run!([MOUNT, "--bind", &state_profile, STATE_DIR])
+        .whatever("unable to bind mount state profile")?;
 
     // 7️⃣ Setup the root filesystem overlay.
     setup_root_overlay(&system, &config, state_profile)?;
@@ -207,7 +210,7 @@ pub fn overlay_work_dir() -> &'static Path {
 }
 
 /// Mounts the essential filesystems `/proc`, `/sys`, and `/run`.
-fn mount_essential_filesystems() -> Anyhow<()> {
+fn mount_essential_filesystems() -> SystemResult<()> {
     // We ignore any errors. Errors likely mean that the filesystems have already been
     // mounted.
     run!([MOUNT, "-t", "proc", "proc", "/proc"]).ok();
@@ -222,16 +225,21 @@ fn bootstrap_partitions(
     schema: &PartitionSchema,
     root: &SystemRoot,
     data_partition_config: &PartitionConfig,
-) -> Anyhow<()> {
-    let old_table = PartitionTable::read(dev)?;
-    if let Some(new_table) = repart(&old_table, schema)? {
+) -> SystemResult<()> {
+    let old_table = PartitionTable::read(dev).whatever("unable to read partition table")?;
+    if let Some(new_table) =
+        repart(&old_table, schema).whatever("unable to compute new partition table")?
+    {
         // Write new partition table to disk.
-        new_table.write(dev)?;
-        run!([SYNC])?;
+        new_table
+            .write(dev)
+            .whatever("unable to write new partition table")?;
+        run!([SYNC]).whatever("unable to synchronize file systems")?;
         // Inform the kernel about new partitions.
-        update_kernel_partitions(dev, &old_table, &new_table)?;
+        update_kernel_partitions(dev, &old_table, &new_table)
+            .whatever("unable to update partitions in the kernel")?;
         if let Some(data_partition) = resolve_data_partition(Some(root), data_partition_config) {
-            mkfs_ext4(data_partition, "data")?;
+            mkfs_ext4(data_partition, "data").whatever("unable to create EXT4 filesystem")?;
         }
         // We do not need to patch the partition ID in the configuration files as we
         // keep the id from the original image.
@@ -240,7 +248,7 @@ fn bootstrap_partitions(
 }
 
 /// Sets up the overlay.
-fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) -> Anyhow<()> {
+fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) -> SystemResult<()> {
     let overlay_state = state_profile.join("overlay");
     let force_persist = state_profile.join(".rugpi/force-persist-overlay").exists();
     if !force_persist && !matches!(config.overlay, Overlay::Persist) {
@@ -265,8 +273,9 @@ fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) ->
         "-o",
         "noatime,lowerdir={MOUNT_POINT_SYSTEM},upperdir={hot_overlay_state},workdir={OVERLAY_WORK_DIR}",
         OVERLAY_ROOT_DIR
-    ])?;
-    run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])?;
+    ]).whatever("unable to setup system overlay mounts")?;
+    run!([MOUNT, "--rbind", "/run", overlay_root_dir().join("run")])
+        .whatever("unable to rbind /run")?;
     if let Some(boot_slot) = active_boot_entry.get_slot("boot") {
         let SlotKind::Block(boot_slot) = system.slots()[boot_slot].kind();
         run!([
@@ -275,13 +284,14 @@ fn setup_root_overlay(system: &System, config: &Config, state_profile: &Path) ->
             "ro",
             boot_slot.device().path(),
             overlay_root_dir().join("boot")
-        ])?;
+        ])
+        .whatever("unable to mount boot partition")?;
     }
     Ok(())
 }
 
 /// Sets up the bind mounts required for the persistent state.
-fn setup_persistent_state(state_profile: &Path) -> Anyhow<()> {
+fn setup_persistent_state(state_profile: &Path) -> SystemResult<()> {
     let root_dir = overlay_root_dir();
 
     let persist_dir = state_profile.join("persist");
@@ -309,15 +319,18 @@ fn setup_persistent_state(state_profile: &Path) -> Anyhow<()> {
                     fs::remove_dir_all(&state_path).ok();
                     create_parent_dir(&state_path).ok();
                     if system_path.is_dir() {
-                        run!([CP, "-a", &system_path, &state_path])?;
+                        run!([CP, "-a", &system_path, &state_path])
+                            .whatever("unable to copy system files from root partition to state")?;
                     } else {
                         fs::create_dir_all(&state_path).ok();
                     }
                 }
                 if !system_path.is_dir() {
-                    fs::create_dir_all(&system_path)?;
+                    fs::create_dir_all(&system_path)
+                        .whatever("unable to create system directory")?;
                 }
-                run!([MOUNT, "--bind", &state_path, &system_path])?;
+                run!([MOUNT, "--bind", &state_path, &system_path])
+                    .whatever("unable to bind-mount persistent directory")?;
             }
             Persist::File { file, default } => {
                 let file = path_strip_root(file.as_ref());
@@ -332,18 +345,23 @@ fn setup_persistent_state(state_profile: &Path) -> Anyhow<()> {
                 }
                 if !state_path.is_file() {
                     fs::remove_dir_all(&state_path).ok();
-                    create_parent_dir(&state_path)?;
+                    create_parent_dir(&state_path)
+                        .whatever("unable to create parent directory of persistent file")?;
                     if system_path.is_file() {
-                        run!([CP, "-a", &system_path, &state_path])?;
+                        run!([CP, "-a", &system_path, &state_path])
+                            .whatever("unable to copy persistent file from system")?;
                     } else {
-                        fs::write(&state_path, default.as_deref().unwrap_or_default())?;
+                        fs::write(&state_path, default.as_deref().unwrap_or_default())
+                            .whatever("unable to write default")?;
                     }
                 }
                 if !system_path.is_file() {
-                    create_parent_dir(&system_path)?;
-                    fs::write(&system_path, "")?;
+                    create_parent_dir(&system_path)
+                        .whatever("unable to create system parent directory")?;
+                    fs::write(&system_path, "").whatever("unable to initialize file")?;
                 }
-                run!([MOUNT, "--bind", &state_path, &system_path])?;
+                run!([MOUNT, "--bind", &state_path, &system_path])
+                    .whatever("unable to bind mount file")?;
             }
         }
     }
@@ -376,16 +394,16 @@ fn create_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
 }
 
 /// Makes sure `/etc/machine-id` has been restored/initialized.
-fn restore_machine_id() -> Anyhow<()> {
+fn restore_machine_id() -> SystemResult<()> {
     let state_machine_id = state_dir().join("machine-id");
     let system_machine_id = overlay_root_dir().join("etc/machine-id");
     if !state_machine_id.exists() {
         // Ensure that the `machine-id` is valid.
-        run!([SYSTEMD_MACHINE_ID_SETUP, "--root", OVERLAY_ROOT_DIR])?;
-        fs::copy(system_machine_id, state_machine_id)?;
-    } else {
-        fs::copy(state_machine_id, system_machine_id)?;
+        run!([SYSTEMD_MACHINE_ID_SETUP, "--root", OVERLAY_ROOT_DIR])
+            .whatever("unable to generate machine id")?;
     }
+    fs::copy(system_machine_id, state_machine_id)
+        .whatever("unable to copy machine id into state")?;
     Ok(())
 }
 
@@ -394,21 +412,22 @@ fn restore_machine_id() -> Anyhow<()> {
 /// We follow the example from the manpage of the `pivot_root` system call here.
 ///
 /// We are not using `chroot` as this lead to problems with Docker.
-fn exec_chroot_init() -> Anyhow<()> {
+fn exec_chroot_init() -> SystemResult<()> {
     println!("Changing current working directory to overlay root directory.");
-    nix::unistd::chdir(OVERLAY_ROOT_DIR)?;
+    nix::unistd::chdir(OVERLAY_ROOT_DIR).whatever("unable to switch to overlay directory")?;
     println!("Pivoting root mount point to current working directory.");
-    nix::unistd::pivot_root(".", ".")?;
+    nix::unistd::pivot_root(".", ".").whatever("unable to pivot root directory")?;
     println!("Unmounting the previous root filesystem.");
-    nix::mount::umount2(".", MntFlags::MNT_DETACH)?;
+    nix::mount::umount2(".", MntFlags::MNT_DETACH)
+        .whatever("unable to unmount old root directory")?;
     println!("Starting system init process.");
     let systemd_init = &CString::new("/sbin/init").unwrap();
-    nix::unistd::execv(systemd_init, &[systemd_init])?;
+    nix::unistd::execv(systemd_init, &[systemd_init]).whatever("unable to run system init")?;
     Ok(())
 }
 
 /// Reboot the system to the spare partitions if the deferred spare reboot flag is set.
-fn check_deferred_spare_reboot(system: &System) -> Anyhow<()> {
+fn check_deferred_spare_reboot(system: &System) -> SystemResult<()> {
     if is_flag_set(DEFERRED_SPARE_REBOOT_FLAG) {
         println!("Executing deferred reboot to spare partitions.");
         // Remove file and make sure that changes are synced to disk.
@@ -417,7 +436,10 @@ fn check_deferred_spare_reboot(system: &System) -> Anyhow<()> {
         if !system.needs_commit()? {
             // Reboot to the spare partitions.
             if let Some((spare, _)) = system.spare_entry()? {
-                system.boot_flow().set_try_next(system, spare)?;
+                system
+                    .boot_flow()
+                    .set_try_next(system, spare)
+                    .whatever("unable to set next boot entry")?;
                 reboot()?;
             }
         }

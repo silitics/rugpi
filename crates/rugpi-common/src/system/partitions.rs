@@ -5,12 +5,12 @@ use std::{
     sync::Mutex,
 };
 
-use anyhow::bail;
+use reportify::{bail, ResultExt};
 use tracing::{error, warn};
 use xscript::{run, Run};
 
-use super::{config::PartitionConfig, paths, root::SystemRoot};
-use crate::{disk::blkdev::BlockDevice, Anyhow};
+use super::{config::PartitionConfig, paths, root::SystemRoot, SystemResult};
+use crate::disk::blkdev::BlockDevice;
 
 /// Resolve the data partition block device.
 pub fn resolve_data_partition(
@@ -25,7 +25,7 @@ pub fn resolve_data_partition(
             }
         }
     })
-    .inspect_err(|error| error!("error resolving data partition: {error}"))
+    .inspect_err(|error| error!("error resolving data partition: {error:?}"))
     .ok()
     .flatten()
 }
@@ -36,7 +36,7 @@ pub fn resolve_config_partition(
     config: &PartitionConfig,
 ) -> Option<BlockDevice> {
     resolve_partition(root, config, || Ok(1))
-        .inspect_err(|error| error!("error resolving config partition: {error}"))
+        .inspect_err(|error| error!("error resolving config partition: {error:?}"))
         .ok()
         .flatten()
 }
@@ -45,8 +45,8 @@ pub fn resolve_config_partition(
 fn resolve_partition(
     root: Option<&SystemRoot>,
     config: &PartitionConfig,
-    default: impl FnOnce() -> Anyhow<u32>,
-) -> Anyhow<Option<BlockDevice>> {
+    default: impl FnOnce() -> SystemResult<u32>,
+) -> SystemResult<Option<BlockDevice>> {
     if config.disabled {
         return Ok(None);
     }
@@ -54,7 +54,9 @@ fn resolve_partition(
         if config.partition.is_some() {
             warn!("ignoring `partition` because `device` is set");
         }
-        BlockDevice::new(device)?
+        BlockDevice::new(device)
+            .whatever("partition is not a block device")
+            .with_info(|_| format!("device: {device:?}"))?
     } else {
         let partition = match config.partition {
             Some(partition) => partition,
@@ -118,7 +120,7 @@ impl ConfigPartition {
     }
 
     /// Ensure that the partition is writable while the closure runs.
-    pub fn ensure_writable<U, F: FnOnce() -> U>(&self, closure: F) -> Anyhow<U> {
+    pub fn ensure_writable<U, F: FnOnce() -> U>(&self, closure: F) -> SystemResult<U> {
         let _guard = self.acquire_write_guard()?;
         Ok(closure())
     }
@@ -126,10 +128,11 @@ impl ConfigPartition {
     /// Make the partition writable and return a guard.
     ///
     /// When the guard is dropped, the partition may become read-only again.
-    fn acquire_write_guard(&self) -> Anyhow<ConfigPartitionWriteGuard> {
+    fn acquire_write_guard(&self) -> SystemResult<ConfigPartitionWriteGuard> {
         let mut writer_count = self.writer_count.lock().unwrap();
         if self.protected && *writer_count == 0 {
-            run!(["mount", "-o", "remount,rw", &self.path])?;
+            run!(["mount", "-o", "remount,rw", &self.path])
+                .whatever("unable to mount config partition as writable")?;
         }
         *writer_count = writer_count
             .checked_add(1)

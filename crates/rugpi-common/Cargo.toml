@@ -9,7 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 bytes.workspace = true
 console = "0.15.8"
 crc32fast = "1.3.2"
@@ -29,6 +28,7 @@ xscript.workspace = true
 xz2 = "0.1.7"
 indexmap = { version = "2.5.0", features = ["serde"] }
 tempfile = "3.12.0"
+reportify.workspace = true
 
 [dev-dependencies]
 clap.workspace = true

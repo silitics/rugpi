@@ -42,7 +42,7 @@ impl SystemRoot {
             .map(|root_device| {
                 let table = PartitionTable::read(&root_device)
                     .inspect_err(|error| {
-                        error!("error reading partition table from root device: {error}")
+                        error!("error reading partition table from root device: {error:?}")
                     })
                     .ok();
                 SystemRoot {

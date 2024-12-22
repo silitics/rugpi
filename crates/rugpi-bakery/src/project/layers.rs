@@ -4,8 +4,7 @@ use std::{
     path::Path,
 };
 
-use anyhow::Context;
-use rugpi_common::Anyhow;
+use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -13,7 +12,7 @@ use super::{
     recipes::{ParameterValue, RecipeName},
     repositories::RepositoryIdx,
 };
-use crate::utils::caching::ModificationTime;
+use crate::{utils::caching::ModificationTime, BakeryResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -37,12 +36,12 @@ pub struct LayerConfig {
 }
 
 impl LayerConfig {
-    pub fn load(path: &Path) -> Anyhow<Self> {
+    pub fn load(path: &Path) -> BakeryResult<Self> {
         toml::from_str(
             &fs::read_to_string(path)
-                .with_context(|| format!("error reading layer config from `{path:?}`"))?,
+                .whatever_with(|_| format!("unable to read layer file from {path:?}"))?,
         )
-        .with_context(|| format!("error parsing layer config from path `{path:?}`"))
+        .whatever_with(|_| format!("unable to parse layer file from {path:?}"))
     }
 }
 

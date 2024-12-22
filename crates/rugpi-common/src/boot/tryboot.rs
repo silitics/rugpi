@@ -1,4 +1,6 @@
-use crate::{devices, Anyhow};
+use std::io;
+
+use crate::devices;
 
 /// The autoboot configuration for system `A`.
 pub const AUTOBOOT_A: &str = "[all]
@@ -21,7 +23,7 @@ pub enum AutobootSection {
     Tryboot,
 }
 
-pub fn set_spare_flag() -> Anyhow<()> {
+pub fn set_spare_flag() -> Result<(), io::Error> {
     // Instead of rebooting with `reboot "0 tryboot"`, we directly set the
     // required flag via Raspberry Pi's firmware interface. By default,
     // `reboot` should not set any reboot flags, hence, our flags wil not
@@ -33,7 +35,7 @@ pub fn set_spare_flag() -> Anyhow<()> {
     Ok(())
 }
 
-pub fn clear_spare_flag() -> Anyhow<()> {
+pub fn clear_spare_flag() -> Result<(), io::Error> {
     if devices::rpi::get_tryboot_flag()? {
         devices::rpi::set_tryboot_flag(false)?;
     }

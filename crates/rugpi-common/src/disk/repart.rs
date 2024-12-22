@@ -1,13 +1,13 @@
 //! Utilities for repartitioning disks.
 
-use anyhow::bail;
+use reportify::{bail, Report};
 use serde::Deserialize;
 
 use super::{parse_size, PartitionTable, PartitionTableType};
 use crate::{
     disk::{gpt::gpt_types, mbr::mbr_types, NumBlocks, Partition, PartitionType},
+    partitions::DiskError,
     utils::units::NumBytes,
-    Anyhow,
 };
 
 /// Partition schema.
@@ -35,7 +35,7 @@ pub struct SchemaPartition {
 pub fn repart(
     old_table: &PartitionTable,
     schema: &PartitionSchema,
-) -> Anyhow<Option<PartitionTable>> {
+) -> Result<Option<PartitionTable>, Report<DiskError>> {
     if old_table.ty() != schema.ty {
         bail!(
             "partition table types do not match ({} != {})",
@@ -146,7 +146,10 @@ pub fn repart(
 ///
 /// Arguably the checks here should panic as they correspond to internal invariants. We
 /// return errors instead such that they are handled gracefully.
-fn check_new_table(old_table: &PartitionTable, new_table: &PartitionTable) -> Anyhow<()> {
+fn check_new_table(
+    old_table: &PartitionTable,
+    new_table: &PartitionTable,
+) -> Result<(), Report<DiskError>> {
     // We first validate the new table ensuring that no partitions overlap.
     new_table.validate()?;
     if old_table.disk_id != new_table.disk_id {

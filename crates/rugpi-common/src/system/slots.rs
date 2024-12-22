@@ -1,12 +1,13 @@
 use std::{ops::Index, sync::Mutex};
 
-use anyhow::bail;
+use reportify::{bail, ResultExt};
 
 use super::{
     config::{BlockSlotConfig, SlotConfig, SlotConfigKind, SlotsConfig},
     root::SystemRoot,
+    SystemResult,
 };
-use crate::{disk::blkdev::BlockDevice, Anyhow};
+use crate::disk::blkdev::BlockDevice;
 
 /// Unique index of a slot of a system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -22,7 +23,7 @@ pub struct SystemSlots {
 }
 
 impl SystemSlots {
-    fn from_iter<'i, I>(root: Option<&SystemRoot>, iter: I) -> Anyhow<Self>
+    fn from_iter<'i, I>(root: Option<&SystemRoot>, iter: I) -> SystemResult<Self>
     where
         I: Iterator<Item = (&'i str, &'i SlotConfig)>,
     {
@@ -30,7 +31,9 @@ impl SystemSlots {
         for (name, config) in iter {
             let SlotConfigKind::Block(raw) = &config.kind;
             let device = if let Some(device) = &raw.device {
-                BlockDevice::new(device)?
+                BlockDevice::new(device)
+                    .whatever("slot device is not a block device")
+                    .with_info(|_| format!("device: {device:?}"))?
             } else if let Some(partition) = &raw.partition {
                 let Some(root) = root else {
                     bail!("no system root")
@@ -51,7 +54,10 @@ impl SystemSlots {
         Ok(Self { slots })
     }
 
-    pub fn from_config(root: Option<&SystemRoot>, config: Option<&SlotsConfig>) -> Anyhow<Self> {
+    pub fn from_config(
+        root: Option<&SystemRoot>,
+        config: Option<&SlotsConfig>,
+    ) -> SystemResult<Self> {
         match config {
             Some(config) => Self::from_iter(
                 root,

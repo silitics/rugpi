@@ -1,6 +1,7 @@
 use std::{fs, path::Path};
 
-use rugpi_common::Anyhow;
+use reportify::ResultExt;
+use rugpi_common::system::SystemResult;
 use xscript::{run, Run};
 
 pub static DEFERRED_SPARE_REBOOT_FLAG: &str = "/run/rugpi/mounts/data/.rugpi/deferred-reboot-spare";
@@ -11,7 +12,7 @@ pub fn is_init_process() -> bool {
 }
 
 /// Reboot the system.
-pub fn reboot() -> Anyhow<()> {
+pub fn reboot() -> SystemResult<()> {
     if is_init_process() {
         // Make sure that no data is lost.
         nix::unistd::sync();
@@ -26,24 +27,24 @@ pub fn reboot() -> Anyhow<()> {
             );
         }
     } else {
-        run!(["reboot"])?;
+        run!(["reboot"]).whatever("unable to run `reboot`")?;
     };
     Ok(())
 }
 
-pub fn set_flag(path: impl AsRef<Path>) -> Anyhow<()> {
+pub fn set_flag(path: impl AsRef<Path>) -> SystemResult<()> {
     let path = path.as_ref();
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent).whatever("unable to create flag directory")?;
     }
-    fs::write(path, "")?;
+    fs::write(path, "").whatever("unable to set flag")?;
     Ok(())
 }
 
-pub fn clear_flag(path: impl AsRef<Path>) -> Anyhow<()> {
+pub fn clear_flag(path: impl AsRef<Path>) -> SystemResult<()> {
     let path = path.as_ref();
     if path.exists() {
-        fs::remove_file(path)?;
+        fs::remove_file(path).whatever("unable to clear flag")?;
     }
     Ok(())
 }

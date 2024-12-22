@@ -3,13 +3,13 @@
 use core::fmt;
 use std::{collections::HashMap, fs, path::Path, str::FromStr};
 
-use anyhow::Context;
 use clap::ValueEnum;
-use rugpi_common::Anyhow;
+use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::{images::ImageConfig, repositories::Source};
+use crate::BakeryResult;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -24,12 +24,12 @@ pub struct BakeryConfig {
 
 impl BakeryConfig {
     /// Load the configuration from the given path.
-    pub fn load(path: &Path) -> Anyhow<Self> {
+    pub fn load(path: &Path) -> BakeryResult<Self> {
         toml::from_str(
             &fs::read_to_string(path)
-                .with_context(|| format!("reading configuration file from {path:?}"))?,
+                .whatever_with(|_| format!("reading configuration file from {path:?}"))?,
         )
-        .with_context(|| format!("loading configuration file from {path:?}"))
+        .whatever_with(|_| format!("loading configuration file from {path:?}"))
     }
 }
 

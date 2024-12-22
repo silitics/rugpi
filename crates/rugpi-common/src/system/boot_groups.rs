@@ -3,14 +3,14 @@ use std::{
     sync::atomic::{self, AtomicBool},
 };
 
-use anyhow::bail;
 use indexmap::IndexMap;
+use reportify::bail;
 
 use super::{
     config::BootGroupsConfig,
     slots::{SlotIdx, SystemSlots},
+    SystemResult,
 };
-use crate::Anyhow;
 
 /// Unique index of a boot group of a system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -25,7 +25,10 @@ pub struct BootGroups {
 }
 
 impl BootGroups {
-    pub fn from_config(slots: &SystemSlots, config: Option<&BootGroupsConfig>) -> Anyhow<Self> {
+    pub fn from_config(
+        slots: &SystemSlots,
+        config: Option<&BootGroupsConfig>,
+    ) -> SystemResult<Self> {
         let mut groups = Vec::new();
         match config {
             Some(config) => {

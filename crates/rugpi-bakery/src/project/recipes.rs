@@ -8,13 +8,15 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, bail, Context};
-use rugpi_common::Anyhow;
+use reportify::{bail, whatever, ResultExt};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use super::repositories::RepositoryIdx;
-use crate::utils::caching::{mtime_recursive, ModificationTime};
+use crate::{
+    utils::caching::{mtime_recursive, ModificationTime},
+    BakeryResult,
+};
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]
@@ -40,25 +42,27 @@ impl RecipeLoader {
     }
 
     /// Loads a recipe from the given path.
-    pub fn load(&self, path: &Path) -> Anyhow<Recipe> {
+    pub fn load(&self, path: &Path) -> BakeryResult<Recipe> {
         let path = path.to_path_buf();
-        let modified = mtime_recursive(&path)?;
+        let modified = mtime_recursive(&path).whatever("unable to determine mtime")?;
         let name = path
             .file_name()
-            .ok_or_else(|| anyhow!("unable to determine recipe name from path `{path:?}`"))?
+            .ok_or_else(|| whatever!("unable to determine recipe name from path `{path:?}`"))?
             .to_string_lossy()
             .into();
         let info_path = path.join("recipe.toml");
-        let info = toml::from_str(
-            &fs::read_to_string(&info_path)
-                .with_context(|| format!("error reading recipe info from path `{info_path:?}"))?,
-        )
-        .with_context(|| format!("error parsing recipe info from path `{info_path:?}`"))?;
+        let info =
+            toml::from_str(&fs::read_to_string(&info_path).whatever_with(|_| {
+                format!("error reading recipe info from path `{info_path:?}")
+            })?)
+            .whatever_with(|_| format!("error parsing recipe info from path `{info_path:?}`"))?;
         let mut steps = Vec::new();
         let steps_dir = path.join("steps");
         if steps_dir.exists() {
-            for entry in fs::read_dir(&steps_dir)? {
-                steps.push(RecipeStep::load(&entry?.path())?);
+            for entry in fs::read_dir(&steps_dir).whatever("unable to read recipe steps")? {
+                steps.push(RecipeStep::load(
+                    &entry.whatever("unable to read recipe step")?.path(),
+                )?);
             }
         }
         steps.sort_by_key(|step| step.position);
@@ -183,19 +187,20 @@ pub struct RecipeStep {
 
 impl RecipeStep {
     /// Tries to load a recipe step from the provided path.
-    fn load(path: &Path) -> Anyhow<Self> {
+    fn load(path: &Path) -> BakeryResult<Self> {
         let filename = path
             .file_name()
             .and_then(OsStr::to_str)
-            .ok_or_else(|| anyhow!("unable to determine filename of step `{:?}`", path))?
+            .ok_or_else(|| whatever!("unable to determine filename of step `{:?}`", path))?
             .to_owned();
         let (position, kind) = filename
             .split_once('-')
-            .ok_or_else(|| anyhow!("unable to parse filename of step `{:?}`", path))?;
-        let position = position.parse().context("unable to parse step position")?;
+            .ok_or_else(|| whatever!("unable to parse filename of step `{:?}`", path))?;
+        let position = position.parse().whatever("unable to parse step position")?;
         let kind = match kind.split('.').next().unwrap() {
             "packages" => {
-                let packages = fs::read_to_string(path)?
+                let packages = fs::read_to_string(path)
+                    .whatever("unable to read packages step")?
                     .split_whitespace()
                     .map(str::to_owned)
                     .collect();

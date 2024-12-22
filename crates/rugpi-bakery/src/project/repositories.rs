@@ -28,15 +28,18 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Context;
+use reportify::{bail, ResultExt};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use xscript::{read_str, run, LocalEnv, Run};
 
 use super::Project;
-use crate::utils::{
-    idx_vec::{new_idx_type, IdxVec},
-    prelude::*,
+use crate::{
+    utils::{
+        idx_vec::{new_idx_type, IdxVec},
+        prelude::*,
+    },
+    BakeryResult,
 };
 
 #[derive(Debug)]
@@ -48,7 +51,7 @@ pub struct ProjectRepositories {
 }
 
 impl ProjectRepositories {
-    pub fn load(project: &Project) -> Anyhow<Self> {
+    pub fn load(project: &Project) -> BakeryResult<Self> {
         let mut repositories = RepositoriesLoader::new(&project.dir);
         let core = repositories.load_source(
             Source::Path(PathSource {
@@ -107,7 +110,7 @@ impl RepositoriesLoader {
         &mut self,
         repositories: HashMap<String, Source>,
         update: bool,
-    ) -> Anyhow<RepositoryIdx> {
+    ) -> BakeryResult<RepositoryIdx> {
         self.load_repository(
             Source::Path(PathSource { path: "".into() }).materialize(&self.root_dir, update)?,
             RepositoryConfig {
@@ -122,7 +125,7 @@ impl RepositoriesLoader {
     /// Load a repository from the given source and return its id.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub fn load_source(&mut self, source: Source, update: bool) -> Anyhow<RepositoryIdx> {
+    pub fn load_source(&mut self, source: Source, update: bool) -> BakeryResult<RepositoryIdx> {
         let source_id = source.id();
         if let Some(id) = self.source_to_repository.get(&source_id).cloned() {
             let Some(repository) = &self.repositories[id] else {
@@ -141,9 +144,12 @@ impl RepositoriesLoader {
             let source = source.materialize(&self.root_dir, update)?;
             let config_path = source.dir.join("rugpi-repository.toml");
             let config =
-                toml::from_str(&std::fs::read_to_string(&config_path).with_context(|| {
+                toml::from_str(&std::fs::read_to_string(&config_path).whatever_with(|_| {
                     format!("reading repository configuration from {config_path:?}")
-                })?)?;
+                })?)
+                .whatever_with(|_| {
+                    format!("unable to parse repository configuration file {config_path:?}")
+                })?;
             self.load_repository(source, config, update)
         }
     }
@@ -154,7 +160,7 @@ impl RepositoriesLoader {
         source: MaterializedSource,
         config: RepositoryConfig,
         update: bool,
-    ) -> Anyhow<RepositoryIdx> {
+    ) -> BakeryResult<RepositoryIdx> {
         if self.source_to_repository.contains_key(&source.id) {
             bail!("repository from {} has already been loaded", source.id);
         }
@@ -275,7 +281,7 @@ impl Source {
     /// Materialize the source within the given project root directory.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub fn materialize(self, root_dir: &Path, update: bool) -> Anyhow<MaterializedSource> {
+    pub fn materialize(self, root_dir: &Path, update: bool) -> BakeryResult<MaterializedSource> {
         let id = self.id();
         debug!("materializing source {id}");
         let path = match &self {
@@ -325,17 +331,19 @@ impl GitSource {
     /// Checkout the Git repository in the given directory.
     ///
     /// The *fetch* flag indicates whether updates should be fetched from the remote.
-    fn checkout(&self, path: &Path, fetch: bool) -> Anyhow<()> {
+    fn checkout(&self, path: &Path, fetch: bool) -> BakeryResult<()> {
         if !path.exists() {
-            run!(["git", "clone", &self.url, path])?;
+            run!(["git", "clone", &self.url, path]).whatever("unable to clone repository")?;
         }
         let env = LocalEnv::new(path);
         if fetch {
-            run!(env, ["git", "fetch", "--all"])?;
+            run!(env, ["git", "fetch", "--all"])
+                .whatever("unable to fetch updates of repository")?;
         }
         macro_rules! rev_parse {
             ($rev:literal) => {
                 read_str!(env, ["git", "rev-parse", "--verify", $rev])
+                    .whatever("unable to parse rev")
             };
         }
         let mut commit = rev_parse!("refs/remotes/origin/HEAD^{{commit}}")?;
@@ -350,7 +358,7 @@ impl GitSource {
         }
         let head = rev_parse!("HEAD^{{commit}}")?;
         if head != commit {
-            run!(env, ["git", "checkout", commit])?;
+            run!(env, ["git", "checkout", commit]).whatever("error checking out commit")?;
         }
         Ok(())
     }
