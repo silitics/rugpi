@@ -116,7 +116,8 @@ pub fn main() -> SystemResult<()> {
                         None => {
                             let Some(entry) = system
                                 .boot_entries()
-                                .iter().find(|(_, entry)| !entry.active())
+                                .iter()
+                                .find(|(_, entry)| !entry.active())
                             else {
                                 bail!("unable to find an entry");
                             };

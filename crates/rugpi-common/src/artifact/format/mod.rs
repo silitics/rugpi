@@ -106,9 +106,7 @@ pub struct Metadata {
 }
 
 impl Decode for Metadata {
-    fn decode_segment<R: BufRead>(
-        mut segment: SegmentDecoder<'_, R>,
-    ) -> Result<Self, DecodeError> {
+    fn decode_segment<R: BufRead>(mut segment: SegmentDecoder<'_, R>) -> Result<Self, DecodeError> {
         let mut key = None;
         let mut map = HashMap::new();
         while let Some(decoder) = segment.next()? {
