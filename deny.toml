@@ -11,6 +11,9 @@ no-default-features = false
 version = 2
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
+ignore = [
+    { id = "RUSTSEC-2023-0071", reason = "we are only using RSA internally for testing" },
+]
 
 [licenses]
 version = 2
@@ -23,6 +26,7 @@ allow = [
     "OpenSSL",
     "0BSD",
     "Unicode-3.0",
+    "CC0-1.0",
 ]
 confidence-threshold = 0.96
 
