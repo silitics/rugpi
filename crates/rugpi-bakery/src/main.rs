@@ -15,7 +15,6 @@ use project::{
 use reportify::{bail, Report, ResultExt};
 use rugpi_common::fsutils::copy_recursive;
 use serde::Deserialize;
-use utils::logging::init_logging;
 
 pub mod bake;
 pub mod project;
@@ -114,7 +113,7 @@ pub struct InitCommand {
 
 /// Entrypoint of the CLI.
 fn main() -> BakeryResult<()> {
-    init_logging();
+    rugpi_cli::init();
 
     let args = Args::parse();
     match &args.command {

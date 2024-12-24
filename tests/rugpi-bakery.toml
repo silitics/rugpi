@@ -20,3 +20,27 @@ target = "rpi-uboot"
 layer = "customized"
 architecture = "armhf"
 target = "rpi-uboot"
+
+[images.customized-amd64]
+layer = "customized-efi"
+architecture = "amd64"
+target = "generic-grub-efi"
+
+# This image has a larger size and can be directly used with QEMU.
+[images.customized-amd64-vm]
+layer = "customized-efi"
+architecture = "amd64"
+target = "generic-grub-efi"
+size = "16G"
+
+[images.customized-arm64]
+layer = "customized-efi"
+architecture = "arm64"
+target = "generic-grub-efi"
+
+# This image has a larger size and can be directly used with QEMU.
+[images.customized-arm64-vm]
+layer = "customized-efi"
+architecture = "arm64"
+target = "generic-grub-efi"
+size = "16G"

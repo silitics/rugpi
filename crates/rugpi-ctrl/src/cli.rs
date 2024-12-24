@@ -51,6 +51,8 @@ fn clear_rugpi_state_flag(name: &str) -> SystemResult<()> {
 }
 
 pub fn main() -> SystemResult<()> {
+    rugpi_cli::init();
+
     let args = Args::parse();
     let system = System::initialize()?;
     match &args.command {

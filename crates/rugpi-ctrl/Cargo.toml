@@ -23,6 +23,7 @@ tracing.workspace = true
 indexmap = "2.5.0"
 serde_json = "1.0.133"
 reportify.workspace = true
+rugpi-cli.workspace = true
 
 [lints]
 workspace = true

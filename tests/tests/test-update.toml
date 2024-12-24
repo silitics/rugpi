@@ -1,0 +1,24 @@
+[vm]
+image = "./build/images/customized-arm64-vm.img"
+stdout = "./build/stdout.log"
+private-key = "/Users/koehlma/.ssh/id_rsa"
+
+[[steps]]
+action = "run"
+stdin = "./build/images/customized-arm64.img"
+script = """
+rugpi-ctrl system info
+pv -f - | rugpi-ctrl update install -
+"""
+
+[[steps]]
+action = "wait"
+duration_secs = 10.0
+
+[[steps]]
+action = "run"
+script = """
+rugpi-ctrl system info
+rugpi-ctrl system commit
+rugpi-ctrl system info
+"""
