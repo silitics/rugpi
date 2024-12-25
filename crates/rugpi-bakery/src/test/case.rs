@@ -18,11 +18,13 @@ pub enum TestStep {
         src: String,
         dst: String,
     },
+    #[serde(rename_all = "kebab-case")]
     Run {
         script: String,
         stdin: Option<PathBuf>,
         may_fail: Option<bool>,
     },
+    #[serde(rename_all = "kebab-case")]
     Wait {
         duration_secs: f64,
     },
