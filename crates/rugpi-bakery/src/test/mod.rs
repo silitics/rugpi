@@ -1,7 +1,6 @@
-use std::{path::PathBuf, time::Duration};
+use std::{path::Path, time::Duration};
 
 use case::{TestCase, TestStep};
-use clap::Parser;
 use reportify::{bail, Report, ResultExt};
 use rugpi_cli::info;
 use tokio::fs;
@@ -15,20 +14,9 @@ reportify::new_whatever_type! {
 
 pub type RugpiTestResult<T> = Result<T, Report<RugpiTestError>>;
 
-/// Command line arguments.
-#[derive(Debug, Parser)]
-pub struct Args {
-    /// Test case file.
-    case: PathBuf,
-}
-
-#[tokio::main]
-pub async fn main() -> RugpiTestResult<()> {
-    rugpi_cli::init();
-    let args = Args::parse();
-
+pub async fn main(case: &Path) -> RugpiTestResult<()> {
     let case = toml::from_str::<TestCase>(
-        &fs::read_to_string(&args.case)
+        &fs::read_to_string(&case)
             .await
             .whatever("unable to read test case")?,
     )

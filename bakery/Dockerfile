@@ -16,6 +16,8 @@ RUN apt-get -y update \
         proot \
         python3 \
         qemu-utils \
+        qemu-system-arm \
+        qemu-system-x86 \
         wget \
         xz-utils \
         zip \

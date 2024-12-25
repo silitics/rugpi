@@ -18,6 +18,7 @@ use serde::Deserialize;
 
 pub mod bake;
 pub mod project;
+pub mod test;
 pub mod utils;
 
 reportify::new_whatever_type! {
@@ -55,6 +56,8 @@ pub enum Command {
     Update(UpdateCommand),
     /// Initialize the project.
     Init(InitCommand),
+    /// Run integration tests.
+    Test(TestCommand),
     /// Internal unstable commands.
     #[clap(subcommand)]
     Internal(InternalCommand),
@@ -85,6 +88,12 @@ pub enum BakeCommand {
         /// The name of the layer to bake.
         layer: String,
     },
+}
+
+/// The `test` command.
+#[derive(Debug, Parser)]
+pub struct TestCommand {
+    case: PathBuf,
 }
 
 /// The `bake` command.
@@ -222,6 +231,14 @@ fn main() -> BakeryResult<()> {
                     }
                 }
             }
+        }
+        Command::Test(test_command) => {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(test::main(&test_command.case))
+                .whatever("unable to run test")?;
         }
     }
     Ok(())

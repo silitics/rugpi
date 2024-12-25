@@ -18,7 +18,7 @@ use tokio::{
     time,
 };
 
-use crate::{case::VmConfig, RugpiTestResult};
+use super::{case::VmConfig, RugpiTestResult};
 
 pub struct Vm {
     #[expect(dead_code, reason = "not currently used")]
@@ -120,11 +120,11 @@ impl Vm {
         let key =
             PrivateKeyWithHashAlg::new(self.private_key.clone(), Some(ssh_key::HashAlg::Sha512))
                 .whatever("unable to construct SSH key for SSH authentication")?;
-        time::timeout(Duration::from_secs(30), async {
+        time::timeout(Duration::from_secs(120), async {
             loop {
                 info!("trying to connect to VM via SSH");
                 if let Ok(Ok(mut ssh_session)) = time::timeout(
-                    Duration::from_secs(1),
+                    Duration::from_secs(5),
                     russh::client::connect(config.clone(), ("127.0.0.1", 2233), SshHandler),
                 )
                 .await
@@ -147,7 +147,7 @@ impl Vm {
                     *self.sftp_session.lock().await = Some(sftp);
                     break;
                 } else {
-                    time::sleep(Duration::from_millis(500)).await
+                    time::sleep(Duration::from_secs(4)).await
                 }
             }
             Ok(())
@@ -184,7 +184,7 @@ pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
     let mut command = Command::new("qemu-system-aarch64");
     command.args(&[
         "-machine",
-        "virt,accel=hvf",
+        "virt",
         "-cpu",
         "cortex-a72",
         "-m",
@@ -200,7 +200,7 @@ pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
         "-device",
         "virtio-rng-pci",
         "-bios",
-        "/opt/homebrew/share/qemu/edk2-aarch64-code.fd",
+        "/usr/share/AAVMF/AAVMF_CODE.fd",
         "-nographic",
         "-serial",
         "mon:stdio",

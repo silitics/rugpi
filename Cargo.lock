@@ -2021,6 +2021,7 @@ dependencies = [
 name = "rugpi-bakery"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "colored",
  "hex",
@@ -2031,10 +2032,13 @@ dependencies = [
  "reqwest",
  "rugpi-cli",
  "rugpi-common",
+ "russh",
+ "russh-sftp",
  "serde",
  "sha1",
  "tempfile",
  "thiserror 1.0.69",
+ "tokio",
  "toml 0.8.19",
  "url",
  "uuid",
@@ -2095,22 +2099,6 @@ dependencies = [
  "toml 0.7.8",
  "tracing",
  "xscript 0.3.0",
-]
-
-[[package]]
-name = "rugpi-test"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "reportify",
- "rugpi-cli",
- "russh",
- "russh-sftp",
- "serde",
- "thiserror 2.0.9",
- "tokio",
- "toml 0.8.19",
 ]
 
 [[package]]
