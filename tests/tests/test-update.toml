@@ -1,14 +1,16 @@
 [vm]
-image = "./build/images/customized-arm64-vm.img"
+image = "./build/images/customized-arm64.img"
 stdout = "./build/stdout.log"
-private-key = "/Users/koehlma/.ssh/id_rsa"
+private-key = "./files/id_rsa"
 
 [[steps]]
 action = "run"
 stdin = "./build/images/customized-arm64.img"
+# Rebooting may cause the script to fail executing. We will check everything later.
+may_fail = true
 script = """
-rugpi-ctrl system info
-pv -f - | rugpi-ctrl update install -
+rugpi-ctrl system info --json
+rugpi-ctrl update install -
 """
 
 [[steps]]
@@ -18,7 +20,7 @@ duration_secs = 10.0
 [[steps]]
 action = "run"
 script = """
-rugpi-ctrl system info
+rugpi-ctrl system info --json
 rugpi-ctrl system commit
-rugpi-ctrl system info
+rugpi-ctrl system info --json
 """

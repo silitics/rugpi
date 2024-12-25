@@ -21,6 +21,7 @@ pub enum TestStep {
     Run {
         script: String,
         stdin: Option<PathBuf>,
+        may_fail: Option<bool>,
     },
     Wait {
         duration_secs: f64,

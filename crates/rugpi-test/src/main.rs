@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 
 use case::{TestCase, TestStep};
 use clap::Parser;
-use reportify::{Report, ResultExt};
+use reportify::{bail, Report, ResultExt};
 use rugpi_cli::info;
 use tokio::fs;
 
@@ -36,13 +36,17 @@ pub async fn main() -> RugpiTestResult<()> {
 
     let vm = qemu::start(&case.vm).await?;
 
-    info!("VM running and connected via SSH");
+    info!("VM started");
 
     for step in &case.steps {
         match step {
             case::TestStep::Reboot => todo!(),
             case::TestStep::Copy { .. } => todo!(),
-            case::TestStep::Run { script, stdin } => {
+            case::TestStep::Run {
+                script,
+                stdin,
+                may_fail,
+            } => {
                 info!("running script");
                 vm.wait_for_ssh()
                     .await
@@ -52,7 +56,11 @@ pub async fn main() -> RugpiTestResult<()> {
                     .await
                     .whatever::<RugpiTestError, _>("unable to run script")
                 {
-                    eprintln!("{:?}", report);
+                    if may_fail.unwrap_or(false) {
+                        eprintln!("ignoring error while executing script:\n{report:?}");
+                    } else {
+                        bail!("error during test")
+                    }
                 }
             }
             TestStep::Wait { duration_secs } => {

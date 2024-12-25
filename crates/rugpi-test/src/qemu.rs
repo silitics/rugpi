@@ -162,6 +162,25 @@ pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
     let private_key = load_secret_key(&config.private_key, None)
         .whatever("unable to load private SSH key")
         .with_info(|_| format!("path: {:?}", config.private_key))?;
+    fs::create_dir_all(".rugpi/")
+        .await
+        .whatever("unable to create .rugpi directory")?;
+    if !Command::new("qemu-img")
+        .args(&["create", "-f", "qcow2", "-F", "raw", "-o"])
+        .arg(format!(
+            "backing_file=../{}",
+            config.image.to_string_lossy()
+        ))
+        .args(&[".rugpi/vm-image.img", "48G"])
+        .spawn()
+        .whatever("unable to create VM image")?
+        .wait()
+        .await
+        .whatever("unable to create VM image")?
+        .success()
+    {
+        bail!("unable to create VM image");
+    }
     let mut command = Command::new("qemu-system-aarch64");
     command.args(&[
         "-machine",
@@ -174,10 +193,7 @@ pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
         "cpus=2",
     ]);
     command.arg("-drive");
-    command.arg(format!(
-        "file={},format=raw,if=virtio",
-        config.image.to_string_lossy()
-    ));
+    command.arg("file=.rugpi/vm-image.img,format=qcow2,if=virtio");
     command.args(&["-device", "virtio-net-pci,netdev=net0", "-netdev"]);
     command.arg("user,id=net0,hostfwd=tcp:127.0.0.1:2233-:22");
     command.args(&[
