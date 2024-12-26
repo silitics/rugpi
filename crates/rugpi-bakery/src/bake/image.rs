@@ -25,7 +25,7 @@ use crate::{
         rpi_uboot::initialize_uboot, Target,
     },
     project::images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
-    utils::prelude::*,
+    utils::{caching::mtime, prelude::*},
     BakeryResult,
 };
 
@@ -35,6 +35,15 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResul
 
     if let Some(parent) = image.parent() {
         fs::create_dir_all(parent).ok();
+    }
+
+    if image.exists() {
+        let src_mtime = mtime(src).whatever("unable to get image mtime")?;
+        let image_mtime = mtime(image).whatever("unable to get image mtime")?;
+        if src_mtime <= image_mtime {
+            info!("Image is newer than sources.");
+            return Ok(());
+        }
     }
 
     // Initialize system root directory from provided TAR file.

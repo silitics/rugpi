@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     convert::Infallible,
-    ffi::{CStr, CString},
+    ffi::{CStr, CString, OsStr},
     fs,
     path::{Path, PathBuf},
 };
@@ -15,6 +15,7 @@ use project::{
 use reportify::{bail, Report, ResultExt};
 use rugpi_common::fsutils::copy_recursive;
 use serde::Deserialize;
+use test::RugpiTestError;
 
 pub mod bake;
 pub mod project;
@@ -93,7 +94,7 @@ pub enum BakeCommand {
 /// The `test` command.
 #[derive(Debug, Parser)]
 pub struct TestCommand {
-    case: PathBuf,
+    workflows: Vec<String>,
 }
 
 /// The `bake` command.
@@ -233,11 +234,38 @@ fn main() -> BakeryResult<()> {
             }
         }
         Command::Test(test_command) => {
+            let project = load_project(&args)?;
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap()
-                .block_on(test::main(&test_command.case))
+                .block_on(async move {
+                    let mut workflows = Vec::new();
+                    if test_command.workflows.is_empty() {
+                        let mut read_dir = tokio::fs::read_dir(project.dir.join("tests"))
+                            .await
+                            .whatever("unable to scan for test workflows")?;
+                        while let Some(entry) = read_dir
+                            .next_entry()
+                            .await
+                            .whatever("unable to read entry")?
+                        {
+                            let path = entry.path();
+                            if path.extension() == Some(OsStr::new("toml")) {
+                                workflows.push(path);
+                            }
+                        }
+                    } else {
+                        for name in &test_command.workflows {
+                            workflows
+                                .push(project.dir.join("tests").join(name).with_extension("toml"));
+                        }
+                    };
+                    for workflow in workflows {
+                        test::main(&project, &workflow).await?;
+                    }
+                    <Result<(), Report<RugpiTestError>>>::Ok(())
+                })
                 .whatever("unable to run test")?;
         }
     }

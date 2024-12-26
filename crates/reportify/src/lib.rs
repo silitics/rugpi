@@ -276,6 +276,7 @@ use std::{
     any::Any,
     error::Error as StdError,
     fmt::{Debug, Display},
+    future::Future,
 };
 
 use backtrace::BacktraceImpl;
@@ -327,7 +328,7 @@ impl<E: 'static + StdError + Send> Error for E {
     }
 }
 
-trait AnyReport {
+trait AnyReport: Send {
     fn error(&self) -> &dyn Error;
 
     fn meta(&self) -> &ReportMeta;

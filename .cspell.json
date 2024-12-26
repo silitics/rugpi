@@ -38,6 +38,7 @@
     "Chunker",
     "cmdline",
     "composability",
+    "cpus",
     "discoverability",
     "Discoverability",
     "editenv",

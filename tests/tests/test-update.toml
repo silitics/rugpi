@@ -1,7 +1,6 @@
-[vm]
-image = "./build/images/customized-arm64.img"
-stdout = "./build/stdout.log"
-private-key = "./files/id_rsa"
+[[systems]]
+disk-image = "customized-arm64"
+ssh = { private-key = "./files/id_rsa" }
 
 [[steps]]
 action = "run"
@@ -15,7 +14,7 @@ rugpi-ctrl update install -
 
 [[steps]]
 action = "wait"
-duration-secs = 10.0
+duration = 10
 
 [[steps]]
 action = "run"

@@ -18,7 +18,7 @@ use tokio::{
     time,
 };
 
-use super::{case::VmConfig, RugpiTestResult};
+use super::{workflow::TestSystemConfig, RugpiTestResult};
 
 pub struct Vm {
     #[expect(dead_code, reason = "not currently used")]
@@ -26,7 +26,7 @@ pub struct Vm {
     ssh_session: Mutex<Option<Handle<SshHandler>>>,
     sftp_session: Mutex<Option<SftpSession>>,
     #[expect(dead_code, reason = "not currently used")]
-    vm_config: VmConfig,
+    vm_config: TestSystemConfig,
     private_key: Arc<PrivateKey>,
 }
 
@@ -158,20 +158,20 @@ impl Vm {
     }
 }
 
-pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
-    let private_key = load_secret_key(&config.private_key, None)
+pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResult<Vm> {
+    let private_key = load_secret_key(&config.ssh.private_key, None)
         .whatever("unable to load private SSH key")
-        .with_info(|_| format!("path: {:?}", config.private_key))?;
+        .with_info(|_| format!("path: {:?}", config.ssh.private_key))?;
     fs::create_dir_all(".rugpi/")
         .await
         .whatever("unable to create .rugpi directory")?;
     if !Command::new("qemu-img")
         .args(&["create", "-f", "qcow2", "-F", "raw", "-o"])
-        .arg(format!(
-            "backing_file=../{}",
-            config.image.to_string_lossy()
-        ))
-        .args(&[".rugpi/vm-image.img", "48G"])
+        .arg(format!("backing_file=../{}", image_file))
+        .args(&[
+            ".rugpi/vm-image.img",
+            config.disk_size.as_deref().unwrap_or("40G"),
+        ])
         .spawn()
         .whatever("unable to create VM image")?
         .wait()
@@ -207,30 +207,22 @@ pub async fn start(config: &VmConfig) -> RugpiTestResult<Vm> {
     ]);
     command
         .kill_on_drop(true)
-        .stdout(if config.stdout.is_some() {
-            Stdio::piped()
-        } else {
-            Stdio::null()
-        })
-        .stderr(if config.stderr.is_some() {
-            Stdio::piped()
-        } else {
-            Stdio::null()
-        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .stdin(Stdio::null());
     let mut child = command.spawn().whatever("unable to spawn Qemu")?;
-    if let Some(stdout) = &config.stdout {
+    if let Some(stdout) = Some("build/vm-stdout.log") {
         let mut stdout_log = fs::File::create(stdout)
             .await
             .whatever("unable to create stdout log file")?;
         let mut stdout = child.stdout.take().expect("we used Stdio::piped");
         tokio::spawn(async move { io::copy(&mut stdout, &mut stdout_log).await });
     }
-    if let Some(stderr) = &config.stderr {
+    if let Some(stderr) = Some("build/vm-stderr.log") {
         let mut stderr_log = fs::File::create(stderr)
             .await
             .whatever("unable to create stderr log file")?;
-        let mut stderr = child.stdout.take().expect("we used Stdio::piped");
+        let mut stderr = child.stderr.take().expect("we used Stdio::piped");
         tokio::spawn(async move { io::copy(&mut stderr, &mut stderr_log).await });
     }
     // We give Qemu some time to start before checking it's exit status.

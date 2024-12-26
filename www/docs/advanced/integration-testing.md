@@ -1,14 +1,70 @@
 # Integration Testing
 
-:::warning
-**Work in progress!** See https://github.com/silitics/rugpi/issues/41.
-:::
+Embedded Linux systems are inherently complex, with numerous interconnected components working together. To ensure that all parts of a system work together seamlessly, Rugpi Bakery includes an integration testing framework designed to validate system images as a complete unit. This framework boots a system image in a virtual machine and then executes a _test workflow_ on the system. By catching integration errors early, it reduces the need for costly and time-consuming testing on physical hardware.
 
-Embedded Linux systems are inherently complex, with numerous interconnected components working together. To ensure that all parts of a system work together seamlessly, Rugpi Bakery includes an integration testing framework designed to validate system images as a complete unit. This framework uses virtual machines to execute comprehensive _test workflows_. By catching integration errors early, it minimizes the need for costly and time-consuming testing on physical hardware.
+**Limitations:** Currently, the integration testing framework is limited to the `generic-grub-efi` target. 
 
-Test workflows are placed in the `tests` directory of your Rugpi Bakery project. Each workflow consists of a TOML file describing the test to be conducted.
 
-- TODO: We probably need some sort of testing matrix to test different configurations/images.
+## Test Workflows
+
+Test workflows are placed in the `tests` directory of your Rugpi Bakery project. Each workflow consists of a TOML file describing the tests to be conducted. To this end, the workflow file starts with a declaration of _test systems_:
+
+```toml
+[[systems]]
+disk-image = "<image-name>"
+disk-size = "40G"
+ssh = { private-key = "<path-to-private-key>" }
+```
+
+Each test system declaration must specify a `disk-image`, which is the image to use for the system. In addition, a `disk-size` can be specified determining the size of the disk. Note that Rugpi Bakery allocates an image per system that grows on-demand and stores only the changes made over the original system image. Hence, typically much less than `disk-space` additional space is required. Multiple systems can be specified in the same test workflow. Rugpi will then run the workflow for each system.
+
+To execute commands on the system under test, Rugpi Bakery connects to the system running in the VM via SSH. To this end, a private key needs to specified. This private key must be placed in the project directory. It is recommended to generate a pair of keys exclusively for this purpose and inject the public key with an additional layer on-top of the actual system layer.[^1] To generate a suitable pair of SSH keys in the current working directory, run:
+
+```shell
+ssh-keygen -t rsa -b 40960 -f id_rsa
+```
+
+The declaration of test systems is followed by a specification of _test steps_.
+
+[^1]: In the future, Rugpi Bakery may inject a key by itself prior to running the VM.
+
+### Test Steps
+
+Each test step performs a certain `action`. Currently, the following actions are supported:
+
+- `wait`: Wait for some amount of time.
+- `run`: Run a script via SSH in the VM.
+
+#### Wait
+
+The `wait` action takes a `duration` option specifying the time to wait in seconds. Here is an example for waiting 20 seconds:
+
+```toml
+[[steps]]
+action = "wait"
+duration = 20
+```
+
+#### Run
+
+The `run` action takes a `script` option with a shell script to execute. For example:
+
+```toml
+[[steps]]
+action = "run"
+script = """
+echo "Hello from the VM."
+"""
+```
+
+In addition, the `run` action supports the following optional options:
+
+- `may-fail`: Indicates whether the script is allowed to fail. Normally, when a script fails, the corresponding test fails. Sometimes, e.g., when rebooting the system with a script, the execution may fail because the SSH connection drops, however, this is expected and the test should not fail. In this case, you can set `may-fail` to `true`. Note that a non-zero exit code of the script will always fail the test.
+- `stdin`: Path to a file which is provided as stdin to the script. This is useful to stream, e.g., an update into the system.
+
+## Running Tests
+
+Tests can be run with the `test` subcommand:
 
 ```shell
 ./run-bakery test

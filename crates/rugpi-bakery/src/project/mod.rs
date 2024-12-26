@@ -1,15 +1,14 @@
 //! In-memory representation of Rugpi Bakery projects.
 
 use std::{
-    cell::OnceCell,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use reportify::ResultExt;
 
 use self::{config::BakeryConfig, library::Library, repositories::ProjectRepositories};
-use crate::{utils::prelude::*, BakeryResult};
+use crate::BakeryResult;
 
 pub mod config;
 pub mod images;
@@ -19,7 +18,7 @@ pub mod recipes;
 pub mod repositories;
 
 /// A project.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Project {
     /// The configuration of the project.
@@ -33,30 +32,37 @@ pub struct Project {
 impl Project {
     /// The repositories of the project.
     pub fn repositories(&self) -> BakeryResult<&Arc<ProjectRepositories>> {
-        self.lazy
-            .repositories
-            .try_get_or_init(|| ProjectRepositories::load(self).map(Arc::new))
-            .whatever("loading repositories")
+        if let Some(repositories) = self.lazy.repositories.get() {
+            return Ok(repositories);
+        }
+        let repositories = ProjectRepositories::load(self)
+            .map(Arc::new)
+            .whatever("loading repositories")?;
+        let _ = self.lazy.repositories.set(repositories);
+        Ok(self.lazy.repositories.get().unwrap())
     }
 
     /// The library of the project.
     pub fn library(&self) -> BakeryResult<&Arc<Library>> {
-        self.lazy.library.try_get_or_init(|| {
-            let repositories = self.repositories()?.clone();
-            Library::load(repositories)
-                .map(Arc::new)
-                .whatever("loading library")
-        })
+        if let Some(library) = self.lazy.library.get() {
+            return Ok(library);
+        }
+        let repositories = self.repositories()?.clone();
+        let library = Library::load(repositories)
+            .map(Arc::new)
+            .whatever("loading library")?;
+        let _ = self.lazy.library.set(library);
+        Ok(self.lazy.library.get().unwrap())
     }
 }
 
 /// Lazily initialized fields of [`Project`].
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct ProjectLazy {
     /// The repositories of the project.
-    repositories: OnceCell<Arc<ProjectRepositories>>,
+    repositories: OnceLock<Arc<ProjectRepositories>>,
     /// The library of the project.
-    library: OnceCell<Arc<Library>>,
+    library: OnceLock<Arc<Library>>,
 }
 
 /// Project loader.
