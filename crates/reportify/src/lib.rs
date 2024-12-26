@@ -276,7 +276,6 @@ use std::{
     any::Any,
     error::Error as StdError,
     fmt::{Debug, Display},
-    future::Future,
 };
 
 use backtrace::BacktraceImpl;
