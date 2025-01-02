@@ -263,6 +263,7 @@ fn main() -> BakeryResult<()> {
                     };
                     for workflow in workflows {
                         test::main(&project, &workflow).await?;
+                        rugpi_cli::force_redraw();
                     }
                     <Result<(), Report<RugpiTestError>>>::Ok(())
                 })

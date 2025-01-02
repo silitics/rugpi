@@ -29,6 +29,18 @@ pub trait Widget {
     }
 }
 
+impl Widget for &str {
+    fn draw(self, ctx: &mut DrawCtx) {
+        ctx.write_str(self);
+    }
+}
+
+impl Widget for &String {
+    fn draw(self, ctx: &mut DrawCtx) {
+        ctx.write_str(self);
+    }
+}
+
 impl<W: Widget> Widget for Styled<W> {
     fn draw(self, ctx: &mut DrawCtx) {
         ctx.with_style(self.style, |ctx| self.value.draw(ctx));
@@ -340,7 +352,9 @@ impl<H: Display> Widget for Heading<H> {
             ctx.write_repeated(decoration_char, 2.into());
         });
         ctx.write_char(' ');
-        write!(ctx, "{}", self.heading);
+        ctx.with_style(Style::new().bold(), |ctx| {
+            write!(ctx, "{}", self.heading);
+        });
         let mut remaining = ctx.measure_remaining_width();
         if !remaining.is_zero() {
             ctx.with_optional_style(self.decoration_style, |ctx| {

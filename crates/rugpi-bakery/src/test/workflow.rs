@@ -32,7 +32,13 @@ pub enum TestStep {
         script: String,
         stdin: Option<PathBuf>,
         may_fail: Option<bool>,
+        #[serde(default)]
+        description: String,
     },
     #[serde(rename_all = "kebab-case")]
-    Wait { duration: f64 },
+    Wait {
+        #[serde(default)]
+        description: String,
+        duration: f64,
+    },
 }

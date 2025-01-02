@@ -1,10 +1,12 @@
+use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
 use reportify::{bail, Report, ResultExt};
-use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Widget};
-use rugpi_cli::StatusSegment;
+use rugpi_cli::style::{Style, Stylize};
+use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Text, Widget};
+use rugpi_cli::{StatusSegment, StatusSegmentRef, VisualHeight};
 use tokio::fs;
 use tokio::task::spawn_blocking;
 use tracing::info;
@@ -52,13 +54,17 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
 
         let test_status = rugpi_cli::add_status(TestCliStatus {
             total_steps: workflow.steps.len() as u64,
-            state: Mutex::new(TestState { current_step: 0 }),
+            state: Mutex::default(),
             heading: format!("Test {test_name:?}"),
         });
 
         let vm = qemu::start(&output.to_string_lossy(), system).await?;
 
         info!("VM started");
+
+        let ctx = TestCtx {
+            status: test_status.clone(),
+        };
 
         for (idx, step) in workflow.steps.iter().enumerate() {
             test_status.state.lock().unwrap().current_step = idx as u64 + 1;
@@ -68,13 +74,15 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
                     script,
                     stdin,
                     may_fail,
+                    description,
                 } => {
                     info!("running script");
+                    ctx.status.set_description(description.clone());
                     vm.wait_for_ssh()
                         .await
                         .whatever("unable to connect to VM via SSH")?;
                     if let Err(report) = vm
-                        .run_script(script, stdin.as_ref().map(|p| p.as_ref()))
+                        .run_script(&ctx, script, stdin.as_ref().map(|p| p.as_ref()))
                         .await
                         .whatever::<RugpiTestError, _>("unable to run script")
                     {
@@ -85,7 +93,11 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
                         }
                     }
                 }
-                TestStep::Wait { duration } => {
+                TestStep::Wait {
+                    duration,
+                    description,
+                } => {
+                    ctx.status.set_description(description.clone());
                     info!("waiting for {duration} seconds");
                     tokio::time::sleep(Duration::from_secs_f64(*duration)).await;
                 }
@@ -96,14 +108,38 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+pub struct TestCtx {
+    pub status: StatusSegmentRef<TestCliStatus>,
+}
+
+#[derive(Debug)]
 pub struct TestCliStatus {
     state: Mutex<TestState>,
     heading: String,
     total_steps: u64,
 }
 
+impl TestCliStatus {
+    pub fn set_description(&self, description: String) {
+        self.state.lock().unwrap().description = description;
+    }
+
+    pub fn push_log_line(&self, line: String) {
+        let mut state = self.state.lock().unwrap();
+        state.log_lines.push_back(line);
+        while state.log_lines.len() > 10 {
+            state.log_lines.pop_front();
+        }
+    }
+}
+
+#[derive(Debug, Default)]
 struct TestState {
     current_step: u64,
+    log_lines: VecDeque<String>,
+    description: String,
+    step_progress: Option<StepProgress>,
 }
 
 impl StatusSegment for TestCliStatus {
@@ -111,7 +147,35 @@ impl StatusSegment for TestCliStatus {
         let state = self.state.lock().unwrap();
         Heading::new(&self.heading).draw(ctx);
         ProgressSpinner::new().draw(ctx);
-        write!(ctx, " Step [{}/{}] ", state.current_step, self.total_steps);
-        ProgressBar::new(state.current_step - 1, self.total_steps).draw(ctx)
+        ctx.with_style(Style::new().bold(), |ctx| {
+            write!(ctx, " Step {}/{}:", state.current_step, self.total_steps);
+        });
+        if !state.description.is_empty() {
+            write!(ctx, " {:?}", state.description);
+        }
+        if let Some(step_progress) = &state.step_progress {
+            write!(ctx, "\n  ╰╴{} ", step_progress.message);
+            ProgressBar::new(step_progress.position, step_progress.length)
+                .hide_percentage()
+                .draw(ctx);
+        }
+        if !state.log_lines.is_empty() {
+            let show_lines = VisualHeight::from_usize(state.log_lines.len())
+                .min(ctx.measure_remaining_height())
+                .into_u64() as usize;
+            let skip_lines = state.log_lines.len() - show_lines;
+            Text::new(state.log_lines.iter().skip(skip_lines))
+                .prefix("> ")
+                .styled()
+                .dark_gray()
+                .draw(ctx);
+        }
     }
+}
+
+#[derive(Debug)]
+pub struct StepProgress {
+    message: &'static str,
+    position: u64,
+    length: u64,
 }

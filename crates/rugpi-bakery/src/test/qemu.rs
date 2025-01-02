@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -22,7 +23,7 @@ use tokio::{fs, time};
 use tracing::{error, info};
 
 use super::workflow::TestSystemConfig;
-use super::RugpiTestResult;
+use super::{RugpiTestResult, TestCtx};
 
 pub struct Vm {
     #[expect(dead_code, reason = "not currently used")]
@@ -34,19 +35,56 @@ pub struct Vm {
     private_key: Arc<PrivateKey>,
 }
 
+#[derive(Debug, Default)]
+struct LineSplitter {
+    buffer: Vec<u8>,
+}
+
+impl LineSplitter {
+    pub fn continue_splitting<'splitter, 'bytes>(
+        &'splitter mut self,
+        bytes: &'bytes [u8],
+    ) -> impl 'bytes + Iterator<Item = String>
+    where
+        'splitter: 'bytes,
+    {
+        bytes.iter().filter_map(|b| {
+            if *b == b'\n' {
+                let line = String::from_utf8_lossy(&self.buffer).into_owned();
+                self.buffer.clear();
+                Some(line)
+            } else {
+                self.buffer.push(*b);
+                None
+            }
+        })
+    }
+}
+
 impl Vm {
     pub async fn run_script(
         &self,
+        ctx: &TestCtx,
         script: &str,
         stdin: Option<&Path>,
     ) -> Result<(), Report<SshError>> {
-        if self.call(script, stdin).await.with_info(|_| "run script")? != 0 {
+        if self
+            .call(ctx, script, stdin)
+            .await
+            .with_info(|_| "run script")?
+            != 0
+        {
             bail!("script failed");
         }
         Ok(())
     }
 
-    async fn call(&self, command: &str, stdin: Option<&Path>) -> Result<u32, Report<SshError>> {
+    async fn call(
+        &self,
+        ctx: &TestCtx,
+        command: &str,
+        stdin: Option<&Path>,
+    ) -> Result<u32, Report<SshError>> {
         let mut channel = if let Some(ssh_session) = &mut *self.ssh_session.lock().await {
             ssh_session.channel_open_session().await?
         } else {
@@ -65,15 +103,38 @@ impl Vm {
             let mut stdin_file = tokio::fs::File::open(stdin)
                 .await
                 .whatever("error opening stdin file")?;
+            let stdin_length = stdin
+                .metadata()
+                .whatever("unable to load `stdin` metadata")?
+                .size();
+            let ctx = ctx.clone();
             tokio::spawn(async move {
-                if let Err(err) = tokio::io::copy(&mut stdin_file, &mut stdin_writer).await {
-                    error!("error writing stdin {:?}", err.report::<io::Error>());
+                let mut buffer = Vec::with_capacity(8096);
+                let mut bytes_written = 0;
+                while let Ok(read) = stdin_file.read_buf(&mut buffer).await {
+                    if read == 0 {
+                        break;
+                    }
+                    let _ = stdin_writer.write_all(&buffer[..read]).await;
+                    buffer.clear();
+                    bytes_written += read as u64;
+                    let mut state = ctx.status.state.lock().unwrap();
+                    state.step_progress = Some(super::StepProgress {
+                        message: "sending `stdin`",
+                        position: bytes_written,
+                        length: stdin_length,
+                    });
                 }
+                let mut state = ctx.status.state.lock().unwrap();
+                state.step_progress = None;
                 let _ = eof_tx.send(());
             });
         };
 
         let mut eof_sent = false;
+
+        let mut stderr_splitter = LineSplitter::default();
+        let mut stdout_splitter = LineSplitter::default();
 
         loop {
             tokio::select! {
@@ -86,14 +147,20 @@ impl Vm {
                         break;
                     };
                     match msg {
-                        ChannelMsg::ExtendedData { .. } => {
+                        ChannelMsg::ExtendedData { ref data, .. } => {
+                            for line in stderr_splitter.continue_splitting(data) {
+                                ctx.status.push_log_line(line);
+                            }
                             // stderr
                             //     .write_all(data)
                             //     .await
                             //     .whatever("unable to write SSH stderr to terminal")?;
                             // stderr.flush().await.whatever("unable to flush stderr")?;
                         }
-                        ChannelMsg::Data { .. } => {
+                        ChannelMsg::Data { ref data } => {
+                            for line in stdout_splitter.continue_splitting(data) {
+                                ctx.status.push_log_line(line);
+                            }
                             // stdout
                             //     .write_all(data)
                             //     .await
@@ -225,6 +292,9 @@ pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResu
             let mut line_buffer = Vec::new();
             let mut buffer = Vec::with_capacity(8096);
             while let Ok(read) = stdout.read_buf(&mut buffer).await {
+                if read == 0 {
+                    break;
+                }
                 let _ = stdout_log.write_all(&buffer[..read]).await;
                 for b in &buffer[..read] {
                     if *b == '\n' as u8 {

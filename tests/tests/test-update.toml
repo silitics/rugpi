@@ -4,6 +4,7 @@ ssh = { private-key = "./files/id_rsa" }
 
 [[steps]]
 action = "run"
+description = "install a system update"
 stdin = "./build/images/customized-arm64.img"
 # Rebooting may cause the script to fail executing. We will check everything later.
 may-fail = true
@@ -14,10 +15,12 @@ rugpi-ctrl update install -
 
 [[steps]]
 action = "wait"
+description = "wait for 10 seconds"
 duration = 10
 
 [[steps]]
 action = "run"
+description = "check whether the update has been installed"
 script = """
 rugpi-ctrl system info --json
 rugpi-ctrl system commit
