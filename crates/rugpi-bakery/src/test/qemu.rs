@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -5,13 +6,16 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
+use rugpi_cli::style::Stylize;
+use rugpi_cli::widgets::{Heading, Text, Widget};
+use rugpi_cli::{StatusSegment, VisualHeight};
 use russh::client::Handle;
 use russh::keys::key::PrivateKeyWithHashAlg;
 use russh::keys::{load_secret_key, ssh_key, PrivateKey};
 use russh::ChannelMsg;
 use russh_sftp::client::SftpSession;
 use thiserror::Error;
-use tokio::io::{self, AsyncWriteExt};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, Command};
 use tokio::sync::{oneshot, Mutex};
 use tokio::{fs, time};
@@ -51,8 +55,8 @@ impl Vm {
         channel.exec(true, command).await?;
 
         let mut code = None;
-        let mut stdout = tokio::io::stdout();
-        let mut stderr = tokio::io::stderr();
+        // let mut stdout = tokio::io::stdout();
+        // let mut stderr = tokio::io::stderr();
 
         let (eof_tx, mut eof_rx) = oneshot::channel();
 
@@ -82,19 +86,19 @@ impl Vm {
                         break;
                     };
                     match msg {
-                        ChannelMsg::ExtendedData { ref data, .. } => {
-                            stderr
-                                .write_all(data)
-                                .await
-                                .whatever("unable to write SSH stderr to terminal")?;
-                            stderr.flush().await.whatever("unable to flush stderr")?;
+                        ChannelMsg::ExtendedData { .. } => {
+                            // stderr
+                            //     .write_all(data)
+                            //     .await
+                            //     .whatever("unable to write SSH stderr to terminal")?;
+                            // stderr.flush().await.whatever("unable to flush stderr")?;
                         }
-                        ChannelMsg::Data { ref data } => {
-                            stdout
-                                .write_all(data)
-                                .await
-                                .whatever("unable to write SSH stdout to terminal")?;
-                            stdout.flush().await.whatever("unable to flush stdout")?;
+                        ChannelMsg::Data { .. } => {
+                            // stdout
+                            //     .write_all(data)
+                            //     .await
+                            //     .whatever("unable to write SSH stdout to terminal")?;
+                            // stdout.flush().await.whatever("unable to flush stdout")?;
                         }
                         ChannelMsg::ExitStatus { exit_status } => {
                             code = Some(exit_status);
@@ -216,7 +220,24 @@ pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResu
             .await
             .whatever("unable to create stdout log file")?;
         let mut stdout = child.stdout.take().expect("we used Stdio::piped");
-        tokio::spawn(async move { io::copy(&mut stdout, &mut stdout_log).await });
+        tokio::spawn(async move {
+            let log = rugpi_cli::add_status(VmLog::default());
+            let mut line_buffer = Vec::new();
+            let mut buffer = Vec::with_capacity(8096);
+            while let Ok(read) = stdout.read_buf(&mut buffer).await {
+                let _ = stdout_log.write_all(&buffer[..read]).await;
+                for b in &buffer[..read] {
+                    if *b == '\n' as u8 {
+                        log.push_line(String::from_utf8_lossy(&line_buffer).into_owned());
+                        line_buffer.clear();
+                    } else {
+                        line_buffer.push(*b);
+                    }
+                }
+                buffer.clear();
+            }
+            // io::copy(&mut stdout, &mut stdout_log).await
+        });
     }
     if let Some(stderr) = Some("build/vm-stderr.log") {
         let mut stderr_log = fs::File::create(stderr)
@@ -268,5 +289,41 @@ impl russh::client::Handler for SshHandler {
     async fn check_server_key(&mut self, _: &ssh_key::PublicKey) -> Result<bool, Self::Error> {
         // We do not care about the identity of the server.
         Ok(true)
+    }
+}
+
+#[derive(Debug, Default)]
+struct VmLog {
+    state: std::sync::Mutex<VmLogState>,
+}
+
+impl VmLog {
+    fn push_line(&self, line: String) {
+        let mut state = self.state.lock().unwrap();
+        state.lines.push_back(line);
+        while state.lines.len() > 15 {
+            state.lines.pop_front();
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct VmLogState {
+    lines: VecDeque<String>,
+}
+
+impl StatusSegment for VmLog {
+    fn draw(&self, ctx: &mut rugpi_cli::DrawCtx) {
+        Heading::new("VM Output").draw(ctx);
+        let state = self.state.lock().unwrap();
+        let show_lines = VisualHeight::from_usize(state.lines.len())
+            .min(ctx.measure_remaining_height())
+            .into_u64() as usize;
+        let skip_lines = state.lines.len() - show_lines;
+        Text::new(state.lines.iter().skip(skip_lines))
+            .prefix("> ")
+            .styled()
+            .dark_gray()
+            .draw(ctx);
     }
 }
