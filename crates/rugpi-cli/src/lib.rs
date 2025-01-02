@@ -25,8 +25,6 @@ pub struct Initializer {
     start_drawing_thread: bool,
     /// Period for redrawing the status area.
     drawing_period: Duration,
-    /// Disable user input on the terminal.
-    disable_user_input: bool,
 }
 
 impl Initializer {
@@ -36,7 +34,6 @@ impl Initializer {
             init_tracing: true,
             start_drawing_thread: true,
             drawing_period: Duration::from_millis(100),
-            disable_user_input: true,
         }
     }
 
@@ -56,17 +53,6 @@ impl Initializer {
             std::thread::spawn(move || loop {
                 std::thread::sleep(self.drawing_period);
                 redraw();
-            });
-        }
-        if self.disable_user_input {
-            std::thread::spawn(move || {
-                let stderr = Term::stderr();
-                let _ = stderr.hide_cursor();
-                loop {
-                    if stderr.read_key().is_err() {
-                        break;
-                    }
-                }
             });
         }
     }
