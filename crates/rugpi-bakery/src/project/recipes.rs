@@ -1,22 +1,18 @@
 //! Data structures for representing recipes.
 
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    fmt, fs, ops,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::{fmt, fs, ops};
 
 use reportify::{bail, whatever, ResultExt};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use super::repositories::RepositoryIdx;
-use crate::{
-    utils::caching::{mtime_recursive, ModificationTime},
-    BakeryResult,
-};
+use crate::utils::caching::{mtime_recursive, ModificationTime};
+use crate::BakeryResult;
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]

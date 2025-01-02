@@ -1,17 +1,17 @@
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    ffi::{CStr, CString, OsStr},
-    fs,
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
+use std::convert::Infallible;
+use std::ffi::{CStr, CString, OsStr};
+use std::fs;
+use std::path::{Path, PathBuf};
 
-use bake::{image::make_image, LayerBakery};
+use bake::image::make_image;
+use bake::LayerBakery;
 use clap::Parser;
 use colored::Colorize;
-use project::{
-    config::Architecture, images::ImageConfig, repositories::Source, Project, ProjectLoader,
-};
+use project::config::Architecture;
+use project::images::ImageConfig;
+use project::repositories::Source;
+use project::{Project, ProjectLoader};
 use reportify::{bail, Report, ResultExt};
 use rugpi_common::fsutils::copy_recursive;
 use serde::Deserialize;

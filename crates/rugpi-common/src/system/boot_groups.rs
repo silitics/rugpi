@@ -1,16 +1,12 @@
-use std::{
-    ops::Index,
-    sync::atomic::{self, AtomicBool},
-};
+use std::ops::Index;
+use std::sync::atomic::{self, AtomicBool};
 
 use indexmap::IndexMap;
 use reportify::bail;
 
-use super::{
-    config::BootGroupsConfig,
-    slots::{SlotIdx, SystemSlots},
-    SystemResult,
-};
+use super::config::BootGroupsConfig;
+use super::slots::{SlotIdx, SystemSlots};
+use super::SystemResult;
 
 /// Unique index of a boot group of a system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

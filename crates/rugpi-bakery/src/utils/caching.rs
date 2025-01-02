@@ -1,11 +1,9 @@
 //! Utilities for caching.
 
-use std::{
-    fs,
-    io::{self, Read, Write},
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::fs;
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use indicatif::{ProgressBar, ProgressStyle};
 use reportify::{bail, ResultExt};
@@ -14,7 +12,8 @@ use sha1::{Digest, Sha1};
 use tracing::info;
 use url::Url;
 
-use crate::{utils::prelude::*, BakeryResult};
+use crate::utils::prelude::*;
+use crate::BakeryResult;
 
 pub fn download(url: &Url) -> BakeryResult<PathBuf> {
     let Some(file_name) = url.path_segments().and_then(|segments| segments.last()) else {

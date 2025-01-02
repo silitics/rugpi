@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use reportify::{bail, ResultExt};
-use rugpi_common::{boot::uboot::UBootEnv, fsutils::copy_recursive};
+use rugpi_common::boot::uboot::UBootEnv;
+use rugpi_common::fsutils::copy_recursive;
 
-use crate::{
-    project::{config::Architecture, images::ImageConfig},
-    BakeryResult,
-};
+use crate::project::config::Architecture;
+use crate::project::images::ImageConfig;
+use crate::BakeryResult;
 
 pub fn initialize_uboot(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {
     copy_recursive("/usr/share/rugpi/pi/firmware", &config_dir)

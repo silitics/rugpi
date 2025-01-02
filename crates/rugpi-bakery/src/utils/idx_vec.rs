@@ -1,6 +1,7 @@
 //! A vector with typed indices.
 
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 /// An index into an [`IdxVec`].
 pub trait Idx: Copy {

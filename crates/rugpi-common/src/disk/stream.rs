@@ -1,14 +1,13 @@
 //! Utilities for reading streamed images.
 
-use std::{
-    collections::VecDeque,
-    fmt::Display,
-    io::{self, Read},
-};
+use std::collections::VecDeque;
+use std::fmt::Display;
+use std::io::{self, Read};
 
 use thiserror::Error;
 
-use super::{gpt::Guid, PartitionType};
+use super::gpt::Guid;
+use super::PartitionType;
 
 /// Standard sector size is 512 bytes.
 const SECTOR_SIZE: usize = 512;

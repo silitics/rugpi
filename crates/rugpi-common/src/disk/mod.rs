@@ -8,13 +8,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use self::gpt::{Guid, GPT_TABLE_BLOCKS, GUID_STRING_LENGTH};
-use crate::{
-    partitions::DiskError,
-    utils::{
-        ascii_numbers::parse_ascii_decimal_digit,
-        units::{NumBytes, Quantity, Unit},
-    },
-};
+use crate::partitions::DiskError;
+use crate::utils::ascii_numbers::parse_ascii_decimal_digit;
+use crate::utils::units::{NumBytes, Quantity, Unit};
 
 pub mod blkdev;
 pub mod blkpg;

@@ -1,13 +1,12 @@
 use std::process::Stdio;
 
-use axum::{
-    extract::{DefaultBodyLimit, Multipart},
-    response::Html,
-    routing::{get, post},
-    Router, Server,
-};
+use axum::extract::{DefaultBodyLimit, Multipart};
+use axum::response::Html;
+use axum::routing::{get, post};
+use axum::{Router, Server};
 use clap::Parser;
-use tokio::{io::AsyncWriteExt, process::Command};
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 #[cfg(not(debug_assertions))]
 use xscript::{run, Run};
 

@@ -1,20 +1,16 @@
-use std::{
-    collections::HashMap,
-    fs,
-    io::{self, Read},
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
+use std::fs;
+use std::io::{self, Read};
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use reportify::{Report, ResultExt};
-use rugpi_common::{
-    boot::grub::{grub_envblk_decode, grub_envblk_encode},
-    disk::{
-        blkdev::is_block_device, blkpg::update_kernel_partitions, repart, stream::ImgStream,
-        PartitionTable,
-    },
-    maybe_compressed::MaybeCompressed,
-};
+use rugpi_common::boot::grub::{grub_envblk_decode, grub_envblk_encode};
+use rugpi_common::disk::blkdev::is_block_device;
+use rugpi_common::disk::blkpg::update_kernel_partitions;
+use rugpi_common::disk::stream::ImgStream;
+use rugpi_common::disk::{repart, PartitionTable};
+use rugpi_common::maybe_compressed::MaybeCompressed;
 use xscript::{run, Run};
 
 reportify::new_whatever_type! {

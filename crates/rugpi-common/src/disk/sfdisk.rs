@@ -1,19 +1,17 @@
-use std::{
-    fmt::Write,
-    os::unix::fs::{FileTypeExt, MetadataExt},
-    path::Path,
-    str::FromStr,
-};
+use std::fmt::Write;
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
+use std::path::Path;
+use std::str::FromStr;
 
 use reportify::{whatever, Report, ResultExt};
 use serde::Deserialize;
 use xscript::{read_str, run, Run};
 
-use super::{
-    blkdev::BlockDevice, gpt::Guid, mbr, DiskId, NumBlocks, Partition, PartitionTable,
-    PartitionType,
-};
-use crate::{partitions::DiskError, utils::units::NumBytes};
+use super::blkdev::BlockDevice;
+use super::gpt::Guid;
+use super::{mbr, DiskId, NumBlocks, Partition, PartitionTable, PartitionType};
+use crate::partitions::DiskError;
+use crate::utils::units::NumBytes;
 
 /// Path to the `sfdisk` executable.
 const SFDISK: &str = "/usr/sbin/sfdisk";

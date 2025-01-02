@@ -1,6 +1,7 @@
 //! System configuration.
 
-use std::{fs, path::Path};
+use std::fs;
+use std::path::Path;
 
 use indexmap::IndexMap;
 use reportify::ResultExt;

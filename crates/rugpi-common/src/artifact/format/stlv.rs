@@ -146,10 +146,8 @@
 //!   or XML.
 //! - STLV streams allow for detecting truncated and invalid inputs.
 
-use std::{
-    fmt,
-    io::{self, BufRead, Seek, Write},
-};
+use std::fmt;
+use std::io::{self, BufRead, Seek, Write};
 
 use console::style;
 

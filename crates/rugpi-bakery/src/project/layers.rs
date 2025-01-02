@@ -1,18 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-    path::Path,
-};
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
 
 use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    config::Architecture,
-    recipes::{ParameterValue, RecipeName},
-    repositories::RepositoryIdx,
-};
-use crate::{utils::caching::ModificationTime, BakeryResult};
+use super::config::Architecture;
+use super::recipes::{ParameterValue, RecipeName};
+use super::repositories::RepositoryIdx;
+use crate::utils::caching::ModificationTime;
+use crate::BakeryResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

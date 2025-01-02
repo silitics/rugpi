@@ -1,32 +1,27 @@
-use std::{ffi::CString, fs, io, path::Path, thread, time::Duration};
+use std::ffi::CString;
+use std::path::Path;
+use std::time::Duration;
+use std::{fs, io, thread};
 
 use nix::mount::MntFlags;
 use reportify::{bail, ensure, ResultExt};
-use rugpi_common::{
-    ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH},
-    disk::{
-        blkpg::update_kernel_partitions,
-        repart::{
-            generic_efi_partition_schema, generic_mbr_partition_schema, repart, PartitionSchema,
-        },
-        PartitionTable,
-    },
-    partitions::mkfs_ext4,
-    system::{
-        config::{load_system_config, PartitionConfig},
-        partitions::{resolve_config_partition, resolve_data_partition},
-        paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM},
-        root::{find_system_device, SystemRoot},
-        slots::SlotKind,
-        System, SystemResult,
-    },
+use rugpi_common::ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH};
+use rugpi_common::disk::blkpg::update_kernel_partitions;
+use rugpi_common::disk::repart::{
+    generic_efi_partition_schema, generic_mbr_partition_schema, repart, PartitionSchema,
 };
+use rugpi_common::disk::PartitionTable;
+use rugpi_common::partitions::mkfs_ext4;
+use rugpi_common::system::config::{load_system_config, PartitionConfig};
+use rugpi_common::system::partitions::{resolve_config_partition, resolve_data_partition};
+use rugpi_common::system::paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM};
+use rugpi_common::system::root::{find_system_device, SystemRoot};
+use rugpi_common::system::slots::SlotKind;
+use rugpi_common::system::{System, SystemResult};
 use xscript::{run, Run};
 
-use crate::{
-    state::{load_state_config, Persist, STATE_CONFIG_DIR},
-    utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG},
-};
+use crate::state::{load_state_config, Persist, STATE_CONFIG_DIR};
+use crate::utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG};
 
 pub fn main() -> SystemResult<()> {
     ensure!(is_init_process(), "process must be the init process");

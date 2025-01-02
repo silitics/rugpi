@@ -4,11 +4,11 @@ use reportify::{bail, Report};
 use serde::Deserialize;
 
 use super::{parse_size, PartitionTable, PartitionTableType};
-use crate::{
-    disk::{gpt::gpt_types, mbr::mbr_types, NumBlocks, Partition, PartitionType},
-    partitions::DiskError,
-    utils::units::NumBytes,
-};
+use crate::disk::gpt::gpt_types;
+use crate::disk::mbr::mbr_types;
+use crate::disk::{NumBlocks, Partition, PartitionType};
+use crate::partitions::DiskError;
+use crate::utils::units::NumBytes;
 
 /// Partition schema.
 #[derive(Debug, Clone, Deserialize)]
@@ -275,11 +275,9 @@ pub fn generic_efi_partition_schema(system_size: NumBytes) -> PartitionSchema {
 #[cfg(test)]
 mod tests {
     use super::{generic_efi_partition_schema, generic_mbr_partition_schema, repart};
-    use crate::disk::{
-        gpt::{gpt_types, Guid},
-        mbr::{mbr_types, MbrId},
-        parse_size, DiskId, NumBlocks, Partition, PartitionTable,
-    };
+    use crate::disk::gpt::{gpt_types, Guid};
+    use crate::disk::mbr::{mbr_types, MbrId};
+    use crate::disk::{parse_size, DiskId, NumBlocks, Partition, PartitionTable};
 
     #[test]
     fn test_repart_mbr() {

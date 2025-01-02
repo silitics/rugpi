@@ -1,12 +1,11 @@
-use std::{ops::Index, sync::Mutex};
+use std::ops::Index;
+use std::sync::Mutex;
 
 use reportify::{bail, ResultExt};
 
-use super::{
-    config::{BlockSlotConfig, SlotConfig, SlotConfigKind, SlotsConfig},
-    root::SystemRoot,
-    SystemResult,
-};
+use super::config::{BlockSlotConfig, SlotConfig, SlotConfigKind, SlotsConfig};
+use super::root::SystemRoot;
+use super::SystemResult;
 use crate::disk::blkdev::BlockDevice;
 
 /// Unique index of a slot of a system.

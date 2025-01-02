@@ -1,10 +1,12 @@
 //! Functionality for rendering error reports.
 
-use std::{fmt, panic::Location};
+use std::fmt;
+use std::panic::Location;
 
 use console::style;
 
-use crate::{backtrace::BacktraceImpl, AnyReport, Printable};
+use crate::backtrace::BacktraceImpl;
+use crate::{AnyReport, Printable};
 
 trait TreeNode {
     fn render(&self, renderer: &mut Renderer) -> fmt::Result;

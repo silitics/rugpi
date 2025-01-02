@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use reportify::{bail, ResultExt};
-use rugpi_common::{boot::grub::grub_write_defaults, fsutils::copy_recursive};
+use rugpi_common::boot::grub::grub_write_defaults;
+use rugpi_common::fsutils::copy_recursive;
 
-use crate::{
-    project::{config::Architecture, images::ImageConfig},
-    BakeryResult,
-};
+use crate::project::config::Architecture;
+use crate::project::images::ImageConfig;
+use crate::BakeryResult;
 
 pub fn initialize_grub(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {
     std::fs::create_dir_all(config_dir.join("EFI/BOOT")).ok();

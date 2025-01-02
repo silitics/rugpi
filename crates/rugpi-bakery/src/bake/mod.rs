@@ -1,25 +1,22 @@
 //! Functionality for baking layers and images.
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use reportify::{bail, whatever, ResultExt};
-use rugpi_common::{loop_dev::LoopDevice, mount::Mounted};
+use rugpi_common::loop_dev::LoopDevice;
+use rugpi_common::mount::Mounted;
 use tempfile::tempdir;
 use tracing::info;
 use url::Url;
 use xscript::{run, Run};
 
-use crate::{
-    project::{config::Architecture, library::LayerIdx, Project},
-    utils::{
-        caching::{download, Hasher},
-        prelude::*,
-    },
-    BakeryResult,
-};
+use crate::project::config::Architecture;
+use crate::project::library::LayerIdx;
+use crate::project::Project;
+use crate::utils::caching::{download, Hasher};
+use crate::utils::prelude::*;
+use crate::BakeryResult;
 
 pub mod customize;
 pub mod image;

@@ -1,16 +1,12 @@
 //! Raspberry Pi-specific functionality.
 
-use std::{
-    io,
-    os::fd::{AsRawFd, FromRawFd, OwnedFd},
-    path::Path,
-};
+use std::io;
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::path::Path;
 
-use nix::{
-    fcntl,
-    libc::{c_char, c_int},
-    sys::stat,
-};
+use nix::fcntl;
+use nix::libc::{c_char, c_int};
+use nix::sys::stat;
 
 /// Check whether the device is a Raspberry Pi.
 pub fn is_raspberry_pi() -> bool {

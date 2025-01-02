@@ -20,13 +20,11 @@
 //!
 //! Sources have to be *materialized* into a local directory before they can be used.
 
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    os::unix::ffi::OsStrExt,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::os::unix::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use reportify::{bail, ResultExt};
 use serde::{Deserialize, Serialize};
@@ -35,10 +33,8 @@ use tracing::debug;
 use xscript::{read_str, run, LocalEnv, Run};
 
 use super::Project;
-use crate::{
-    utils::idx_vec::{new_idx_type, IdxVec},
-    BakeryResult,
-};
+use crate::utils::idx_vec::{new_idx_type, IdxVec};
+use crate::BakeryResult;
 
 #[derive(Debug)]
 #[non_exhaustive]

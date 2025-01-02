@@ -1,13 +1,13 @@
 //! In-memory representation of Rugpi Bakery projects.
 
-use std::{
-    path::{Path, PathBuf},
-    sync::{Arc, OnceLock},
-};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 
 use reportify::ResultExt;
 
-use self::{config::BakeryConfig, library::Library, repositories::ProjectRepositories};
+use self::config::BakeryConfig;
+use self::library::Library;
+use self::repositories::ProjectRepositories;
 use crate::BakeryResult;
 
 pub mod config;

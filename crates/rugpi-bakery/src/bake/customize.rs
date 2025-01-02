@@ -1,12 +1,10 @@
 //! Applies a set of recipes to a system.
 
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-    ops::Deref,
-    path::Path,
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::ops::Deref;
+use std::path::Path;
+use std::sync::Arc;
 
 use reportify::{bail, ResultExt};
 use rugpi_common::mount::{MountStack, Mounted};
@@ -14,21 +12,15 @@ use tempfile::tempdir;
 use tracing::{error, info};
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
-use crate::{
-    project::{
-        config::Architecture,
-        layers::{Layer, LayerConfig},
-        library::Library,
-        recipes::{PackageManager, Recipe, StepKind},
-        repositories::RepositoryIdx,
-        Project,
-    },
-    utils::{
-        caching::{mtime, mtime_recursive},
-        prelude::*,
-    },
-    BakeryResult,
-};
+use crate::project::config::Architecture;
+use crate::project::layers::{Layer, LayerConfig};
+use crate::project::library::Library;
+use crate::project::recipes::{PackageManager, Recipe, StepKind};
+use crate::project::repositories::RepositoryIdx;
+use crate::project::Project;
+use crate::utils::caching::{mtime, mtime_recursive};
+use crate::utils::prelude::*;
+use crate::BakeryResult;
 
 pub fn customize(
     project: &Project,

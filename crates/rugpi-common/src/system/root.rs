@@ -5,10 +5,8 @@ use std::path::Path;
 use tracing::error;
 
 use super::paths;
-use crate::disk::{
-    blkdev::{find_block_device, BlockDevice},
-    PartitionTable,
-};
+use crate::disk::blkdev::{find_block_device, BlockDevice};
+use crate::disk::PartitionTable;
 
 /// Find the system block device.
 pub fn find_system_device() -> Option<BlockDevice> {

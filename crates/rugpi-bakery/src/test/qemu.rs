@@ -1,24 +1,24 @@
-use std::{path::Path, process::Stdio, sync::Arc, time::Duration};
+use std::path::Path;
+use std::process::Stdio;
+use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
-use russh::{
-    client::Handle,
-    keys::{key::PrivateKeyWithHashAlg, load_secret_key, ssh_key, PrivateKey},
-    ChannelMsg,
-};
+use russh::client::Handle;
+use russh::keys::key::PrivateKeyWithHashAlg;
+use russh::keys::{load_secret_key, ssh_key, PrivateKey};
+use russh::ChannelMsg;
 use russh_sftp::client::SftpSession;
 use thiserror::Error;
-use tokio::{
-    fs,
-    io::{self, AsyncWriteExt},
-    process::{Child, Command},
-    sync::{oneshot, Mutex},
-    time,
-};
+use tokio::io::{self, AsyncWriteExt};
+use tokio::process::{Child, Command};
+use tokio::sync::{oneshot, Mutex};
+use tokio::{fs, time};
 use tracing::{error, info};
 
-use super::{workflow::TestSystemConfig, RugpiTestResult};
+use super::workflow::TestSystemConfig;
+use super::RugpiTestResult;
 
 pub struct Vm {
     #[expect(dead_code, reason = "not currently used")]

@@ -1,14 +1,18 @@
 //! Project configuration.
 
 use core::fmt;
-use std::{collections::HashMap, fs, path::Path, str::FromStr};
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+use std::str::FromStr;
 
 use clap::ValueEnum;
 use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::{images::ImageConfig, repositories::Source};
+use super::images::ImageConfig;
+use super::repositories::Source;
 use crate::BakeryResult;
 
 #[derive(Debug, Clone, Deserialize)]

@@ -1,7 +1,5 @@
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 
 use reportify::{Report, ResultExt};
 use tracing::info;

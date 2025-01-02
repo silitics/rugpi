@@ -117,5 +117,4 @@ macro_rules! define_enum {
     };
 }
 
-pub(crate) use define_enum;
-pub(crate) use define_struct;
+pub(crate) use {define_enum, define_struct};

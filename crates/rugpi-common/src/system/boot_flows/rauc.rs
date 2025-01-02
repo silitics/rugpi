@@ -6,14 +6,10 @@ use reportify::ResultExt;
 use serde::{Deserialize, Serialize};
 
 use super::BootFlowResult;
-use crate::{
-    boot::grub::{load_grub_env, save_grub_env, GrubEnv},
-    system::{
-        boot_flows::{BootFlow, BootGroupStatus},
-        boot_groups::BootGroupIdx,
-        System,
-    },
-};
+use crate::boot::grub::{load_grub_env, save_grub_env, GrubEnv};
+use crate::system::boot_flows::{BootFlow, BootGroupStatus};
+use crate::system::boot_groups::BootGroupIdx;
+use crate::system::System;
 
 /// RAUC-compatible Grub boot flow configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]

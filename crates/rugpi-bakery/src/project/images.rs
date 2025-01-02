@@ -1,4 +1,5 @@
-use rugpi_common::disk::{gpt::gpt_types, PartitionTableType, PartitionType};
+use rugpi_common::disk::gpt::gpt_types;
+use rugpi_common::disk::{PartitionTableType, PartitionType};
 use serde::{Deserialize, Serialize};
 
 use super::config::Architecture;

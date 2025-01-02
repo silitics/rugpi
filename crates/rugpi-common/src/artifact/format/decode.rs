@@ -1,9 +1,7 @@
 //! High-level decoding API.
 
-use std::{
-    io::{self, BufRead, Seek},
-    ops::Range,
-};
+use std::io::{self, BufRead, Seek};
+use std::ops::Range;
 
 use bytes::Bytes;
 use thiserror::Error;

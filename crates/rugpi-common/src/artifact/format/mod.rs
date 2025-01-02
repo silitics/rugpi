@@ -3,19 +3,15 @@
 //! The artifact format is based on the *STLV encoding* specified and implemented in
 //! [`stlv`].
 
-use std::{
-    collections::HashMap,
-    io::{self, BufRead, Write},
-};
+use std::collections::HashMap;
+use std::io::{self, BufRead, Write};
 
 use bytes::Bytes;
 
-use self::{
-    decode::{Decode, DecodeError, SegmentDecoder},
-    encode::Encode,
-    macros::{define_enum, define_struct},
-    stlv::{write_atom_head, AtomHead},
-};
+use self::decode::{Decode, DecodeError, SegmentDecoder};
+use self::encode::Encode;
+use self::macros::{define_enum, define_struct};
+use self::stlv::{write_atom_head, AtomHead};
 
 pub mod decode;
 pub mod encode;

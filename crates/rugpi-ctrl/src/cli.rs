@@ -1,29 +1,21 @@
 //! Definition of the command line interface (CLI).
 
-use std::{
-    fs::{self, File},
-    io::{self, Read},
-    path::Path,
-};
+use std::fs::{self, File};
+use std::io::{self, Read};
+use std::path::Path;
 
 use clap::{Parser, ValueEnum};
 use reportify::{bail, whatever, ErrorExt, ResultExt};
-use rugpi_common::{
-    disk::stream::ImgStream,
-    maybe_compressed::MaybeCompressed,
-    stream_hasher::StreamHasher,
-    system::{
-        boot_groups::{BootGroup, BootGroupIdx},
-        info::SystemInfo,
-        slots::SlotKind,
-        System, SystemResult,
-    },
-};
+use rugpi_common::disk::stream::ImgStream;
+use rugpi_common::maybe_compressed::MaybeCompressed;
+use rugpi_common::stream_hasher::StreamHasher;
+use rugpi_common::system::boot_groups::{BootGroup, BootGroupIdx};
+use rugpi_common::system::info::SystemInfo;
+use rugpi_common::system::slots::SlotKind;
+use rugpi_common::system::{System, SystemResult};
 
-use crate::{
-    overlay::overlay_dir,
-    utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG},
-};
+use crate::overlay::overlay_dir;
+use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
 
 fn create_rugpi_state_directory() -> SystemResult<()> {
     fs::create_dir_all("/run/rugpi/state/.rugpi")

@@ -4,18 +4,17 @@
 //! of partition tables via `BLKRRPART` to fail. The solution is to instead directly
 //! inform the Kernel about any changes made to the partitions.
 
-use std::{
-    ffi::c_void,
-    fs::File,
-    os::fd::{AsRawFd, RawFd},
-    path::Path,
-};
+use std::ffi::c_void;
+use std::fs::File;
+use std::os::fd::{AsRawFd, RawFd};
+use std::path::Path;
 
 use nix::libc::{c_char, c_int, c_longlong};
 use reportify::{Report, ResultExt};
 
 use super::PartitionTable;
-use crate::{disk::NumBlocks, utils::units::NumBytes};
+use crate::disk::NumBlocks;
+use crate::utils::units::NumBytes;
 
 reportify::new_whatever_type! {
     BlkpgError

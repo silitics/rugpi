@@ -272,11 +272,9 @@
 //! [^3]: Recall that this library is still in an exploratory stage, so this might not
 //!       actually work out.
 
-use std::{
-    any::Any,
-    error::Error as StdError,
-    fmt::{Debug, Display},
-};
+use std::any::Any;
+use std::error::Error as StdError;
+use std::fmt::{Debug, Display};
 
 use backtrace::BacktraceImpl;
 

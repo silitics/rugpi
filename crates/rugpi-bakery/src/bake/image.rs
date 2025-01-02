@@ -1,34 +1,33 @@
 //! Creates an image.
 
-use std::{
-    fs::{self, File},
-    os::unix::fs::MetadataExt,
-    path::{Path, PathBuf},
-};
+use std::fs::{self, File};
+use std::os::unix::fs::MetadataExt;
+use std::path::{Path, PathBuf};
 
 use reportify::{bail, whatever, ResultExt};
-use rugpi_common::{
-    disk::{
-        gpt::gpt_types, mbr::mbr_types, parse_size, DiskId, NumBlocks, Partition, PartitionTable,
-        PartitionTableType,
-    },
-    fsutils::{allocate_file, copy_recursive, copy_sparse},
-    grub_patch_env, rpi_patch_boot, rpi_patch_config,
-    utils::{ascii_numbers, units::NumBytes},
+use rugpi_common::disk::gpt::gpt_types;
+use rugpi_common::disk::mbr::mbr_types;
+use rugpi_common::disk::{
+    parse_size, DiskId, NumBlocks, Partition, PartitionTable, PartitionTableType,
 };
+use rugpi_common::fsutils::{allocate_file, copy_recursive, copy_sparse};
+use rugpi_common::utils::ascii_numbers;
+use rugpi_common::utils::units::NumBytes;
+use rugpi_common::{grub_patch_env, rpi_patch_boot, rpi_patch_config};
 use tempfile::tempdir;
 use tracing::info;
 use xscript::{run, Run};
 
-use crate::{
-    bake::targets::{
-        generic_grub_efi::initialize_grub, rpi_tryboot::initialize_tryboot,
-        rpi_uboot::initialize_uboot, Target,
-    },
-    project::images::{self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout},
-    utils::{caching::mtime, prelude::*},
-    BakeryResult,
+use crate::bake::targets::generic_grub_efi::initialize_grub;
+use crate::bake::targets::rpi_tryboot::initialize_tryboot;
+use crate::bake::targets::rpi_uboot::initialize_uboot;
+use crate::bake::targets::Target;
+use crate::project::images::{
+    self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout,
 };
+use crate::utils::caching::mtime;
+use crate::utils::prelude::*;
+use crate::BakeryResult;
 
 pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResult<()> {
     let work_dir = tempdir().whatever("unable to create temporary directory")?;

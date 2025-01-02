@@ -1,17 +1,15 @@
-use std::{
-    fs::{self, File},
-    io::{self, BufRead, BufReader, BufWriter, Write},
-    path::{Path, PathBuf},
-};
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader, BufWriter, Write};
+use std::path::{Path, PathBuf};
 
 use clap::Parser;
 use reportify::{whatever, Report, ResultExt};
-use rugpi_common::artifact::format::{
-    encode::{self, Encode},
-    stlv::{self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek},
-    tags::{self, TagNameResolver},
-    ArtifactHeader, FragmentHeader, FragmentInfo, Hash,
+use rugpi_common::artifact::format::encode::{self, Encode};
+use rugpi_common::artifact::format::stlv::{
+    self, write_atom_head, write_close_segment, write_open_segment, AtomHead, SkipSeek,
 };
+use rugpi_common::artifact::format::tags::{self, TagNameResolver};
+use rugpi_common::artifact::format::{ArtifactHeader, FragmentHeader, FragmentInfo, Hash};
 use sha2::Digest;
 
 reportify::new_whatever_type! {

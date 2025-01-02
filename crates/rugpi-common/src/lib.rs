@@ -1,7 +1,9 @@
 //! Common functionality shared between Rugpi Bakery and Rugpi Ctrl.
 #![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]
 
-use std::{collections::HashMap, fs, io, path::Path};
+use std::collections::HashMap;
+use std::path::Path;
+use std::{fs, io};
 
 use boot::grub::grub_envblk_encode;
 use reportify::{Report, ResultExt};

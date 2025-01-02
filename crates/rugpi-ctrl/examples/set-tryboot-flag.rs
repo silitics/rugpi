@@ -1,11 +1,10 @@
-use std::{io, path::Path};
+use std::io;
+use std::path::Path;
 
-use nix::{
-    errno::Errno,
-    fcntl,
-    libc::{c_char, c_int},
-    sys::stat,
-};
+use nix::errno::Errno;
+use nix::fcntl;
+use nix::libc::{c_char, c_int};
+use nix::sys::stat;
 use reportify::Report;
 
 const RPI_FIRMWARE_GET_REBOOT_FLAGS: u32 = 0x00030064_u32;

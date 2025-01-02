@@ -1,4 +1,5 @@
-use std::{io, path::Path};
+use std::io;
+use std::path::Path;
 
 use reportify::{new_whatever_type, Report, ResultExt};
 

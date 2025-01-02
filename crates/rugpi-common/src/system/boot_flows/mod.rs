@@ -1,30 +1,26 @@
 //! Boot flows for atomic system updates.
 
-use std::{collections::HashMap, fmt::Debug, fs::File, io::Write};
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::fs::File;
+use std::io::Write;
 
 use reportify::{bail, Report, ResultExt};
 use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
 
-use super::{
-    boot_groups::{BootGroupIdx, BootGroups},
-    config::BootFlowConfig,
-    slots::SlotIdx,
-    ConfigPartition, System,
-};
-use crate::{
-    boot::{
-        grub::{self, load_grub_env, write_with_hash, RUGPI_BOOTPART},
-        tryboot::{self, AutobootSection, AUTOBOOT_A, AUTOBOOT_B},
-        uboot::{self, UBootEnv},
-    },
-    grub_patch_env,
-    mount::Mounted,
-    partitions::get_disk_id,
-    rpi_patch_boot,
-    system::slots::SlotKind,
-    utils::ascii_numbers,
-};
+use super::boot_groups::{BootGroupIdx, BootGroups};
+use super::config::BootFlowConfig;
+use super::slots::SlotIdx;
+use super::{ConfigPartition, System};
+use crate::boot::grub::{self, load_grub_env, write_with_hash, RUGPI_BOOTPART};
+use crate::boot::tryboot::{self, AutobootSection, AUTOBOOT_A, AUTOBOOT_B};
+use crate::boot::uboot::{self, UBootEnv};
+use crate::mount::Mounted;
+use crate::partitions::get_disk_id;
+use crate::system::slots::SlotKind;
+use crate::utils::ascii_numbers;
+use crate::{grub_patch_env, rpi_patch_boot};
 
 reportify::new_whatever_type! {
     BootFlowError

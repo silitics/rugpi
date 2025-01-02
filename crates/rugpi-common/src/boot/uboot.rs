@@ -1,10 +1,13 @@
-use std::{collections::HashMap, io, path::Path};
+use std::collections::HashMap;
+use std::io;
+use std::path::Path;
 
 use reportify::{Report, ResultExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::system::{boot_flows::BootFlowError, System};
+use crate::system::boot_flows::BootFlowError;
+use crate::system::System;
 
 /// A U-Boot environment.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

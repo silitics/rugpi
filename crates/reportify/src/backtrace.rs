@@ -1,6 +1,7 @@
 //! Functionality for capturing and rendering backtraces.
 
-use std::{env, fmt, sync::atomic};
+use std::sync::atomic;
+use std::{env, fmt};
 
 use console::style;
 

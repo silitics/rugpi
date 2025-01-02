@@ -1,13 +1,13 @@
-use std::{fs, path::Path};
+use std::fs;
+use std::path::Path;
 
 use reportify::{Report, ResultExt};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    disk::{parse_size, repart::PartitionSchema},
-    system::SystemError,
-    utils::units::NumBytes,
-};
+use crate::disk::parse_size;
+use crate::disk::repart::PartitionSchema;
+use crate::system::SystemError;
+use crate::utils::units::NumBytes;
 
 pub const CTRL_CONFIG_PATH: &str = "/etc/rugpi/ctrl.toml";
 

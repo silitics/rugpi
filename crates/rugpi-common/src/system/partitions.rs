@@ -1,15 +1,15 @@
 //! Functionality for working with the data and config partition of a system.
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Mutex,
-};
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use reportify::{bail, ResultExt};
 use tracing::{error, warn};
 use xscript::{run, Run};
 
-use super::{config::PartitionConfig, paths, root::SystemRoot, SystemResult};
+use super::config::PartitionConfig;
+use super::root::SystemRoot;
+use super::{paths, SystemResult};
 use crate::disk::blkdev::BlockDevice;
 
 /// Resolve the data partition block device.

@@ -5,10 +5,8 @@ use std::ops::Deref;
 use thiserror::Error;
 
 use super::NumBlocks;
-use crate::utils::{
-    ascii_numbers::{self, byte_to_ascii_hex, parse_ascii_hex_byte, Case},
-    const_helpers::const_for,
-};
+use crate::utils::ascii_numbers::{self, byte_to_ascii_hex, parse_ascii_hex_byte, Case};
+use crate::utils::const_helpers::const_for;
 
 /// Number of blocks used by a GPT partition table.
 pub const GPT_TABLE_BLOCKS: NumBlocks = NumBlocks::from_raw(33);
@@ -127,7 +125,8 @@ impl<'de> serde::Deserialize<'de> for Guid {
 /// GPT partition types.
 pub mod gpt_types {
     use super::Guid;
-    use crate::{disk::PartitionType, utils::const_helpers::const_unwrap_result};
+    use crate::disk::PartitionType;
+    use crate::utils::const_helpers::const_unwrap_result;
 
     /// EFI GPT partition type.
     pub const EFI: PartitionType = PartitionType::Gpt(const_unwrap_result!(Guid::from_hex_str(
@@ -186,7 +185,8 @@ pub enum InvalidGuid {
 pub mod tests {
     use std::ops::Deref;
 
-    use crate::{disk::gpt::Guid, utils::ascii_numbers};
+    use crate::disk::gpt::Guid;
+    use crate::utils::ascii_numbers;
 
     #[test]
     pub fn test_guid_roundtrip() {

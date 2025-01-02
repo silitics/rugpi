@@ -1,20 +1,20 @@
-use std::{collections::HashMap, ffi::OsStr, fs, ops::Deref, path::Path, str::FromStr, sync::Arc};
+use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::fs;
+use std::ops::Deref;
+use std::path::Path;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use reportify::{whatever, ResultExt};
 
-use super::{
-    config::Architecture,
-    layers::{Layer, LayerConfig},
-    recipes::{Recipe, RecipeLoader},
-    repositories::{ProjectRepositories, RepositoryIdx},
-};
-use crate::{
-    utils::{
-        caching::mtime,
-        idx_vec::{new_idx_type, IdxVec},
-    },
-    BakeryResult,
-};
+use super::config::Architecture;
+use super::layers::{Layer, LayerConfig};
+use super::recipes::{Recipe, RecipeLoader};
+use super::repositories::{ProjectRepositories, RepositoryIdx};
+use crate::utils::caching::mtime;
+use crate::utils::idx_vec::{new_idx_type, IdxVec};
+use crate::BakeryResult;
 
 #[derive(Debug)]
 pub struct Library {
