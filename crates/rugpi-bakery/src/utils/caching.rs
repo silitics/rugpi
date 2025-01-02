@@ -12,7 +12,6 @@ use sha1::{Digest, Sha1};
 use tracing::info;
 use url::Url;
 
-use crate::utils::prelude::*;
 use crate::BakeryResult;
 
 pub fn download(url: &Url) -> BakeryResult<PathBuf> {

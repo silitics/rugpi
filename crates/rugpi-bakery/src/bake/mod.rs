@@ -15,7 +15,6 @@ use crate::project::config::Architecture;
 use crate::project::library::LayerIdx;
 use crate::project::Project;
 use crate::utils::caching::{download, Hasher};
-use crate::utils::prelude::*;
 use crate::BakeryResult;
 
 pub mod customize;

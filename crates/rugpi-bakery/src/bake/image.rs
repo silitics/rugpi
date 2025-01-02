@@ -26,7 +26,6 @@ use crate::project::images::{
     self, grub_efi_image_layout, pi_image_layout, ImageConfig, ImageLayout,
 };
 use crate::utils::caching::mtime;
-use crate::utils::prelude::*;
 use crate::BakeryResult;
 
 pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResult<()> {

@@ -19,7 +19,6 @@ use crate::project::recipes::{PackageManager, Recipe, StepKind};
 use crate::project::repositories::RepositoryIdx;
 use crate::project::Project;
 use crate::utils::caching::{mtime, mtime_recursive};
-use crate::utils::prelude::*;
 use crate::BakeryResult;
 
 pub fn customize(
