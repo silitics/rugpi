@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use reportify::{bail, Report, ResultExt};
-use rugpi_cli::widgets::{Heading, ProgressBar, Widget};
+use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Widget};
 use rugpi_cli::StatusSegment;
 use tokio::fs;
 use tokio::task::spawn_blocking;
@@ -110,7 +110,8 @@ impl StatusSegment for TestCliStatus {
     fn draw(&self, ctx: &mut rugpi_cli::DrawCtx) {
         let state = self.state.lock().unwrap();
         Heading::new(&self.heading).draw(ctx);
-        write!(ctx, "Step [{}/{}] ", state.current_step, self.total_steps);
+        ProgressSpinner::new().draw(ctx);
+        write!(ctx, " Step [{}/{}] ", state.current_step, self.total_steps);
         ProgressBar::new(state.current_step - 1, self.total_steps).draw(ctx)
     }
 }
