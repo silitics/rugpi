@@ -1,8 +1,8 @@
 use std::{path::Path, time::Duration};
 
 use reportify::{bail, Report, ResultExt};
-use rugpi_cli::info;
 use tokio::{fs, task::spawn_blocking};
+use tracing::info;
 use workflow::{TestStep, TestWorkflow};
 
 use crate::{bake, project::Project};

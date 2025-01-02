@@ -123,7 +123,7 @@ pub struct InitCommand {
 
 /// Entrypoint of the CLI.
 fn main() -> BakeryResult<()> {
-    rugpi_cli::init();
+    rugpi_cli::Initializer::new().init();
 
     let args = Args::parse();
     match &args.command {

@@ -31,14 +31,12 @@ use std::{
 use reportify::{bail, ResultExt};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use tracing::debug;
 use xscript::{read_str, run, LocalEnv, Run};
 
 use super::Project;
 use crate::{
-    utils::{
-        idx_vec::{new_idx_type, IdxVec},
-        prelude::*,
-    },
+    utils::idx_vec::{new_idx_type, IdxVec},
     BakeryResult,
 };
 

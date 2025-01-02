@@ -8,8 +8,10 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-tracing.workspace = true
+console = "0.15.10"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+tracing.workspace = true
 
 [lints]
 workspace = true

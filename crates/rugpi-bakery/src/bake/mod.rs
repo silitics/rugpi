@@ -8,6 +8,7 @@ use std::{
 use reportify::{bail, whatever, ResultExt};
 use rugpi_common::{loop_dev::LoopDevice, mount::Mounted};
 use tempfile::tempdir;
+use tracing::info;
 use url::Url;
 use xscript::{run, Run};
 

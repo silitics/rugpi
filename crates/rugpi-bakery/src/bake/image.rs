@@ -17,6 +17,7 @@ use rugpi_common::{
     utils::{ascii_numbers, units::NumBytes},
 };
 use tempfile::tempdir;
+use tracing::info;
 use xscript::{run, Run};
 
 use crate::{

@@ -11,6 +11,7 @@ use std::{
 use reportify::{bail, ResultExt};
 use rugpi_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
+use tracing::{error, info};
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
 use crate::{

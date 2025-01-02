@@ -11,6 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reportify::{bail, ResultExt};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use tracing::info;
 use url::Url;
 
 use crate::{utils::prelude::*, BakeryResult};

@@ -9,8 +9,8 @@ use std::{
 };
 
 use reportify::{bail, whatever, ResultExt};
-use rugpi_cli::warn;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use super::repositories::RepositoryIdx;
 use crate::{

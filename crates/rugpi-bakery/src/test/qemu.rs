@@ -2,7 +2,6 @@ use std::{path::Path, process::Stdio, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
-use rugpi_cli::{error, info};
 use russh::{
     client::Handle,
     keys::{key::PrivateKeyWithHashAlg, load_secret_key, ssh_key, PrivateKey},
@@ -17,6 +16,7 @@ use tokio::{
     sync::{oneshot, Mutex},
     time,
 };
+use tracing::{error, info};
 
 use super::{workflow::TestSystemConfig, RugpiTestResult};
 

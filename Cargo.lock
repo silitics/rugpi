@@ -2040,6 +2040,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "toml 0.8.19",
+ "tracing",
  "url",
  "uuid",
  "xscript 0.3.0",
@@ -2049,6 +2050,7 @@ dependencies = [
 name = "rugpi-cli"
 version = "0.1.0"
 dependencies = [
+ "console",
  "tracing",
  "tracing-subscriber",
 ]
