@@ -53,14 +53,18 @@ The `run` action takes a `script` option with a shell script to execute. For exa
 [[steps]]
 action = "run"
 script = """
+#!/bin/bash
 echo "Hello from the VM."
 """
 ```
 
+Note that the script needs a shebang, e.g., `#!/bin/bash`, to execute.
+
 In addition, the `run` action supports the following optional options:
 
-- `may-fail`: Indicates whether the script is allowed to fail. Normally, when a script fails, the corresponding test fails. Sometimes, e.g., when rebooting the system with a script, the execution may fail because the SSH connection drops, however, this is expected and the test should not fail. In this case, you can set `may-fail` to `true`. Note that a non-zero exit code of the script will always fail the test.
-- `stdin`: Path to a file which is provided as stdin to the script. This is useful to stream, e.g., an update into the system.
+- `may-disconnect`: Sometimes, e.g., when rebooting the system with a script, the execution may fail because the SSH connection drops, however, this is expected and the test should not fail. In this case, you can set `may-disconnect` to `true` indicating that it is okay for the SSH connection to drop. Note that a non-zero exit code of the script will still fail the test.
+- `may-fail`: Allows the script to fail with a non-zero exit code without the test failing.
+- `stdin-file`: Path to a file which is provided as stdin to the script. Can be used to stream an update into the system.
 
 ## Running Tests
 

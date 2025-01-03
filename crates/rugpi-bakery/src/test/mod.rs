@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use reportify::{bail, Report, ResultExt};
+use reportify::{ErrorExt, Report, ResultExt};
 use rugpi_cli::style::{Style, Stylize};
 use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Text, Widget};
 use rugpi_cli::{StatusSegment, StatusSegmentRef, VisualHeight};
@@ -72,7 +72,8 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
             match step {
                 workflow::TestStep::Run {
                     script,
-                    stdin,
+                    stdin_file,
+                    may_disconnect,
                     may_fail,
                     description,
                 } => {
@@ -82,14 +83,23 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
                         .await
                         .whatever("unable to connect to VM via SSH")?;
                     if let Err(report) = vm
-                        .run_script(&ctx, script, stdin.as_ref().map(|p| p.as_ref()))
+                        .run_script(&ctx, script, stdin_file.as_ref().map(|p| p.as_ref()))
                         .await
-                        .whatever::<RugpiTestError, _>("unable to run script")
                     {
-                        if may_fail.unwrap_or(false) {
-                            eprintln!("ignoring error while executing script:\n{report:?}");
-                        } else {
-                            bail!("error during test")
+                        match report.error() {
+                            qemu::ExecError::Disconnected => {
+                                if !may_disconnect.unwrap_or(false) {
+                                    return Err(report.whatever("script execution failed"));
+                                }
+                            }
+                            qemu::ExecError::Failed { code } => {
+                                if *code != 0 && !may_fail.unwrap_or(false) {
+                                    return Err(report.whatever("script execution failed"));
+                                }
+                            }
+                            qemu::ExecError::Other => {
+                                return Err(report.whatever("script execution failed"));
+                            }
                         }
                     }
                 }
@@ -97,8 +107,15 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
                     duration,
                     description,
                 } => {
-                    ctx.status.set_description(description.clone());
-                    info!("waiting for {duration} seconds");
+                    ctx.status.set_description(if description.is_empty() {
+                        if *duration == 1.0 {
+                            "wait for 1 second".to_owned()
+                        } else {
+                            format!("wait for {duration:.1} seconds")
+                        }
+                    } else {
+                        description.clone()
+                    });
                     tokio::time::sleep(Duration::from_secs_f64(*duration)).await;
                 }
             }
@@ -154,7 +171,7 @@ impl StatusSegment for TestCliStatus {
             write!(ctx, " {:?}", state.description);
         }
         if let Some(step_progress) = &state.step_progress {
-            write!(ctx, "\n  ╰╴{} ", step_progress.message);
+            write!(ctx, "\n╰╴{} ", step_progress.message);
             ProgressBar::new(step_progress.position, step_progress.length)
                 .hide_percentage()
                 .draw(ctx);

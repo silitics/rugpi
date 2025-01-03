@@ -30,7 +30,8 @@ pub enum TestStep {
     #[serde(rename_all = "kebab-case")]
     Run {
         script: String,
-        stdin: Option<PathBuf>,
+        stdin_file: Option<PathBuf>,
+        may_disconnect: Option<bool>,
         may_fail: Option<bool>,
         #[serde(default)]
         description: String,

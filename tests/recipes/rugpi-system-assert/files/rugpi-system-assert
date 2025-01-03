@@ -1,0 +1,13 @@
+#!/bin/bash
+
+json_path=$1;
+expected_value=$2;
+
+json_value=$(rugpi-ctrl system info --json | jq -r "$json_path")
+
+if [ "$json_value" != "$expected_value" ]; then
+    echo "Invalid value for '${json_path}'. Expected '${expected_value}, got '${json_value}'."
+    exit 1
+else
+    echo "Value for '${json_path}' is '${expected_value}'. Ok!"
+fi

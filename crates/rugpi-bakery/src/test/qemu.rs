@@ -67,16 +67,31 @@ impl Vm {
         ctx: &TestCtx,
         script: &str,
         stdin: Option<&Path>,
-    ) -> Result<(), Report<SshError>> {
-        if self
-            .call(ctx, script, stdin)
+    ) -> Result<(), Report<ExecError>> {
+        let Some(sftp_session) = &*self.sftp_session.lock().await else {
+            bail!("no SFTP session");
+        };
+        let mut test_script = sftp_session
+            .create("/tmp/rugpi-test-script.sh")
             .await
-            .with_info(|_| "run script")?
-            != 0
-        {
-            bail!("script failed");
-        }
-        Ok(())
+            .whatever("unable to create `rugpi-test-script.sh`")?;
+        test_script
+            .write_all(script.as_bytes())
+            .await
+            .whatever("unable to write to `rugpi-test-script.sh`")?;
+        test_script
+            .sync_all()
+            .await
+            .whatever("error syncing `rugpi-test-script.sh`")?;
+        drop(test_script);
+
+        self.call(
+            ctx,
+            "chmod +x /tmp/rugpi-test-script.sh\n/tmp/rugpi-test-script.sh",
+            stdin,
+        )
+        .await
+        .with_info(|_| "run script")
     }
 
     async fn call(
@@ -84,17 +99,21 @@ impl Vm {
         ctx: &TestCtx,
         command: &str,
         stdin: Option<&Path>,
-    ) -> Result<u32, Report<SshError>> {
+    ) -> Result<(), Report<ExecError>> {
         let mut channel = if let Some(ssh_session) = &mut *self.ssh_session.lock().await {
-            ssh_session.channel_open_session().await?
+            ssh_session
+                .channel_open_session()
+                .await
+                .whatever("unable to open SSH channel")?
         } else {
             bail!("no SSH session");
         };
-        channel.exec(true, command).await?;
+        channel
+            .exec(true, command)
+            .await
+            .whatever("unable to execute command")?;
 
         let mut code = None;
-        // let mut stdout = tokio::io::stdout();
-        // let mut stderr = tokio::io::stderr();
 
         let (eof_tx, mut eof_rx) = oneshot::channel();
 
@@ -120,7 +139,7 @@ impl Vm {
                     bytes_written += read as u64;
                     let mut state = ctx.status.state.lock().unwrap();
                     state.step_progress = Some(super::StepProgress {
-                        message: "sending `stdin`",
+                        message: "sending `stdin-file`",
                         position: bytes_written,
                         length: stdin_length,
                     });
@@ -139,7 +158,7 @@ impl Vm {
         loop {
             tokio::select! {
                 _ = (&mut eof_rx), if !eof_sent => {
-                    channel.eof().await?;
+                    let _ = channel.eof().await;
                     eof_sent = true;
                 }
                 msg = channel.wait() => {
@@ -176,9 +195,13 @@ impl Vm {
             };
         }
         if let Some(code) = code {
-            Ok(code)
+            if code == 0 {
+                Ok(())
+            } else {
+                Err(ExecError::Failed { code }.report())
+            }
         } else {
-            bail!("program did not exit properly")
+            Err(ExecError::Disconnected.report())
         }
     }
     pub async fn wait_for_ssh(&self) -> Result<(), Report<SshError>> {
@@ -333,6 +356,22 @@ pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResu
 }
 
 struct SshHandler;
+
+#[derive(Debug, Error)]
+pub enum ExecError {
+    #[error("SSH client disconnected while executing script")]
+    Disconnected,
+    #[error("script execution failed with non-zero return code {code}")]
+    Failed { code: u32 },
+    #[error("script execution failed")]
+    Other,
+}
+
+impl Whatever for ExecError {
+    fn new() -> Self {
+        Self::Other
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum SshError {

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Check if the disk image is provided
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <disk-image>"
+    exit 1
+fi
+
+DISK_IMAGE="$1"
+
+# Check if the disk image file exists
+if [ ! -f "$DISK_IMAGE" ]; then
+    echo "Error: Disk image file '$DISK_IMAGE' does not exist."
+    exit 1
+fi
+
+# QEMU settings
+MEMORY="2G"                # Amount of memory for the VM
+CPUS="2"                   # Number of CPUs for the VM
+UEFI_CODE="/opt/homebrew/share/qemu/edk2-aarch64-code.fd" # Path to UEFI firmware (adjust if needed)
+MACHINE_TYPE="virt"        # Machine type for ARM64
+
+# Ensure UEFI firmware exists
+if [ ! -f "$UEFI_CODE" ]; then
+    echo "Error: UEFI firmware file '$UEFI_CODE' not found. Install 'qemu' using Homebrew."
+    echo "Run: brew install qemu"
+    exit 1
+fi
+
+# Start QEMU
+qemu-system-aarch64 \
+    -machine "$MACHINE_TYPE",accel=hvf \
+    -cpu cortex-a72 \
+    -m "$MEMORY" \
+    -smp cpus="$CPUS" \
+    -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
+    -device virtio-net-pci,netdev=net0 \
+    -netdev user,id=net0,hostfwd=tcp::2233-:22 \
+    -device virtio-rng-pci \
+    -bios "$UEFI_CODE" \
+    -nographic \
+    -serial mon:stdio
+
+# -drive file="$DISK_IMAGE",format=raw,if=virtio \
