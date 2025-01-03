@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.5
+
+- Fixes off-by-one error in partition table sanity check affecting GPT layouts.
+
 ## Version 0.7.4
 
 - Add support for verifying the hash of updates via `--check-hash`.
