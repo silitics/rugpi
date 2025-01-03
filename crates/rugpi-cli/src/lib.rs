@@ -92,8 +92,8 @@ pub fn is_attended() -> bool {
 }
 
 /// Check whether the terminal supports unicode.
-pub fn _wie() -> bool {
-    TERMINAL._wie()
+pub fn supports_unicode() -> bool {
+    TERMINAL.supports_unicode()
 }
 
 /// Check whether the terminal supports colors.
@@ -168,7 +168,7 @@ impl TerminalRef {
     }
 
     /// Check whether the terminal supports unicode.
-    pub fn _wie(&self) -> bool {
+    pub fn supports_unicode(&self) -> bool {
         true
     }
 
@@ -249,7 +249,7 @@ impl TerminalRef {
             time,
             available_width,
             available_height,
-            _wie: self._wie(),
+            _wie: self.supports_unicode(),
             supports_colors: self.supports_colors(),
             current_style: Style::new(),
         };
