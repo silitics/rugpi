@@ -49,7 +49,7 @@ Here is a summary of the core concepts of the build process:
 
 Rugix Bakery implements a build process that generates build artifacts from layers created by executing recipes.
 
-**Example: Two Devices Variants.**
+**Example: Two Device Variants.**
 Assume you have an application that you want to integrate into a Debian-based system and then deploy to two different device variants. In Rugix Bakery, you would define a layer for your application building upon a Debian base layer. The device-specific modifications will then be realized by a layer per device variant using the application layer as a base. Finally Rugix Bakery will generate a full system image for initial provisioning and a Rugix Ctrl update bundle for each variant, respectively. The figure bellow shows the corresponding build tree with the final build artifacts at the bottom.
 
 <p>
