@@ -22,6 +22,10 @@ const config: Config = {
     locales: ["en"],
   },
 
+  markdown: {
+    mermaid: true
+  },
+
   presets: [
     [
       "classic",
@@ -165,6 +169,10 @@ const config: Config = {
       additionalLanguages: ["rust", "toml", "yaml"],
     },
   } satisfies Preset.ThemeConfig,
+
+  themes: [
+    '@docusaurus/theme-mermaid'
+  ],
 
   plugins: [
     async function tailwind(context, options) {

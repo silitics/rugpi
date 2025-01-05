@@ -1,3 +1,7 @@
+---
+sidebar_position: 10
+---
+
 # Integration Testing
 
 Embedded Linux systems are inherently complex, with numerous interconnected components working together. To ensure that all parts of a system work together seamlessly, Rugpi Bakery includes an integration testing framework designed to validate system images as a complete unit. This framework boots a system image in a virtual machine and then executes a _test workflow_ on the system. By catching integration errors early, it reduces the need for costly and time-consuming testing on physical hardware.

@@ -1,0 +1,28 @@
+---
+sidebar_position: 4
+---
+
+# Repositories
+
+_Repositories_ provide reusable recipes and layers, facilitating straightforward sharing within the Rugix community. Instead of operating its own distribution infrastructure, an external Git repository or local directory within the project directory can be used as a repository. The builtin `core` repository is always implicitly available. Additional repositories can be included via the `repositories` section in the global project configuration. For instance, the quick-start templates may include the `rugix-extra` repository with:
+
+```toml
+[repositories]
+rugix-extra = { git = "https://github.com/silitics/rugix-extra.git", branch = "v0.8" }
+```
+
+The recipes and layers provided by a repository can then be used by prefixing their name with the name given to the repository. For instance, the `zsh` recipe from the `rugix-extra` repository can be referenced with `rugix-extra/zsh`. Note that this name is determined by the key in the `repositories` section and can be freely chosen. Local directories can be included by specifying a `path` instead of `git`.
+Note that the path must be relative to and contained in the project directory.
+
+To be used as a repository, a Git repository or local directory must include a _repository configuration_ file `rugix-repository.toml`, providing a `name` and a `description` for the repository. Here is an example from `rugix-extra`:
+
+```toml
+name = "rugix-extra"
+description = "Additional recipes and layers for Rugix Bakery."
+```
+
+The structure of the repository follows the structure of projects, i.e., there are typically two directories, `layers` and `recipes`, containing layer configurations and recipes, respectively. Check out the [`rugix-extra`](https://github.com/silitics/rugix-extra) repository as an example.
+
+:::tip
+When using Git repositories, additionally `rev`, `branch`, and `tag` properties are supported to specify the Git revision, branch, or tag to use. Among other things, this enables semantic versioning of recipes and layers.
+:::
