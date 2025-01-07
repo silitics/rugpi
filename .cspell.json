@@ -88,6 +88,7 @@
     "rootfs",
     "rootfstype",
     "rootwait",
+    "Rugix",
     "rugpi",
     "russh",
     "rustfmt",
@@ -115,6 +116,7 @@
     "vfat",
     "workdir",
     "xscript",
+    "Yocto",
     "Yubi",
     "zerow"
   ]
