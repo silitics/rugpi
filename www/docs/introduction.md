@@ -1,8 +1,8 @@
 ---
-sidebar_position: 0
+sidebar_position: 5
 ---
 
-# The Basics
+# Introduction
 
 Rugpi consists of two tools, *Rugpi Bakery* and *Rugpi Ctrl*.
 Rugpi Bakery is for building customized system *images* while Rugpi Ctrl is for managing a system's state at runtime and installing over-the-air system updates.

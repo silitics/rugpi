@@ -1,5 +1,5 @@
 ---
-sidebar_position: 40
+sidebar_position: 46
 ---
 
 # Upgrading from v0.6

@@ -1,6 +1,6 @@
 {
-    "label": "User Guide",
-    "position": 10,
+    "label": "Supported Devices",
+    "position": 110,
     "link": {
         "type": "doc",
         "id": "index"
