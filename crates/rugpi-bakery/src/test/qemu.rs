@@ -22,6 +22,8 @@ use tokio::sync::{oneshot, Mutex};
 use tokio::{fs, time};
 use tracing::{error, info};
 
+use crate::project::config::Architecture;
+
 use super::workflow::TestSystemConfig;
 use super::{RugpiTestResult, TestCtx};
 
@@ -252,7 +254,11 @@ impl Vm {
     }
 }
 
-pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResult<Vm> {
+pub async fn start(
+    arch: Architecture,
+    image_file: &str,
+    config: &TestSystemConfig,
+) -> RugpiTestResult<Vm> {
     let private_key = load_secret_key(&config.ssh.private_key, None)
         .whatever("unable to load private SSH key")
         .with_info(|_| format!("path: {:?}", config.ssh.private_key))?;
@@ -275,26 +281,42 @@ pub async fn start(image_file: &str, config: &TestSystemConfig) -> RugpiTestResu
     {
         bail!("unable to create VM image");
     }
-    let mut command = Command::new("qemu-system-aarch64");
-    command.args(&[
-        "-machine",
-        "virt",
-        "-cpu",
-        "cortex-a72",
-        "-m",
-        "2G",
-        "-smp",
-        "cpus=2",
-    ]);
+    let mut command = match arch {
+        Architecture::Amd64 => {
+            let mut command = Command::new("qemu-system-x86_64");
+            command.args(&["-machine", "pc", "-m", "2G", "-smp", "cpus=2"]);
+            command
+        }
+        Architecture::Arm64 => {
+            let mut command = Command::new("qemu-system-aarch64");
+            command.args(&[
+                "-machine",
+                "virt",
+                "-cpu",
+                "cortex-a72",
+                "-m",
+                "2G",
+                "-smp",
+                "cpus=2",
+            ]);
+            command
+        }
+        _ => bail!("unsupported architecture {arch}"),
+    };
     command.arg("-drive");
     command.arg("file=.rugpi/vm-image.img,format=qcow2,if=virtio");
     command.args(&["-device", "virtio-net-pci,netdev=net0", "-netdev"]);
     command.arg("user,id=net0,hostfwd=tcp:127.0.0.1:2233-:22");
+    let efi_code = match arch {
+        Architecture::Amd64 => "/usr/share/OVMF/OVMF_CODE.fd",
+        Architecture::Arm64 => "/usr/share/AAVMF/AAVMF_CODE.fd",
+        _ => bail!("unsupported architecture {arch}"),
+    };
     command.args(&[
         "-device",
         "virtio-rng-pci",
         "-bios",
-        "/usr/share/AAVMF/AAVMF_CODE.fd",
+        efi_code,
         "-nographic",
         "-serial",
         "mon:stdio",

@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use reportify::{ErrorExt, Report, ResultExt};
+use reportify::{whatever, ErrorExt, Report, ResultExt};
 use rugpi_cli::style::{Style, Stylize};
 use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Text, Widget};
 use rugpi_cli::{StatusSegment, StatusSegmentRef, VisualHeight};
@@ -42,10 +42,10 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
         let output = Path::new("build/images")
             .join(&system.disk_image)
             .with_extension("img");
-        let project = project.clone();
-        let disk_image = system.disk_image.clone();
         {
             let output = output.clone();
+            let project = project.clone();
+            let disk_image = system.disk_image.clone();
             spawn_blocking(move || bake::bake_image(&project, &disk_image, &output))
                 .await
                 .whatever("error baking image")?
@@ -58,7 +58,13 @@ pub async fn main(project: &Project, workflow_path: &Path) -> RugpiTestResult<()
             heading: format!("Test {test_name:?}"),
         });
 
-        let vm = qemu::start(&output.to_string_lossy(), system).await?;
+        let image_config = project
+            .config
+            .images
+            .get(&system.disk_image)
+            .ok_or_else(|| whatever!("unable to find image"))?;
+
+        let vm = qemu::start(image_config.architecture, &output.to_string_lossy(), system).await?;
 
         info!("VM started");
 
