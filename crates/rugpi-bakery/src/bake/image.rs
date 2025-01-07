@@ -351,8 +351,8 @@ fn compute_fs_size(root: PathBuf) -> BakeryResult<NumBlocks> {
             }
         }
     }
-    // Add an overhead of 10% for filesystem metadata.
-    size += NumBytes::from_raw(size.into_raw().div_ceil(10));
     size = size.max(parse_size("64M").unwrap());
+    // Add an overhead of 20% for filesystem metadata.
+    size += NumBytes::from_raw(size.into_raw().div_ceil(5));
     Ok(bytes_to_blocks(size))
 }
