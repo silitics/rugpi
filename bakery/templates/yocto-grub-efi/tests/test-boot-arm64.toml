@@ -1,0 +1,10 @@
+[[systems]]
+disk-image = "customized-arm64"
+ssh = { private-key = "./files/id_rsa" }
+
+[[steps]]
+action = "run"
+script = """
+#!/bin/bash
+sleep 10
+"""

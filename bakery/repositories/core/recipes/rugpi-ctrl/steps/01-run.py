@@ -20,6 +20,8 @@ lines = []
 
 for line in original.splitlines():
     parts = line.split()
+    if len(parts) < 2:
+        continue
     if parts[1] in {"/", "/boot", "/boot/firmware"}:
         continue
     lines.append(line)

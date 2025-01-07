@@ -1,0 +1,6 @@
+parent = "yocto-base"
+
+recipes = [
+    "grub-setup",
+    "core/rugpi-ctrl",
+]

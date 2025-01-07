@@ -8,6 +8,11 @@ description = """
 Debian images for EFI-compatible systems (AMD64 and ARM64).
 """
 
+[yocto-grub-efi]
+description = """
+Yocto-based template for QEMU (AMD64 and ARM64).
+"""
+
 [rpi-alpine]
 description = """
 Alpine images for Raspberry Pi 4 and 5.
