@@ -4,7 +4,7 @@ use std::time::Duration;
 use std::{fs, io, thread};
 
 use nix::mount::MntFlags;
-use reportify::{bail, ensure, ResultExt};
+use reportify::{bail, ensure, ErrorExt, ResultExt};
 use rugpi_common::ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH};
 use rugpi_common::disk::blkpg::update_kernel_partitions;
 use rugpi_common::disk::repart::{
@@ -17,7 +17,7 @@ use rugpi_common::system::partitions::{resolve_config_partition, resolve_data_pa
 use rugpi_common::system::paths::{MOUNT_POINT_CONFIG, MOUNT_POINT_DATA, MOUNT_POINT_SYSTEM};
 use rugpi_common::system::root::{find_system_device, SystemRoot};
 use rugpi_common::system::slots::SlotKind;
-use rugpi_common::system::{System, SystemResult};
+use rugpi_common::system::{System, SystemError, SystemResult};
 use xscript::{run, Run};
 
 use crate::state::{load_state_config, Persist, STATE_CONFIG_DIR};
@@ -35,6 +35,7 @@ pub fn main() -> SystemResult<()> {
             eprintln!("{error:?}");
         }
     }
+    // nix::unistd::execv(c"/bin/bash", &[c"/bin/bash"]).whatever("unable to run bash")?;
     eprintln!("waiting for 30 seconds...");
     thread::sleep(Duration::from_secs(30));
     Ok(())
@@ -48,8 +49,6 @@ const FSCK: &str = "/usr/sbin/fsck";
 const MOUNT: &str = "/usr/bin/mount";
 /// The `sync` executable.
 const SYNC: &str = "/usr/bin/sync";
-/// The `systemd-machine-id-setup` executable.
-const SYSTEMD_MACHINE_ID_SETUP: &str = "/usr/bin/systemd-machine-id-setup";
 
 const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
@@ -208,9 +207,24 @@ pub fn overlay_work_dir() -> &'static Path {
 fn mount_essential_filesystems() -> SystemResult<()> {
     // We ignore any errors. Errors likely mean that the filesystems have already been
     // mounted.
-    run!([MOUNT, "-t", "proc", "proc", "/proc"]).ok();
-    run!([MOUNT, "-t", "sysfs", "sys", "/sys"]).ok();
-    run!([MOUNT, "-t", "tmpfs", "tmp", "/run"]).ok();
+    if let Err(error) = run!([MOUNT, "-t", "proc", "proc", "/proc"]) {
+        eprintln!(
+            "{:?}",
+            error.whatever::<SystemError, _>("error mounting /proc"),
+        );
+    }
+    if let Err(error) = run!([MOUNT, "-t", "sysfs", "sys", "/sys"]) {
+        eprintln!(
+            "{:?}",
+            error.whatever::<SystemError, _>("error mounting /sys"),
+        );
+    }
+    if let Err(error) = run!([MOUNT, "-t", "tmpfs", "tmp", "/run"]) {
+        eprintln!(
+            "{:?}",
+            error.whatever::<SystemError, _>("error mounting /tmp"),
+        );
+    }
     Ok(())
 }
 
@@ -393,9 +407,9 @@ fn restore_machine_id() -> SystemResult<()> {
     let state_machine_id = state_dir().join("machine-id");
     let system_machine_id = overlay_root_dir().join("etc/machine-id");
     if !state_machine_id.exists() {
-        // Ensure that the `machine-id` is valid.
-        run!([SYSTEMD_MACHINE_ID_SETUP, "--root", OVERLAY_ROOT_DIR])
-            .whatever("unable to generate machine id")?;
+        let machine_id = format!("{}", uuid::Uuid::new_v4().simple());
+        fs::write(&system_machine_id, machine_id.as_bytes())
+            .whatever("unable to write machine-id")?;
     }
     fs::copy(system_machine_id, state_machine_id)
         .whatever("unable to copy machine id into state")?;
