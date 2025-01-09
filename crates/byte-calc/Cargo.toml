@@ -1,0 +1,17 @@
+[package]
+name = "byte-calc"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { version = "1", optional = true }
+
+[features]
+serde = ["dep:serde"]
+
+[lints]
+workspace = true
