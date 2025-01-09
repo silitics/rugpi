@@ -20,6 +20,63 @@
   "required": [],
   "unevaluatedProperties": false,
   "$defs": {
+    "rugix_bakery.recipes.RecipeConfig": {
+      "$id": "rugix_bakery.recipes.RecipeConfig",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "priority": {},
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_bakery.recipes.ParameterDef"
+          }
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bakery.recipes.ParameterDef": {
+      "$id": "rugix_bakery.recipes.ParameterDef",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/rugix_bakery.parameters.ParameterValue"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bakery.parameters.ParameterValue": {
+      "$id": "rugix_bakery.parameters.ParameterValue",
+      "description": "",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {},
+        {
+          "type": "number"
+        }
+      ]
+    },
+    "rugix_bakery.sizes.NumBytes": {
+      "$id": "rugix_bakery.sizes.NumBytes",
+      "description": ""
+    },
     "rugix_bakery.tests.TestConfig": {
       "$id": "rugix_bakery.tests.TestConfig",
       "type": "object",
@@ -64,10 +121,6 @@
         "ssh"
       ],
       "unevaluatedProperties": false
-    },
-    "rugix_bakery.sizes.NumBytes": {
-      "$id": "rugix_bakery.sizes.NumBytes",
-      "description": ""
     },
     "rugix_bakery.tests.SshConfig": {
       "$id": "rugix_bakery.tests.SshConfig",
@@ -177,96 +230,22 @@
       ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.layers.LayerConfig": {
-      "$id": "rugix_bakery.layers.LayerConfig",
+    "rugix_bakery.projects.ProjectConfig": {
+      "$id": "rugix_bakery.projects.ProjectConfig",
       "type": "object",
-      "description": "",
+      "description": "Rugix Bakery project configuration.",
       "properties": {
-        "name": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        },
-        "parent": {
-          "type": "string"
-        },
-        "root": {
-          "type": "boolean"
-        },
-        "recipes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "parameters": {
+        "repositories": {
           "type": "object",
           "additionalProperties": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/$defs/rugix_bakery.parameters.ParameterValue"
-            }
-          }
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.parameters.ParameterValue": {
-      "$id": "rugix_bakery.parameters.ParameterValue",
-      "description": "",
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "boolean"
-        },
-        {},
-        {
-          "type": "number"
-        }
-      ]
-    },
-    "rugix_bakery.recipes.RecipeConfig": {
-      "$id": "rugix_bakery.recipes.RecipeConfig",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "description": {
-          "type": "string"
-        },
-        "priority": {},
-        "dependencies": {
-          "type": "array",
-          "items": {
-            "type": "string"
+            "$ref": "#/$defs/rugix_bakery.repositories.SourceConfig"
           }
         },
-        "parameters": {
+        "images": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.recipes.ParameterDef"
+            "$ref": "#/$defs/rugix_bakery.projects.ImageConfig"
           }
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.recipes.ParameterDef": {
-      "$id": "rugix_bakery.recipes.ParameterDef",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "default": {
-          "$ref": "#/$defs/rugix_bakery.parameters.ParameterValue"
         }
       },
       "required": [],
@@ -344,27 +323,6 @@
       "required": [
         "path"
       ],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.projects.ProjectConfig": {
-      "$id": "rugix_bakery.projects.ProjectConfig",
-      "type": "object",
-      "description": "Global Rugix Bakery project configuration.",
-      "properties": {
-        "repositories": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.repositories.SourceConfig"
-          }
-        },
-        "images": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.projects.ImageConfig"
-          }
-        }
-      },
-      "required": [],
       "unevaluatedProperties": false
     },
     "rugix_bakery.projects.ImageConfig": {
@@ -473,6 +431,48 @@
     "rugix_bakery.projects.PartitionType": {
       "$id": "rugix_bakery.projects.PartitionType",
       "description": ""
+    },
+    "rugix_bakery.layers.LayerConfig": {
+      "$id": "rugix_bakery.layers.LayerConfig",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "root": {
+          "type": "boolean"
+        },
+        "recipes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/$defs/rugix_bakery.parameters.ParameterValue"
+            }
+          }
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
     }
   }
 }

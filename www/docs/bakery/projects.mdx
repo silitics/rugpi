@@ -33,13 +33,13 @@ Each project is configured in a `rugix-bakery.toml` configuration file. Such a f
 
 To give you an idea how a configuration file may look like, here is an example:
 
-```toml
+```toml title="rugix-bakery.toml"
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-project.schema.json
 
 [repositories]
 rugix-extra = { git = "https://github.com/silitics/rugix-extra.git", branch = "v0.8" }
 
-[images.default]
+[images.customized-arm64]
 layer = "customized"
 architecture = "arm64"
 ```
@@ -48,8 +48,10 @@ The `#:schema` directive is used to specify a [JSON Schema](https://json-schema.
 
 #### Configuration Reference
 
-The project configuration file has the following schema:
+For reference, here is the complete schema for project configuration files:
 
 <JSONSchemaViewer schema={ProjectSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-bakery-project.schema.json).

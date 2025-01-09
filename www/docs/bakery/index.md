@@ -37,7 +37,7 @@ Rugix Bakery currently requires the container to run in privileged mode such tha
 
 Before we get into further details, let’s first look at Rugix Bakery’s build process from a high-level perspective.
 
-The build process revolves around two key concepts: _layers_ and _recipes_. A _layer_ consists of the _build outputs_ of a specific stage of the build process. Typically, a layer provides a root filesystem and a kernel for a system. Layers can be built on top of each other, thereby reusing and extending an existing root filesystem as well as any other build outputs that are part of the previous layer. In that regard, layers are akin to image layers in Docker.[^2] A _recipe_ describes additions and modifications to be made to a layer. A layer is then built by applying the recipes specified in the layer's build configuration, optionally using a parent layer as a base.
+The build process revolves around two key concepts: _layers_ and _recipes_. A _layer_ consists of the _build outputs_ of a specific stage of the build process. Typically, a layer provides a root filesystem and a kernel for a system. Layers can be built on top of each other, thereby reusing and extending an existing root filesystem as well as any other build outputs that are part of the previous layer. In that regard, layers are akin to image layers in Docker.[^2] A _recipe_ describes additions and modifications to be made to a layer. A layer is then built by applying the recipes specified in the layer's build configuration, optionally using a _parent layer_ as a base.
 
 Here is a summary of the core concepts of the build process:
 
@@ -50,7 +50,7 @@ Here is a summary of the core concepts of the build process:
 Rugix Bakery implements a build process that generates build artifacts from layers created by executing recipes.
 
 **Example: Two Device Variants.**
-Assume you have an application that you want to integrate into a Debian-based system and then deploy to two different device variants. In Rugix Bakery, you would define a layer for your application building upon a Debian base layer. The device-specific modifications will then be realized by a layer per device variant using the application layer as a base. Finally Rugix Bakery will generate a full system image for initial provisioning and a Rugix Ctrl update bundle for each variant, respectively. The figure bellow shows the corresponding build tree with the final build artifacts at the bottom.
+Assume you have an application that you want to integrate into a Debian-based system and then deploy to two different device variants. In Rugix Bakery, you would define a layer for your application building upon a Debian parent layer. The device-specific modifications will then be realized by a layer per device variant using the application layer as a parent. Finally Rugix Bakery will generate a full system image for initial provisioning and a Rugix Ctrl update bundle for each variant, respectively. The figure bellow shows the corresponding build tree with the final build artifacts at the bottom.
 
 <p>
 ```mermaid
@@ -68,7 +68,7 @@ graph TD;
 ```
 </p>
 
-You can use the same process to build different software variants with a shared base as well. The individual layers will be cached during the build process saving on build time and ensuring that all layers are based on identical base layers.
+You can use the same process to build different software variants with a shared base as well. The individual layers will be cached during the build process saving on build time and ensuring that all layers are based on identical parent layers.
 
 :::note
 If you are using Rugix Bakery with Yocto, then the entire Yocto build for a given device will typically take place in a device-specific Rugix Bakery root layer. If you do not intend to derive different variants of the same Yocto build, Rugix Bakery may not add much over a pure Yocto setup. At the bare minimum, Rugix Bakery gives you an isolated build environment in terms of the Rugix Bakery Docker image and you can use the other features of Rugix Bakery, e.g., its [integration testing framework](integration-testing.md).

@@ -10,22 +10,47 @@ import LayerSchema from "@site/schemas/rugix-bakery-layer.schema.json";
 
 # Layers
 
-Each layer is defined by a file `<layer name>.toml` in the `layers` directory.
+Layers are defined by _layer configuration files_ `<layer name>.toml` in the `layers` directory. As described in the [introduction](./index.md), a layer is built by executing recipes.  For a given layer, the respective layer configuration file specifies the recipes to be executed as well as an optional parent layer that should be used as a base. Here is an example taken from the [Debian template](https://github.com/silitics/rugix/tree/main/bakery/templates/debian-grub-efi):
 
-A layer may be based upon a *parent* layer, that might be fetched from a URL, or be a *root* layer.
+```toml title="layers/customized.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-layer.schema.json
 
-Rugpi comes with pre-defined base layers that can be used by setting `parent` to
+parent = "core/debian-bookworm"
+
+recipes = [
+    # Setup Debian for booting via Grub.
+    "core/debian-grub-setup",
+    # Set a static hostname.
+    "core/set-hostname",
+    # Persist `/root`.
+    "core/persist-root-home",
+    # Setup and enable SSH.
+    "core/ssh",
+    # Enable discovery of the system in the local network.
+    "rugix-extra/avahi",
+    # Setup the network.
+    "setup-network",
+    # Install a static website.
+    "hello-world",
+]
+```
+
+This file defines a layer, named `customized`, that is based on the layer `core/debian-bookworm`, a general-purpose layer to build Debian-based systems shipped with Rugix Bakery. The configuration file then specifies a bunch of recipes to set up and customize the system, for instance, setting up a bootloader integration with Grub and providing a network configuration.
+
+In addition to project-specific layers and recipes defined in the project directory, you can use layers and recipes provided by [repositories](./repositories.mdx). In case of the example, these repositories are `core` and `rugix-extra`. We will explain them in detail later. The `core` repository is shipped with Rugix Bakery and includes the following layers for you to use as a parent layer:
 
 - `core/debian-bookworm` for Debian Bookworm,
 - `core/alpine-3-20` for Alpine Linux 3.20,
 - `core/raspios-bookworm` for Raspberry Pi OS (Bookworm), and
 - `core/raspios-bullseye` for Raspberry Pi OS (Bullseye).
 
-Instead of using a pre-defined base layer, the recipes `core/alpine-bootstrap` and `core/debian-bootstrap` can be used for bootstrapping specific versions of Alpine Linux and Debian with `root` set to `true`.
-For semi-reproducible[^1] images based on Debian snapshots, you can also set the snapshot parameter of `core/debian-bootstrap`.
-For instance:
+## Root Layers
 
-```toml
+If you do not want to use a parent layer, you can also start from scratch by omitting the `parent` setting and specifying `root = true`. For example, here is a layer configuration that bootstraps Debian using the `core/debian-bootstrap` recipe:
+
+```toml title="reproducible-debian.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-layer.schema.json
+
 root = true
 
 recipes = [
@@ -37,16 +62,43 @@ suite = "bookworm"
 snapshot = "20240501T024440Z"
 ```
 
-[^1]: Builds are not fully reproducible yet.
-
-The `url` property can be set to an URL of an image, e.g., of Raspberry Pi OS, or a `.tar` file containing a root filesystem.
-The URL can be either an HTTP URL or a file URL (starting with `file://`).
-In the latter case, the URL is resolved relative to the project directory.
-Using a `.tar` file as a basis enables layers based on root filesystems built with other tools, e.g., OpenEmbedded or Buildroot.
+By setting the `snapshot` parameter of the `core/debian-bootstrap` recipe (more on parameters [later](./recipes.mdx)), the resulting layer will be based on a particular [Debian snapshot](https://snapshot.debian.org/), thereby leading to a semi-reproducible[^1] build.
 
 
-## Configuration Reference
+## Importing Layers
+
+Rugix Bakery can import layers from external sources. To this end, you can specify a URL.
+
+Here is an example for importing a layer from a Raspberry Pi OS (Bookworm) image:
+
+```toml title="raspios-bookworm.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-layer.schema.json
+
+name = "Raspberry Pi OS (Bookworm)"
+url = "https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-03-15/2024-03-15-raspios-bookworm-arm64-lite.img.xz"
+```
+
+Rugix Bakery can download images and TAR archives from HTTP URLs and create layers from them. This is useful if one wants to take an existing system image as a basis, e.g., when building a customized variant of Raspberry Pi OS. In addition to HTTP URLs, file URLs starting with `file://` are also supported. These URLs are resolved relative to the project directory.
+
+:::tip
+You can use this to import a root filesystem built with an external tool, e.g., [Buildroot](https://buildroot.org/).
+:::
+
+Note that imported layers must not specify any recipes. Customizations are applied by using them as a parent.
+
+
+## Excluding recipes
+
+Recipes may depend on other recipes and as such will pull in their dependencies automatically when specified in the `recipes` list of a layer. To avoid that, e.g., when you want to replace some recipe with a local variant, you can exclude certain recipes from a layer. To this end, you can provide a list of recipes to exclude via the `exclude` property.
+
+
+## Layer Configuration
+
+For reference, here is the complete schema for project configuration files:
 
 <JSONSchemaViewer schema={LayerSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
+
+
+[^1]: The layer should be fully reproducible, however, Rugix Bakery does currently not support building images reproducibly. We will add this functionality in the future such that images can be reproduced bit-by-bit.
