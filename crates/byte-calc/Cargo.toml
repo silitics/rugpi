@@ -1,5 +1,6 @@
 [package]
 name = "byte-calc"
+description = "Helper crate to work with bit, byte, and block sizes."
 edition = "2021"
 authors.workspace = true
 version.workspace = true
