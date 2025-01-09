@@ -171,7 +171,8 @@ const config: Config = {
   } satisfies Preset.ThemeConfig,
 
   themes: [
-    '@docusaurus/theme-mermaid'
+    '@docusaurus/theme-mermaid',
+    "docusaurus-json-schema-plugin",
   ],
 
   plugins: [

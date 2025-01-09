@@ -2,24 +2,15 @@
 sidebar_position: 2
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import LayerSchema from "@site/schemas/rugix-bakery-layer.schema.json";
+
+
 # Layers
 
-Each layer is defined by a file `<layer name>.toml` in the `layers` directory. This file has the following structure:
-
-```typescript
-type Layer = {
-    parent?: string;
-    root?: boolean,
-    url?: string;
-    recipes?: string[];
-    exclude?: string[];
-    parameters?: {
-        [recipe: string]: {
-            [parameter: string]: string | boolean | number
-        };
-    }
-}
-```
+Each layer is defined by a file `<layer name>.toml` in the `layers` directory.
 
 A layer may be based upon a *parent* layer, that might be fetched from a URL, or be a *root* layer.
 
@@ -52,3 +43,10 @@ The `url` property can be set to an URL of an image, e.g., of Raspberry Pi OS, o
 The URL can be either an HTTP URL or a file URL (starting with `file://`).
 In the latter case, the URL is resolved relative to the project directory.
 Using a `.tar` file as a basis enables layers based on root filesystems built with other tools, e.g., OpenEmbedded or Buildroot.
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={LayerSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>

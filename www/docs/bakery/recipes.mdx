@@ -2,6 +2,12 @@
 sidebar_position: 3
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import RecipeSchema from "@site/schemas/rugix-bakery-recipe.schema.json";
+
+
 # Recipes
 
 At the top-level of the layer configuration, the recipes to enable are specified as a list:
@@ -80,3 +86,10 @@ When running steps, the following environment variables are set.
 - `RUGPI_BUNDLE_DIR`: The directory of the Rugpi Bundle being built.
 - `RECIPE_DIR`: The directory of the recipe which is applied.
 - `RECIPE_STEP_PATH`: The path of the step being executed.
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={RecipeSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>

@@ -1,0 +1,39 @@
+import sizes::NumBytes
+
+record TestConfig {
+    systems: [SystemConfig],
+    steps: [TestStep],
+}
+
+#[json(rename_all = "kebab-case")]
+record SystemConfig {
+    disk_image: string,
+    disk_size?: NumBytes,
+    ssh: SshConfig,
+}
+
+#[json(rename_all = "kebab-case")]
+record SshConfig {
+    private_key: string,
+}
+
+#[json(tag = "action", rename_all = "kebab-case")]
+variant TestStep {
+    Run: RunStep,
+    Wait: WaitStep,
+}
+
+#[json(rename_all = "kebab-case")]
+record RunStep {
+    script: string,
+    stdin_file?: string,
+    may_disconnect?: bool,
+    may_fail?: bool,
+    description?: string,
+}
+
+#[json(rename_all = "kebab-case")]
+record WaitStep {
+    description?: string,
+    duration: f64,
+}

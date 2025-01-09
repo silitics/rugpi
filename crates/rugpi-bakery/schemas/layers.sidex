@@ -1,0 +1,11 @@
+import parameters::ParameterValue
+
+record LayerConfig {
+    name?: string,
+    url?: string,
+    parent?: string,
+    root?: bool,
+    recipes?: [string],
+    exclude?: [string],
+    parameters?: [string: [string: ParameterValue]],
+}

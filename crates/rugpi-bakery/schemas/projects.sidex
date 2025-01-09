@@ -1,0 +1,90 @@
+import repositories::SourceConfig
+import sizes::NumBytes
+
+/// Global Rugix Bakery project configuration.
+record ProjectConfig {
+    /// Repositories imported into the project.
+    repositories?: [string: SourceConfig],
+    /// Images declarations.
+    images?: [string: ImageConfig],
+}
+
+/// Image configuration.
+record ImageConfig {
+    /// Layer the image is based on.
+    layer: string,
+    /// Architecture of the image.
+    architecture: Architecture,
+    /// Rugix Bakery target.
+    target?: Target,
+    /// Size of the image.
+    size?: NumBytes,
+    /// Layout of the image.
+    layout?: ImageLayout,
+}
+
+/// Layout of a system image.
+record ImageLayout {
+    /// Type of the partition table.
+    #[json(name = "type")]
+    ty?: PartitionTableType,
+    /// Image partitions.
+    partitions?: [ImagePartition],
+}
+
+/// Partition table type.
+#[json(rename_all = "lowercase")]
+#[json(tagged=externally)]
+variant PartitionTableType {
+    /// MBR partition.
+    Mbr,
+    /// GPT partition.
+    Gpt,
+}
+
+/// Partition of an image.
+record ImagePartition {
+    /// Size of the partition.
+    size?: NumBytes,
+    /// Filesystem of the partition.
+    filesystem?: Filesystem,
+    /// Root directory to copy into the filesystem.
+    root?: string,
+    #[json(name = "type")]
+    ty?: PartitionType,
+}
+
+/// Filesystem.
+#[json(rename_all = "lowercase")]
+#[json(tagged=externally)]
+variant Filesystem {
+    /// EXT4 filesystem.
+    Ext4,
+    /// Fat32 filesystem.
+    Fat32,
+}
+
+/// Architecture.
+#[json(rename_all = "lowercase")]
+#[json(tagged=externally)]
+variant Architecture {
+    Amd64,
+    Arm64,
+    Armv7,
+    Armhf,
+    Arm,
+}
+
+/// Target.
+#[json(rename_all = "kebab-case")]
+#[json(tagged=externally)]
+variant Target {
+    GenericGrubEfi,
+    RpiTryboot,
+    RpiUboot,
+    Unknown,
+}
+
+#[rust(type = "::rugpi_common::disk::PartitionType")]
+#[json(type = "string")]
+opaque PartitionType

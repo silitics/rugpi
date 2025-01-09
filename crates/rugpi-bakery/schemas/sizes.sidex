@@ -1,0 +1,3 @@
+#[rust(type = "::byte_calc::NumBytes")]
+#[json(type = "string | number")]
+opaque NumBytes

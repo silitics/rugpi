@@ -2,6 +2,12 @@
 sidebar_position: 4
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import RepositorySchema from "@site/schemas/rugix-bakery-repository.schema.json";
+
+
 # Repositories
 
 _Repositories_ provide reusable recipes and layers, facilitating straightforward sharing within the Rugix community. Instead of operating its own distribution infrastructure, an external Git repository or local directory within the project directory can be used as a repository. The builtin `core` repository is always implicitly available. Additional repositories can be included via the `repositories` section in the global project configuration. For instance, the quick-start templates may include the `rugix-extra` repository with:
@@ -26,3 +32,10 @@ The structure of the repository follows the structure of projects, i.e., there a
 :::tip
 When using Git repositories, additionally `rev`, `branch`, and `tag` properties are supported to specify the Git revision, branch, or tag to use. Among other things, this enables semantic versioning of recipes and layers.
 :::
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={RepositorySchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>

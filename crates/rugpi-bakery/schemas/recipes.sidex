@@ -1,0 +1,12 @@
+import parameters::ParameterValue
+
+record RecipeConfig {
+    description?: string,
+    priority?: i64,
+    dependencies?: [string],
+    parameters?: [string: ParameterDef],
+}
+
+record ParameterDef {
+    default?: ParameterValue,
+}
