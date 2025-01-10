@@ -48,7 +48,7 @@ Rugix Bakery supports the following CPU architectures:[^architecture-plans]
 | `arm64` | 64-bit ARMv8 | `aarch64` | `arm64` | `arm64` |
 | `armv7` | 32-bit ARMv7 | `armv7` | `armhf` | – |
 | `armhf` | 32-bit ARMv6 (Hard-Float) | `armhf` | – | `armhf` |
-| `arm` | 32Tbit ARMv6 | – | `armel` | – |
+| `arm` | 32-bit ARMv6 | – | `armel` | – |
 
 Note that different distributions have different and sometimes inconsistent names for different CPU families.
 For instance, what Debian calls `armhf` is called `armv7` for Alpine Linux and not the same as `armhf` for Raspberry Pi OS.
