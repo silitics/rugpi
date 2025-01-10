@@ -16,7 +16,7 @@ Here is an overview over all the supported Raspberry Pi models:
 
 [^1]: Requires the U-Boot boot flow.
 
-**⚠️ Please also read the remarks for the respective boards bellow.**
+**⚠️ Please also read the remarks for the respective boards below.**
 
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
 

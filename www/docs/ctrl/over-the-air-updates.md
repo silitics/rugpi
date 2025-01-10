@@ -103,7 +103,7 @@ To prevent breaking the system, it is impossible to make the cold set the defaul
 
 Committing an update is up to the concrete update workflow of the application.
 If you want to automatically commit the hot set during the boot process, you may enable the `rugpi-auto-commit` recipe.
-Note that this recipe installs an equally named Systemd service which will also commit an old version if booted into with the rollback feature (see bellow).
+Note that this recipe installs an equally named Systemd service which will also commit an old version if booted into with the rollback feature (see below).
 
 [^3]: Using the `rugpi-ctrl` command line tool.
 

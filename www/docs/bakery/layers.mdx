@@ -81,7 +81,7 @@ url = "https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_
 Rugix Bakery can download images and TAR archives from HTTP URLs and create layers from them. This is useful if one wants to take an existing system image as a basis, e.g., when building a customized variant of Raspberry Pi OS. In addition to HTTP URLs, file URLs starting with `file://` are also supported. These URLs are resolved relative to the project directory.
 
 :::tip
-You can use this to import a root filesystem built with an external tool, e.g., [Buildroot](https://buildroot.org/).
+You can use this to import a root filesystem built with an external tool, e.g., [Buildroot](https://buildroot.org/) or [Yocto](https://www.yoctoproject.org/).
 :::
 
 Note that imported layers must not specify any recipes. Customizations are applied by using them as a parent.
@@ -92,13 +92,15 @@ Note that imported layers must not specify any recipes. Customizations are appli
 Recipes may depend on other recipes and as such will pull in their dependencies automatically when specified in the `recipes` list of a layer. To avoid that, e.g., when you want to replace some recipe with a local variant, you can exclude certain recipes from a layer. To this end, you can provide a list of recipes to exclude via the `exclude` property.
 
 
-## Layer Configuration
+## Configuration Reference
 
-For reference, here is the complete schema for project configuration files:
+For reference, here is the complete schema for layer configuration files:
 
 <JSONSchemaViewer schema={LayerSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-bakery-layer.schema.json).
 
 
 [^1]: The layer should be fully reproducible, however, Rugix Bakery does currently not support building images reproducibly. We will add this functionality in the future such that images can be reproduced bit-by-bit.

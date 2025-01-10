@@ -89,7 +89,7 @@ parameter_name = { default = "a default value" }
 other_parameter = {}  # Required parameter without a default value.
 ```
 
-They are exposed to steps (see bellow) in environment variables of the form `RECIPE_PARAM_<PARAM_NAME>`. So, in case of our example, `RECIPE_PARAM_PARAMETER_NAME` and `RECIPE_PARAM_OTHER_PARAMETER`.
+They are exposed to steps (see below) in environment variables of the form `RECIPE_PARAM_<PARAM_NAME>`. So, in case of our example, `RECIPE_PARAM_PARAMETER_NAME` and `RECIPE_PARAM_OTHER_PARAMETER`.
 
 Parameters are set as part of the layer configuration.
 

@@ -18,7 +18,7 @@ Here is an overview over all the supported Raspberry Pi models:
 
 [^1]: Requires the U-Boot boot flow.
 
-**⚠️ Please also read the remarks for the respective boards bellow.**
+**⚠️ Please also read the remarks for the respective boards below.**
 
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
 
@@ -38,7 +38,7 @@ Make sure that the binaries you install are compatible with the `armv6l` archite
 ### Raspberry Pi 5
 
 If you are using the quick-start template, please use the `tryboot` image.
-The `pi4` image is not compatible with Raspberry Pi 5 as it includes a bootloader update for Raspberry Pi 4 (see bellow).
+The `pi4` image is not compatible with Raspberry Pi 5 as it includes a bootloader update for Raspberry Pi 4 (see below).
 Updating the bootloader is not necessary for Raspberry Pi 5, as it already comes with the `tryboot` feature out-of-the-box.
 
 ### Raspberry Pi 4 and Compute Module 4
