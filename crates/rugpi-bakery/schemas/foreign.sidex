@@ -1,3 +1,6 @@
+//! Foreign types.
+
+/// Number of bytes.
 #[rust(type = "::byte_calc::NumBytes")]
 #[json(type = "string | number")]
 opaque NumBytes

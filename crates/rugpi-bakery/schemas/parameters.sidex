@@ -1,8 +1,0 @@
-
-#[json(tagged=implicitly)]
-variant ParameterValue {
-    String: string,
-    Boolean: bool,
-    Integer: i64,
-    Float: f64,
-}

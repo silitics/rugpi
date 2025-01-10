@@ -1,6 +1,12 @@
+//! Repository configuration.
+
+/// Repository configuration.
 record RepositoryConfig {
+    /// Human-friendly name of the repository.
     name?: string,
+    /// Description of the repository.
     description?: string,
+    /// Repositories used by this repository.
     repositories?: [string: SourceConfig]
 }
 
@@ -22,12 +28,12 @@ record GitSourceConfig {
     tag?: string,
     /// Specific revision of the Git repository.
     rev?: string,
-    /// Subdirectory in which the Rugix Bakery repository is located.
+    /// Subdirectory in which the repository is located.
     dir?: string,
 }
 
 /// Local repository source.
 record PathSourceConfig {
-    /// Path of the Rugix Bakery repository relative to the project directory.
+    /// Path of the repository relative to the project directory.
     path: string,
 }
