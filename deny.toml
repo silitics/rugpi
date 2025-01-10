@@ -46,5 +46,10 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 [licenses.private]
 ignore = false
 
+[sources]
+allow-git = [
+    "git+https://github.com/silitics/sidex.git"
+]
+
 [bans]
 multiple-versions = "allow"
