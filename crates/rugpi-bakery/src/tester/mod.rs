@@ -3,10 +3,9 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use tokio::fs;
 use tracing::info;
 
-use reportify::{ErrorExt, Report, ResultExt};
+use reportify::{ErrorExt, ResultExt};
 
 use rugpi_cli::style::{Style, Stylize};
 use rugpi_cli::widgets::{Heading, ProgressBar, ProgressSpinner, Text, Widget};

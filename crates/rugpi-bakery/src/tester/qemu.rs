@@ -12,7 +12,7 @@ use byte_calc::NumBytes;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
 use rugpi_cli::style::Stylize;
 use rugpi_cli::widgets::{Heading, Text, Widget};
-use rugpi_cli::{cli_msg, StatusSegment, VisualHeight};
+use rugpi_cli::{StatusSegment, VisualHeight};
 
 use russh::client::Handle;
 use russh::keys::key::PrivateKeyWithHashAlg;
