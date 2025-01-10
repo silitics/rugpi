@@ -36,6 +36,22 @@ Rugix Bakery currently requires the container to run in privileged mode such tha
 
 [^privileges]: Existing tools use different approaches to set up an environment that looks like the final system without requiring privileges. For instance, Yocto uses a tool called [Pseudo](https://git.yoctoproject.org/pseudo/about/) (an alternative to the better-known tool [Fakeroot](https://manpages.debian.org/bookworm/pseudo/fakeroot.1.en.html)), to intercepts calls to system APIs via `LD_PRELOAD` and thereby fake a root environment. This approach has limitations, for instance, it does not work with statically-linked binaries and also does not allow starting services binding sockets to ports below 1024. Rugix Bakery strives to provide a container-like environment by using Linux namespaces and process isolation which does not suffer from the same limitations as existing approaches and thereby mimics a real system more closely.
 
+## Architectures
+
+Rugix Bakery supports the following CPU architectures:[^architecture-plans]
+
+[^architecture-plans]: We plan to support more architectures in the future. Feel free to [open an issue on GitHub](https://github.com/silitics/rugpi/issues/new).
+
+| Architecture | Description | Alpine | Debian | Raspberry Pi OS |
+| ------------ | ----------- | ------ | ------ | --------------- |
+| `amd64` | 64-bit x86 | `x86_64` | `amd64` | – |
+| `arm64` | 64-bit ARMv8 | `aarch64` | `arm64` | `arm64` |
+| `armv7` | 32-bit ARMv7 | `armv7` | `armhf` | – |
+| `armhf` | 32-bit ARMv6 (Hard-Float) | `armhf` | – | `armhf` |
+| `arm` | 32Tbit ARMv6 | – | `armel` | – |
+
+Note that different distributions have different and sometimes inconsistent names for different CPU families.
+For instance, what Debian calls `armhf` is called `armv7` for Alpine Linux and not the same as `armhf` for Raspberry Pi OS.
 
 ## Build Process: High-Level Introduction
 

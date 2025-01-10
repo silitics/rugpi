@@ -109,6 +109,10 @@ Rugix Bakery will set up a semi-isolated environment (similar to a container) th
 You can use `install` steps to customize a system in the same way you normally would when you set up a system and perform customizations manually via a local shell. For instance, you can install packages or enable certain system services. Note that services will not run when executing a `run` step, you can, however, [start them as part of the step](./advanced/services.md).
 :::
 
+Note that the architecture reported by `uname -m` during an `install` step may not match the actual CPU and architecture of the device the system is intended for.
+For instance, when building an `armhf` system based on Rasbperry Pi OS, the architecture reported by `uname -m` during the build process is `armv7l`, however, when running the system later on a non-ARMv7 board (e.g., Pi Zero or Pi 1), then the architecture will be `armv6l`.
+We recommend always using the Rugix architecture instead of `uname -m`.
+
 ### Environment Variables
 
 Rugix Bakery will expose the following environment variables when running steps:
