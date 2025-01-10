@@ -11,6 +11,8 @@ mod cmds;
 
 pub mod args;
 
+pub(crate) mod status;
+
 /// Run Rugix Bakery with the provided command line arguments.
 pub async fn run(args: args::Args) -> BakeryResult<()> {
     match &args.cmd {

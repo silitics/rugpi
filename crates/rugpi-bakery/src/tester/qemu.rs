@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::Stdio;
@@ -10,9 +9,6 @@ use xscript::{run, RunAsync};
 use async_trait::async_trait;
 use byte_calc::NumBytes;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
-use rugpi_cli::style::Stylize;
-use rugpi_cli::widgets::{Heading, Text, Widget};
-use rugpi_cli::{StatusSegment, VisualHeight};
 
 use russh::client::Handle;
 use russh::keys::key::PrivateKeyWithHashAlg;
@@ -26,6 +22,7 @@ use tokio::sync::{oneshot, Mutex};
 use tokio::{fs, time};
 use tracing::{error, info};
 
+use crate::cli::status::CliLog;
 use crate::config::projects::Architecture;
 use crate::config::tests::SystemConfig;
 use crate::BakeryResult;
@@ -340,7 +337,7 @@ pub async fn start(
             .whatever("unable to create stdout log file")?;
         let mut stdout = child.stdout.take().expect("we used Stdio::piped");
         tokio::spawn(async move {
-            let log = rugpi_cli::add_status(VmLog::default());
+            let log = rugpi_cli::add_status(CliLog::default());
             let mut line_buffer = Vec::new();
             let mut buffer = Vec::with_capacity(8096);
             while let Ok(read) = stdout.read_buf(&mut buffer).await {
@@ -427,41 +424,5 @@ impl russh::client::Handler for SshHandler {
     async fn check_server_key(&mut self, _: &ssh_key::PublicKey) -> Result<bool, Self::Error> {
         // We do not care about the identity of the server.
         Ok(true)
-    }
-}
-
-#[derive(Debug, Default)]
-struct VmLog {
-    state: std::sync::Mutex<VmLogState>,
-}
-
-impl VmLog {
-    fn push_line(&self, line: String) {
-        let mut state = self.state.lock().unwrap();
-        state.lines.push_back(line);
-        while state.lines.len() > 15 {
-            state.lines.pop_front();
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-struct VmLogState {
-    lines: VecDeque<String>,
-}
-
-impl StatusSegment for VmLog {
-    fn draw(&self, ctx: &mut rugpi_cli::DrawCtx) {
-        Heading::new("VM Output").draw(ctx);
-        let state = self.state.lock().unwrap();
-        let show_lines = VisualHeight::from_usize(state.lines.len())
-            .min(ctx.measure_remaining_height())
-            .into_u64() as usize;
-        let skip_lines = state.lines.len() - show_lines;
-        Text::new(state.lines.iter().skip(skip_lines))
-            .prefix("> ")
-            .styled()
-            .dark_gray()
-            .draw(ctx);
     }
 }

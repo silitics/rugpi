@@ -1,17 +1,22 @@
 //! Applies a set of recipes to a system.
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
 use std::fs;
 use std::ops::Deref;
 use std::path::Path;
+use std::process::Stdio;
 use std::sync::Arc;
 
 use reportify::{bail, ResultExt};
+use rugpi_cli::StatusSegmentRef;
 use rugpi_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info};
-use xscript::{cmd, run, vars, ParentEnv, Run};
+use xscript::{cmd, run, vars, Cmd, ParentEnv, Run};
 
+use crate::cli::status::CliLog;
 use crate::config::layers::LayerConfig;
 use crate::config::projects::Architecture;
 use crate::project::layers::Layer;
@@ -21,6 +26,45 @@ use crate::project::repositories::RepositoryIdx;
 use crate::project::ProjectRef;
 use crate::utils::caching::{mtime, mtime_recursive};
 use crate::BakeryResult;
+
+struct Logger {
+    cli_log: StatusSegmentRef<CliLog>,
+    state: tokio::sync::Mutex<LoggerState>,
+}
+
+struct LoggerState {
+    log_file: tokio::fs::File,
+    line_buffer: Vec<u8>,
+}
+
+impl Logger {
+    pub async fn new(layer_name: &str, layer_path: &Path) -> BakeryResult<Self> {
+        let log_file = tokio::fs::File::create(layer_path.join("build.log"))
+            .await
+            .whatever("error creating layer log file")?;
+        Ok(Self {
+            cli_log: rugpi_cli::add_status(CliLog::new(format!("Layer: {layer_name}"))),
+            state: tokio::sync::Mutex::new(LoggerState {
+                log_file,
+                line_buffer: Vec::new(),
+            }),
+        })
+    }
+
+    pub async fn write(&self, bytes: &[u8]) {
+        let mut state = self.state.lock().await;
+        let _ = state.log_file.write_all(&bytes).await;
+        for b in bytes {
+            if *b == b'\n' {
+                self.cli_log
+                    .push_line(String::from_utf8_lossy(&state.line_buffer).into_owned());
+                state.line_buffer.clear();
+            } else {
+                state.line_buffer.push(*b);
+            }
+        }
+    }
+}
 
 pub async fn customize(
     project: &ProjectRef,
@@ -80,7 +124,11 @@ pub async fn customize(
     }
     let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
-    apply_recipes(project, arch, &jobs, bundle_dir, &root_dir, layer_path)?;
+    let logger = Logger::new(&layer.name, layer_path).await?;
+    apply_recipes(
+        &logger, project, arch, &jobs, bundle_dir, &root_dir, layer_path,
+    )
+    .await?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;
@@ -179,7 +227,58 @@ fn recipe_schedule(
     Ok(recipes)
 }
 
-fn apply_recipes(
+async fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
+    let mut command = tokio::process::Command::new(cmd.prog());
+    command.args(cmd.args());
+    if let Some(vars) = cmd.vars() {
+        if vars.is_clean() {
+            command.env_clear();
+        }
+        for (name, value) in vars.values() {
+            if let Some(value) = value {
+                command.env(name, value);
+            } else {
+                command.env_remove(name);
+            }
+        }
+    }
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command
+        .spawn()
+        .whatever_with(|_| format!("unable to spawn command {cmd}"))?;
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    async fn copy_log<R: Unpin + AsyncRead>(logger: &Logger, mut reader: R) {
+        let mut buffer = Vec::with_capacity(8192);
+        while let Ok(read) = reader.read_buf(&mut buffer).await {
+            if read == 0 {
+                break;
+            }
+            logger.write(&buffer[..read]).await;
+            buffer.clear();
+        }
+    }
+
+    let (_, _, status) = tokio::join!(
+        copy_log(logger, stdout),
+        copy_log(logger, stderr),
+        child.wait()
+    );
+
+    let status = status.whatever_with(|_| format!("unable to spawn command {cmd}"))?;
+    if !status.success() {
+        bail!("failed with exit code {}", status.code().unwrap_or(1));
+    }
+    Ok(())
+}
+
+async fn apply_recipes(
+    logger: &Logger,
     project: &ProjectRef,
     arch: Architecture,
     jobs: &[RecipeJob],
@@ -304,11 +403,15 @@ fn apply_recipes(
                     for (name, value) in &job.parameters {
                         vars.set(format!("RECIPE_PARAM_{}", name.to_uppercase()), value);
                     }
-                    run!(["chroot", root_dir_path, &script]
-                        .with_stdout(xscript::Out::Inherit)
-                        .with_stderr(xscript::Out::Inherit)
-                        .with_vars(vars))
-                    .whatever("unable to run `chroot`")?;
+                    run_cmd(
+                        logger,
+                        Cmd::new("chroot")
+                            .add_arg(root_dir_path)
+                            .add_arg(&script)
+                            .clone()
+                            .with_vars(vars),
+                    )
+                    .await?;
                 }
                 StepKind::Run => {
                     let script = recipe.path.join("steps").join(&step.filename);
@@ -325,11 +428,7 @@ fn apply_recipes(
                     for (name, value) in &job.parameters {
                         vars.set(format!("RECIPE_PARAM_{}", name.to_uppercase()), value);
                     }
-                    run!([&script]
-                        .with_stdout(xscript::Out::Inherit)
-                        .with_stderr(xscript::Out::Inherit)
-                        .with_vars(vars))
-                    .whatever("unable to run script")?;
+                    run_cmd(logger, Cmd::new(&script).with_vars(vars)).await?;
                 }
             }
         }
