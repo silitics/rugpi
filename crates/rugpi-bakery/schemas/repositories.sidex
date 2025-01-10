@@ -11,6 +11,7 @@ record RepositoryConfig {
 }
 
 /// Repository source.
+#[rust(derive(PartialEq, Eq))]
 #[json(tagged=implicitly)]
 variant SourceConfig {
     /// Repository is an external Git repository.
@@ -20,12 +21,15 @@ variant SourceConfig {
 }
 
 /// Git repository source.
+#[rust(derive(PartialEq, Eq))]
 record GitSourceConfig {
     /// URL of the Git repository.
     #[json(name = "git")]
     url: string,
     /// Specific tag of the Git repository.
     tag?: string,
+    /// Specific branch of the Git repository.
+    branch?: string,
     /// Specific revision of the Git repository.
     rev?: string,
     /// Subdirectory in which the repository is located.
@@ -33,6 +37,7 @@ record GitSourceConfig {
 }
 
 /// Local repository source.
+#[rust(derive(PartialEq, Eq))]
 record PathSourceConfig {
     /// Path of the repository relative to the project directory.
     path: string,

@@ -22,12 +22,12 @@ serde = { version = "1.0.171", features = ["derive", "rc"] }
 sha1 = "0.10.5"
 tempfile = "3.8.1"
 thiserror = "1.0.43"
-tokio = { version = "1.42.0", features = ["full"] }
 toml = "0.8.8"
 url = { version = "2.4.0", features = ["serde"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 xscript.workspace = true
 tracing.workspace = true
+tokio.workspace = true
 
 reportify.workspace = true
 rugpi-cli.workspace = true

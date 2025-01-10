@@ -28,6 +28,7 @@ record ImageLayout {
 
 /// Partition table type.
 #[json(tagged=externally, rename_all = "lowercase")]
+#[rust(derive(Copy))]
 variant PartitionTableType {
     /// MBR partition.
     Mbr,

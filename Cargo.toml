@@ -22,7 +22,7 @@ tracing = "0.1"
 sidex = { git = "https://github.com/silitics/sidex.git" }
 sidex-build-rs = { git = "https://github.com/silitics/sidex.git" }
 sidex-serde = { git = "https://github.com/silitics/sidex.git" }
-xscript = "0.3.0"
+xscript = { version = "0.4.0", features = ["tokio"] }
 
 # Colocated but not Rugix-specific crates.
 byte-calc = { path = "crates/byte-calc", features = ["serde"] }

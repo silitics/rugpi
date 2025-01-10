@@ -1,5 +1,6 @@
 //! Common functionality for Rugpi's various CLIs.
 
+use std::future::Future;
 use std::ops::Deref;
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::time::{Duration, Instant};
@@ -7,6 +8,7 @@ use std::{fmt, io};
 
 use console::Term;
 use style::{Style, Styled};
+use tracing::info;
 use tracing_subscriber::fmt::MakeWriter;
 
 use crate::rate_limiter::RateLimiter;
@@ -18,7 +20,7 @@ mod rate_limiter;
 
 /// Helper for initializing the CLI.
 #[derive(Debug)]
-pub struct Initializer {
+pub struct CliBuilder {
     /// Init [`tracing`] by registering a subscriber.
     init_tracing: bool,
     /// Start a background thread redrawing the status area periodically.
@@ -27,7 +29,7 @@ pub struct Initializer {
     drawing_period: Duration,
 }
 
-impl Initializer {
+impl CliBuilder {
     /// Create a new [`Initializer`] with default settings.
     pub fn new() -> Self {
         Self {
@@ -54,6 +56,67 @@ impl Initializer {
                 std::thread::sleep(self.drawing_period);
                 redraw();
             });
+        }
+    }
+
+    pub fn run_async<Fut, E>(self, future: Fut) -> !
+    where
+        Fut: 'static + Send + Future<Output = Result<(), E>>,
+        E: Send + fmt::Debug,
+    {
+        self.init();
+
+        #[derive(Debug)]
+        enum TerminationReason {
+            Success,
+            Failed,
+            Panicked,
+            Interrupted,
+        }
+
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("unable to build Tokio runtime");
+        let reason = runtime.block_on(async move {
+            let run_task = tokio::spawn(async move {
+                if let Err(error) = future.await {
+                    cli_msg!("Error: {error:?}");
+                    TerminationReason::Failed
+                } else {
+                    TerminationReason::Success
+                }
+            });
+            tokio::select! {
+                run_result = run_task => {
+                    match run_result {
+                        Ok(reason) => reason,
+                        Err(error) => {
+                            let panic = error.into_panic();
+                            if let Some(msg) = panic.downcast_ref::<&str>() {
+                                cli_msg!("Panic: {msg}");
+                            } else if let Some(msg) = panic.downcast_ref::<String>() {
+                                cli_msg!("Panic: {msg}");
+                            } else {
+                                cli_msg!("Panic!");
+                            }
+                            TerminationReason::Panicked
+                        }
+                    }
+                }
+                _ = tokio::signal::ctrl_c() => {
+                    TerminationReason::Interrupted
+                }
+            }
+        });
+        info!("Shutting down...");
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        hide_status();
+        force_redraw();
+        if matches!(reason, TerminationReason::Success) {
+            std::process::exit(0)
+        } else {
+            std::process::exit(1)
         }
     }
 }

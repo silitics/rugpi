@@ -1,0 +1,61 @@
+//! The `init` command.
+
+use std::collections::HashMap;
+use std::path::Path;
+
+use colored::Colorize;
+use serde::Deserialize;
+
+use reportify::{bail, ResultExt};
+
+use rugpi_common::fsutils::copy_recursive;
+
+use crate::cli::{args, current_dir};
+use crate::BakeryResult;
+
+/// Run the `init` command.
+pub async fn run(cmd: &args::InitCommand) -> BakeryResult<()> {
+    let Some(template_name) = &cmd.template else {
+        let templates: HashMap<String, TemplateInfo> = toml::from_str(
+            &tokio::fs::read_to_string(Path::new(TEMPLATE_PATH).join("templates.toml"))
+                .await
+                .whatever("error reading templates list")?,
+        )
+        .whatever("error parsing templates list")?;
+
+        rugpi_cli::suspend(|| {
+            eprintln!("{}\n", "Available Templates:".bold());
+            let mut names = templates.keys().collect::<Vec<_>>();
+            names.sort();
+            for name in names {
+                let info = templates.get(name).unwrap();
+                eprintln!(
+                    "  {}:\n    {}",
+                    name.blue(),
+                    info.description.trim().bright_black()
+                );
+            }
+        });
+        return Ok(());
+    };
+    if Path::new("rugpi-bakery.toml").exists() {
+        bail!("Project has already been initialized.");
+    }
+    let cwd = current_dir()?;
+    let template_dir = Path::new(TEMPLATE_PATH).join(template_name);
+    tokio::task::spawn_blocking(|| copy_recursive(template_dir, cwd))
+        .await
+        .expect("panic copying template")
+        .whatever("error copying template to project directory")?;
+    Ok(())
+}
+
+/// Template path.
+const TEMPLATE_PATH: &str = "/usr/share/rugpi/templates";
+
+/// Template information.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TemplateInfo {
+    /// Description of the template.
+    pub description: String,
+}

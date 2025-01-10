@@ -63,7 +63,7 @@ pub fn cli() {
 }
 
 pub fn main() {
-    rugpi_cli::Initializer::new().init();
+    rugpi_cli::CliBuilder::new().init();
     cli();
     rugpi_cli::force_redraw();
 }

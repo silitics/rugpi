@@ -12,24 +12,25 @@ use tempfile::tempdir;
 use tracing::{error, info};
 use xscript::{cmd, run, vars, ParentEnv, Run};
 
-use crate::project::config::Architecture;
-use crate::project::layers::{Layer, LayerConfig};
+use crate::config::layers::LayerConfig;
+use crate::config::projects::Architecture;
+use crate::project::layers::Layer;
 use crate::project::library::Library;
 use crate::project::recipes::{PackageManager, Recipe, StepKind};
 use crate::project::repositories::RepositoryIdx;
-use crate::project::Project;
+use crate::project::ProjectRef;
 use crate::utils::caching::{mtime, mtime_recursive};
 use crate::BakeryResult;
 
-pub fn customize(
-    project: &Project,
+pub async fn customize(
+    project: &ProjectRef,
     arch: Architecture,
     layer: &Layer,
     src: Option<&Path>,
     target: &Path,
     layer_path: &Path,
 ) -> BakeryResult<()> {
-    let library = project.library()?;
+    let library = project.library().await?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
     let jobs = recipe_schedule(layer.repo, config, library)?;
@@ -46,13 +47,15 @@ pub fn customize(
         last_modified = last_modified.max(mtime(src).whatever("unable to determine mtime")?);
     }
     let mut force_run = false;
-    let used_files = project.dir.join(layer_path.join("rebuild-if-changed.txt"));
+    let used_files = project
+        .dir()
+        .join(layer_path.join("rebuild-if-changed.txt"));
     if used_files.exists() {
         for line in std::fs::read_to_string(used_files)
             .whatever("unable to read used files")?
             .lines()
         {
-            if let Ok(modified) = mtime_recursive(&project.dir.join(line)) {
+            if let Ok(modified) = mtime_recursive(&project.dir().join(line)) {
                 last_modified = last_modified.max(modified)
             } else {
                 error!("error determining modification time for {line}");
@@ -96,34 +99,42 @@ fn recipe_schedule(
 ) -> BakeryResult<Vec<RecipeJob>> {
     let mut stack = layer
         .recipes
+        .as_deref()
+        .unwrap_or_default()
         .iter()
-        .map(|name| library.try_lookup(repo, name.deref()))
+        .map(|name| library.try_lookup(repo, name))
         .collect::<BakeryResult<Vec<_>>>()?;
     let mut enabled = stack.iter().cloned().collect::<HashSet<_>>();
     while let Some(idx) = stack.pop() {
         let recipe = &library.recipes[idx];
-        for name in &recipe.info.dependencies {
-            let dependency = library.try_lookup(recipe.repository, name.deref())?;
+        for name in recipe.config.dependencies.as_deref().unwrap_or_default() {
+            let dependency = library.try_lookup(recipe.repository, name)?;
             if enabled.insert(dependency) {
                 stack.push(dependency);
             }
         }
     }
-    for excluded in &layer.exclude {
+    for excluded in layer.exclude.as_deref().unwrap_or_default() {
         let excluded = library.try_lookup(repo, excluded.deref())?;
         enabled.remove(&excluded);
     }
     let parameters = layer
         .parameters
-        .iter()
-        .map(|(name, parameters)| {
-            let recipe = library.try_lookup(repo, name.deref())?;
-            if !enabled.contains(&recipe) {
-                bail!("recipe with name {name} is not part of the layer");
-            }
-            Ok((recipe, parameters))
+        .as_ref()
+        .map(|parameters| {
+            parameters
+                .iter()
+                .map(|(name, parameters)| {
+                    let recipe = library.try_lookup(repo, name.deref())?;
+                    if !enabled.contains(&recipe) {
+                        bail!("recipe with name {name} is not part of the layer");
+                    }
+                    Ok((recipe, parameters))
+                })
+                .collect::<BakeryResult<HashMap<_, _>>>()
         })
-        .collect::<BakeryResult<HashMap<_, _>>>()?;
+        .transpose()?
+        .unwrap_or_default();
     let mut recipes = enabled
         .into_iter()
         .map(|idx| {
@@ -131,7 +142,13 @@ fn recipe_schedule(
             let recipe_params = parameters.get(&idx);
             if let Some(params) = recipe_params {
                 for param_name in params.keys() {
-                    if !recipe.info.parameters.contains_key(param_name) {
+                    if !recipe
+                        .config
+                        .parameters
+                        .as_ref()
+                        .map(|parameters| parameters.contains_key(param_name))
+                        .unwrap_or_default()
+                    {
                         bail!(
                             "unknown parameter `{param_name}` of recipe `{}`",
                             recipe.name
@@ -140,28 +157,30 @@ fn recipe_schedule(
                 }
             }
             let mut parameters = HashMap::new();
-            for (name, def) in &recipe.info.parameters {
-                if let Some(params) = recipe_params {
-                    if let Some(value) = params.get(name) {
-                        parameters.insert(name.to_owned(), value.to_string());
+            if let Some(p) = &recipe.config.parameters {
+                for (name, def) in p {
+                    if let Some(params) = recipe_params {
+                        if let Some(value) = params.get(name) {
+                            parameters.insert(name.to_owned(), value.to_string());
+                            continue;
+                        }
+                    }
+                    if let Some(default) = &def.default {
+                        parameters.insert(name.to_owned(), default.to_string());
                         continue;
                     }
+                    bail!("unable to find value for parameter `{name}`");
                 }
-                if let Some(default) = &def.default {
-                    parameters.insert(name.to_owned(), default.to_string());
-                    continue;
-                }
-                bail!("unable to find value for parameter `{name}`");
             }
             Ok(RecipeJob { recipe, parameters })
         })
         .collect::<Result<Vec<_>, _>>()?;
-    recipes.sort_by_key(|job| -job.recipe.info.priority);
+    recipes.sort_by_key(|job| -job.recipe.config.priority.unwrap_or_default());
     Ok(recipes)
 }
 
 fn apply_recipes(
-    project: &Project,
+    project: &ProjectRef,
     arch: Architecture,
     jobs: &[RecipeJob],
     bundle_dir: &Path,
@@ -171,7 +190,7 @@ fn apply_recipes(
     let mut mount_stack = MountStack::new();
 
     fn mount_all(
-        project: &Project,
+        project: &ProjectRef,
         root_dir_path: &Path,
         stack: &mut MountStack,
     ) -> BakeryResult<()> {
@@ -202,7 +221,7 @@ fn apply_recipes(
         fs::create_dir_all(&project_dir).whatever("unable to create project directory")?;
 
         stack.push(
-            Mounted::bind(&project.dir, &project_dir)
+            Mounted::bind(project.dir(), &project_dir)
                 .whatever("unable to bind mount project directory")?,
         );
 
@@ -218,7 +237,7 @@ fn apply_recipes(
             idx + 1,
             jobs.len(),
             recipe
-                .info
+                .config
                 .description
                 .as_deref()
                 .unwrap_or(recipe.name.deref()),

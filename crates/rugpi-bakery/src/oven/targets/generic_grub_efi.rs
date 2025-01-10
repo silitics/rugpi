@@ -1,11 +1,12 @@
 use std::path::Path;
 
 use reportify::{bail, ResultExt};
+
 use rugpi_common::boot::grub::grub_write_defaults;
 use rugpi_common::fsutils::copy_recursive;
 
-use crate::project::config::Architecture;
-use crate::project::images::ImageConfig;
+use crate::config::images::ImageConfig;
+use crate::config::projects::Architecture;
 use crate::BakeryResult;
 
 pub fn initialize_grub(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {

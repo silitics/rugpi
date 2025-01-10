@@ -24,5 +24,5 @@ if [ "${RECIPE_PARAM_ROOT_AUTHORIZED_KEYS}" != "" ]; then
     mkdir -p /root/.ssh
     echo "${RECIPE_PARAM_ROOT_AUTHORIZED_KEYS}" >> /root/.ssh/authorized_keys
     chmod -R 600 /root/.ssh
-    cat /root/.ssh/authorized_keys >&2
+    cat /root/.ssh/authorized_keys
 fi

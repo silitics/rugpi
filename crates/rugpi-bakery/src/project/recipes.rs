@@ -1,18 +1,20 @@
 //! Data structures for representing recipes.
 
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{fmt, fs, ops};
+use std::{fmt, ops};
+
+use serde::{Deserialize, Serialize};
 
 use reportify::{bail, whatever, ResultExt};
-use serde::{Deserialize, Serialize};
-use tracing::warn;
 
-use super::repositories::RepositoryIdx;
+use crate::config::load_config;
+use crate::config::recipes::RecipeConfig;
 use crate::utils::caching::{mtime_recursive, ModificationTime};
 use crate::BakeryResult;
+
+use super::repositories::RepositoryIdx;
 
 /// Auxiliary data structure for loading recipes.
 #[derive(Debug)]
@@ -38,7 +40,7 @@ impl RecipeLoader {
     }
 
     /// Loads a recipe from the given path.
-    pub fn load(&self, path: &Path) -> BakeryResult<Recipe> {
+    pub async fn load(&self, path: &Path) -> BakeryResult<Recipe> {
         let path = path.to_path_buf();
         let modified = mtime_recursive(&path).whatever("unable to determine mtime")?;
         let name = path
@@ -46,19 +48,20 @@ impl RecipeLoader {
             .ok_or_else(|| whatever!("unable to determine recipe name from path `{path:?}`"))?
             .to_string_lossy()
             .into();
-        let info_path = path.join("recipe.toml");
-        let info =
-            toml::from_str(&fs::read_to_string(&info_path).whatever_with(|_| {
-                format!("error reading recipe info from path `{info_path:?}")
-            })?)
-            .whatever_with(|_| format!("error parsing recipe info from path `{info_path:?}`"))?;
+        let config_path = path.join("recipe.toml");
+        let config = load_config(&config_path).await?;
         let mut steps = Vec::new();
         let steps_dir = path.join("steps");
         if steps_dir.exists() {
-            for entry in fs::read_dir(&steps_dir).whatever("unable to read recipe steps")? {
-                steps.push(RecipeStep::load(
-                    &entry.whatever("unable to read recipe step")?.path(),
-                )?);
+            let mut read_dir = tokio::fs::read_dir(&steps_dir)
+                .await
+                .whatever("unable to read recipe steps")?;
+            while let Some(entry) = read_dir
+                .next_entry()
+                .await
+                .whatever("error reading next directory entry")?
+            {
+                steps.push(RecipeStep::load(&entry.path()).await?);
             }
         }
         steps.sort_by_key(|step| step.position);
@@ -66,13 +69,10 @@ impl RecipeLoader {
             repository: self.repository,
             modified,
             name,
-            info,
+            config,
             steps,
             path,
         };
-        if recipe.info.default.is_some() {
-            warn!("default recipes have been deprecated");
-        }
         Ok(recipe)
     }
 }
@@ -86,7 +86,7 @@ pub struct Recipe {
     /// The name of the recipe.
     pub name: RecipeName,
     /// Information about the recipe.
-    pub info: RecipeInfo,
+    pub config: RecipeConfig,
     /// The steps of the recipe.
     pub steps: Vec<RecipeStep>,
     /// The path of the recipe.
@@ -118,58 +118,6 @@ impl fmt::Display for RecipeName {
     }
 }
 
-/// Information about a recipe.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RecipeInfo {
-    /// An optional description of the recipe.
-    pub description: Option<String>,
-    /// Indicates whether the recipe should be included by default.
-    pub default: Option<bool>,
-    /// The priority of the recipe.
-    #[serde(default)]
-    pub priority: i64,
-    /// The dependencies of the recipe.
-    #[serde(default)]
-    pub dependencies: Vec<RecipeName>,
-    /// The parameters of the recipe.
-    #[serde(default)]
-    pub parameters: HashMap<String, ParameterDef>,
-}
-
-/// Definition of a recipe parameter.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ParameterDef {
-    /// The default value of the parameter.
-    pub default: Option<ParameterValue>,
-}
-
-/// A value of a parameter.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ParameterValue {
-    /// A string.
-    String(String),
-    /// A boolean.
-    Boolean(bool),
-    /// An integer.
-    Integer(i64),
-    /// A floating-point number.
-    Float(f64),
-}
-
-impl fmt::Display for ParameterValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParameterValue::String(value) => value.fmt(f),
-            ParameterValue::Boolean(value) => value.fmt(f),
-            ParameterValue::Integer(value) => value.fmt(f),
-            ParameterValue::Float(value) => value.fmt(f),
-        }
-    }
-}
-
 /// A step of a recipe.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecipeStep {
@@ -183,7 +131,7 @@ pub struct RecipeStep {
 
 impl RecipeStep {
     /// Tries to load a recipe step from the provided path.
-    fn load(path: &Path) -> BakeryResult<Self> {
+    async fn load(path: &Path) -> BakeryResult<Self> {
         let filename = path
             .file_name()
             .and_then(OsStr::to_str)
@@ -195,7 +143,8 @@ impl RecipeStep {
         let position = position.parse().whatever("unable to parse step position")?;
         let kind = match kind.split('.').next().unwrap() {
             "packages" => {
-                let packages = fs::read_to_string(path)
+                let packages = tokio::fs::read_to_string(path)
+                    .await
                     .whatever("unable to read packages step")?
                     .split_whitespace()
                     .map(str::to_owned)

@@ -35,9 +35,17 @@ pub fn build_binaries(target: &str) -> anyhow::Result<()> {
     let env = LocalEnv::new(project_path());
     run!(
         env,
-        ["cargo", "build", "--release", "--target", target]
-            .with_stdout(Out::Inherit)
-            .with_stderr(Out::Inherit)
+        [
+            "cargo",
+            "build",
+            "--release",
+            "--target",
+            target,
+            "--bin",
+            "rugpi-*"
+        ]
+        .with_stdout(Out::Inherit)
+        .with_stderr(Out::Inherit)
     )?;
     let binaries_dir = project_path().join("build/binaries").join(target);
     if binaries_dir.exists() {

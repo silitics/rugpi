@@ -8,13 +8,15 @@ use std::sync::Arc;
 
 use reportify::{whatever, ResultExt};
 
-use super::config::Architecture;
-use super::layers::{Layer, LayerConfig};
-use super::recipes::{Recipe, RecipeLoader};
-use super::repositories::{ProjectRepositories, RepositoryIdx};
+use crate::config::load_config;
+use crate::config::projects::Architecture;
 use crate::utils::caching::mtime;
 use crate::utils::idx_vec::{new_idx_type, IdxVec};
 use crate::BakeryResult;
+
+use super::layers::Layer;
+use super::recipes::{Recipe, RecipeLoader};
+use super::repositories::{ProjectRepositories, RepositoryIdx};
 
 #[derive(Debug)]
 pub struct Library {
@@ -27,85 +29,75 @@ pub struct Library {
 
 impl Library {
     #[allow(clippy::assigning_clones)]
-    pub fn load(repositories: Arc<ProjectRepositories>) -> BakeryResult<Self> {
+    pub async fn load(repositories: Arc<ProjectRepositories>) -> BakeryResult<Self> {
         let mut recipes = IdxVec::new();
-        let tables = IdxVec::<RepositoryIdx, _>::from_vec(
-            repositories
-                .repositories
-                .iter()
-                .map(|(idx, repository)| -> BakeryResult<_> {
-                    let mut table = HashMap::new();
-                    let loader =
-                        RecipeLoader::new(idx).with_default(idx == repositories.root_repository);
-                    let recipes_dir = repository.source.dir.join("recipes");
-                    if recipes_dir.is_dir() {
-                        for entry in fs::read_dir(repository.source.dir.join("recipes"))
-                            .whatever("error reading recipes from directory")?
-                        {
-                            let entry = entry.whatever("error reading recipe directory entry")?;
-                            let path = entry.path();
-                            if !path.is_dir() || should_ignore_path(&path) {
-                                continue;
-                            }
-                            let recipe = loader.load(&entry.path())?;
-                            let recipe_idx = recipes.push(Arc::new(recipe));
-                            table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
-                        }
+        let mut tables = IdxVec::<RepositoryIdx, _>::new();
+        for (idx, repository) in repositories.iter() {
+            let mut table = HashMap::new();
+            let loader = RecipeLoader::new(idx).with_default(idx == repositories.root_repository);
+            let recipes_dir = repository.source.dir.join("recipes");
+            if recipes_dir.is_dir() {
+                for entry in fs::read_dir(repository.source.dir.join("recipes"))
+                    .whatever("error reading recipes from directory")?
+                {
+                    let entry = entry.whatever("error reading recipe directory entry")?;
+                    let path = entry.path();
+                    if !path.is_dir() || should_ignore_path(&path) {
+                        continue;
                     }
-                    Ok(table)
-                })
-                .collect::<BakeryResult<_>>()?,
-        );
+                    let recipe = loader.load(&entry.path()).await?;
+                    let recipe_idx = recipes.push(Arc::new(recipe));
+                    table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
+                }
+            }
+            tables.push(table);
+        }
         let mut layers = IdxVec::new();
-        let layer_tables = IdxVec::<RepositoryIdx, _>::from_vec(
-            repositories
-                .repositories
-                .iter()
-                .map(|(repo, repository)| -> BakeryResult<_> {
-                    let mut table = HashMap::new();
-                    let layers_dir = repository.source.dir.join("layers");
-                    if !layers_dir.exists() {
-                        return Ok(table);
+        let mut layer_tables = IdxVec::<RepositoryIdx, _>::new();
+        for (idx, repository) in repositories.iter() {
+            let mut table = HashMap::new();
+            let layers_dir = repository.source.dir.join("layers");
+            if !layers_dir.exists() {
+                layer_tables.push(table);
+                continue;
+            }
+            for entry in
+                fs::read_dir(layers_dir).whatever("unable to read layers from directory")?
+            {
+                let entry = entry.whatever("unable to read layer directory entry")?;
+                let path = entry.path();
+                if !path.is_file() || should_ignore_path(&path) {
+                    continue;
+                }
+                if path.extension() != Some(OsStr::new("toml")) {
+                    continue;
+                }
+                let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
+                let mut arch = None;
+                if let Some((layer_name, arch_str)) = name.split_once('.') {
+                    arch = Some(
+                        Architecture::from_str(arch_str)
+                            .whatever("unable to parse architecture")?,
+                    );
+                    name = layer_name.to_owned();
+                }
+                let modified = mtime(&path).whatever("unable to obtain layer mtime")?;
+                let layer_config = load_config(&path).await?;
+                let layer_idx = *table
+                    .entry(name.clone())
+                    .or_insert_with(|| layers.push(Layer::new(name, idx, modified)));
+                layers[layer_idx].modified = layers[layer_idx].modified.max(modified);
+                match arch {
+                    Some(arch) => {
+                        layers[layer_idx].arch_configs.insert(arch, layer_config);
                     }
-                    for entry in
-                        fs::read_dir(layers_dir).whatever("unable to read layers from directory")?
-                    {
-                        let entry = entry.whatever("unable to read layer directory entry")?;
-                        let path = entry.path();
-                        if !path.is_file() || should_ignore_path(&path) {
-                            continue;
-                        }
-                        if path.extension() != Some(OsStr::new("toml")) {
-                            continue;
-                        }
-                        let mut name = path.file_stem().unwrap().to_string_lossy().into_owned();
-                        let mut arch = None;
-                        if let Some((layer_name, arch_str)) = name.split_once('.') {
-                            arch = Some(
-                                Architecture::from_str(arch_str)
-                                    .whatever("unable to parse architecture")?,
-                            );
-                            name = layer_name.to_owned();
-                        }
-                        let modified = mtime(&path).whatever("unable to obtain layer mtime")?;
-                        let layer_config = LayerConfig::load(&path)?;
-                        let layer_idx = *table
-                            .entry(name.clone())
-                            .or_insert_with(|| layers.push(Layer::new(name, repo, modified)));
-                        layers[layer_idx].modified = layers[layer_idx].modified.max(modified);
-                        match arch {
-                            Some(arch) => {
-                                layers[layer_idx].arch_configs.insert(arch, layer_config);
-                            }
-                            None => {
-                                layers[layer_idx].default_config = Some(layer_config);
-                            }
-                        }
+                    None => {
+                        layers[layer_idx].default_config = Some(layer_config);
                     }
-                    Ok(table)
-                })
-                .collect::<BakeryResult<_>>()?,
-        );
+                }
+            }
+            layer_tables.push(table);
+        }
         Ok(Self {
             repositories,
             recipes,

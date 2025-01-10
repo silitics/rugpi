@@ -1,68 +1,79 @@
-//! In-memory representation of Rugpi Bakery projects.
+//! In-memory project representation.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
+use library::Library;
 use reportify::ResultExt;
+use repositories::ProjectRepositories;
+use tokio::sync::OnceCell;
 
-use self::config::BakeryConfig;
-use self::library::Library;
-use self::repositories::ProjectRepositories;
+use crate::config::load_config;
+use crate::config::projects::ProjectConfig;
 use crate::BakeryResult;
 
-pub mod config;
-pub mod images;
 pub mod layers;
 pub mod library;
 pub mod recipes;
 pub mod repositories;
 
-/// A project.
+/// Shared reference to an in-memory project.
 #[derive(Debug, Clone)]
-#[non_exhaustive]
-pub struct Project {
-    /// The configuration of the project.
-    pub config: BakeryConfig,
-    /// The project directory.
-    pub dir: PathBuf,
-    /// Lazily initialized fields.
+pub struct ProjectRef {
+    /// Shared project state.
+    shared: Arc<ProjectShared>,
+}
+
+impl ProjectRef {
+    /// Project directory.
+    pub fn dir(&self) -> &Path {
+        &self.shared.dir
+    }
+
+    /// Project configuration.
+    pub fn config(&self) -> &ProjectConfig {
+        &self.shared.config
+    }
+
+    /// Retrieve the repositories of the project.
+    ///
+    /// This may load the repositories lazily.
+    pub async fn repositories(&self) -> BakeryResult<&Arc<ProjectRepositories>> {
+        self.shared
+            .lazy
+            .repositories
+            .get_or_try_init(|| async { ProjectRepositories::load(self).await.map(Arc::new) })
+            .await
+    }
+
+    /// Retrieve the library of the project.
+    ///
+    /// This may load the library lazily.
+    pub async fn library(&self) -> BakeryResult<&Arc<Library>> {
+        let repositories = self.repositories().await?.clone();
+        self.shared
+            .lazy
+            .library
+            .get_or_try_init(|| async { Library::load(repositories).await.map(Arc::new) })
+            .await
+    }
+}
+
+/// Shared project state.
+#[derive(Debug)]
+struct ProjectShared {
+    /// Project directory.
+    dir: PathBuf,
+    /// Project configuration.
+    config: Arc<ProjectConfig>,
+    /// Lazily-loaded project data.
     lazy: ProjectLazy,
 }
 
-impl Project {
-    /// The repositories of the project.
-    pub fn repositories(&self) -> BakeryResult<&Arc<ProjectRepositories>> {
-        if let Some(repositories) = self.lazy.repositories.get() {
-            return Ok(repositories);
-        }
-        let repositories = ProjectRepositories::load(self)
-            .map(Arc::new)
-            .whatever("loading repositories")?;
-        let _ = self.lazy.repositories.set(repositories);
-        Ok(self.lazy.repositories.get().unwrap())
-    }
-
-    /// The library of the project.
-    pub fn library(&self) -> BakeryResult<&Arc<Library>> {
-        if let Some(library) = self.lazy.library.get() {
-            return Ok(library);
-        }
-        let repositories = self.repositories()?.clone();
-        let library = Library::load(repositories)
-            .map(Arc::new)
-            .whatever("loading library")?;
-        let _ = self.lazy.library.set(library);
-        Ok(self.lazy.library.get().unwrap())
-    }
-}
-
-/// Lazily initialized fields of [`Project`].
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct ProjectLazy {
-    /// The repositories of the project.
-    repositories: OnceLock<Arc<ProjectRepositories>>,
-    /// The library of the project.
-    library: OnceLock<Arc<Library>>,
+    repositories: OnceCell<Arc<ProjectRepositories>>,
+    library: OnceCell<Arc<Library>>,
 }
 
 /// Project loader.
@@ -106,12 +117,14 @@ impl ProjectLoader {
     }
 
     /// Load the project.
-    pub fn load(self) -> BakeryResult<Project> {
-        let config = BakeryConfig::load(&self.config_path())?;
-        Ok(Project {
-            dir: self.project_dir,
-            config,
-            lazy: ProjectLazy::default(),
+    pub async fn load(self) -> BakeryResult<ProjectRef> {
+        let config = load_config(&self.config_path()).await?;
+        Ok(ProjectRef {
+            shared: Arc::new(ProjectShared {
+                dir: self.project_dir,
+                config,
+                lazy: ProjectLazy::default(),
+            }),
         })
     }
 }

@@ -1,7 +1,5 @@
 use std::cell::OnceCell;
 
-use super::logging::bug;
-
 /// Extension trait for [`OnceCell`].
 pub trait OnceCellExt<T> {
     /// Gets the contents of the cell or tries to initialize it.
@@ -17,7 +15,7 @@ impl<T> OnceCellExt<T> for OnceCell<T> {
             return Ok(value);
         }
         if self.set(init()?).is_err() {
-            bug!("concurrent initialization of `OnceCell`");
+            panic!("concurrent initialization of `OnceCell`");
         }
         Ok(self.get().unwrap())
     }

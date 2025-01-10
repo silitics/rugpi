@@ -43,7 +43,7 @@ fn clear_rugpi_state_flag(name: &str) -> SystemResult<()> {
 }
 
 pub fn main() -> SystemResult<()> {
-    rugpi_cli::Initializer::new().init();
+    rugpi_cli::CliBuilder::new().init();
 
     let args = Args::parse();
     let system = System::initialize()?;

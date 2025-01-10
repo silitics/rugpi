@@ -15,6 +15,7 @@ record ProjectConfig {
 /// Architecture.
 #[json(rename_all = "lowercase")]
 #[json(tagged=externally)]
+#[rust(derive(Copy, PartialEq, Eq, Hash))]
 variant Architecture {
     /// 64-bit x86.
     Amd64,

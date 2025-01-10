@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use self::gpt::{Guid, GPT_TABLE_BLOCKS, GUID_STRING_LENGTH};
 use crate::partitions::DiskError;
-use crate::utils::ascii_numbers::parse_ascii_decimal_digit;
+use crate::utils::ascii_numbers::{parse_ascii_decimal_digit, Case};
 use crate::utils::units::{NumBytes, Quantity, Unit};
 
 pub mod blkdev;
@@ -276,6 +276,18 @@ impl<'de> serde::Deserialize<'de> for PartitionType {
                     )
                 },
             )?))
+        }
+    }
+}
+
+impl Serialize for PartitionType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            PartitionType::Mbr(part) => serializer.serialize_str(&format!("{part:02x}")),
+            PartitionType::Gpt(guid) => serializer.serialize_str(&guid.to_hex_str(Case::Upper)),
         }
     }
 }

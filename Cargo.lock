@@ -2154,7 +2154,7 @@ dependencies = [
  "indoc",
  "rugpi-common",
  "tokio",
- "xscript 0.3.0",
+ "xscript 0.4.0",
 ]
 
 [[package]]
@@ -2198,7 +2198,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "xscript 0.3.0",
+ "xscript 0.4.0",
 ]
 
 [[package]]
@@ -2234,7 +2234,7 @@ dependencies = [
  "toml 0.8.19",
  "tracing",
  "uuid",
- "xscript 0.3.0",
+ "xscript 0.4.0",
  "xz2",
 ]
 
@@ -2257,7 +2257,7 @@ dependencies = [
  "toml 0.7.8",
  "tracing",
  "uuid",
- "xscript 0.3.0",
+ "xscript 0.4.0",
 ]
 
 [[package]]
@@ -2269,7 +2269,7 @@ dependencies = [
  "rugpi-common",
  "serde",
  "serde_json",
- "xscript 0.3.0",
+ "xscript 0.4.0",
 ]
 
 [[package]]
@@ -3802,9 +3802,12 @@ checksum = "c5cb5aba94ee9fd4d8bd891ed0a84cc06b3c78f37c5e477a1053a9e2c561b383"
 
 [[package]]
 name = "xscript"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5429ec0fcaf4e130adce8fa9d73fb7e7f075fcb92e8f371b8356ccfec44a927e"
+checksum = "691d1125cc400bd90e915242a5bea0592df6ad613e99f3a226d1d5c6d6112adb"
+dependencies = [
+ "tokio",
+]
 
 [[package]]
 name = "xtask"

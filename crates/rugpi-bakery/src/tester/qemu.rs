@@ -5,11 +5,15 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
+use xscript::{run, RunAsync};
+
 use async_trait::async_trait;
+use byte_calc::NumBytes;
 use reportify::{bail, whatever, ErrorExt, Report, ResultExt, Whatever};
 use rugpi_cli::style::Stylize;
 use rugpi_cli::widgets::{Heading, Text, Widget};
-use rugpi_cli::{StatusSegment, VisualHeight};
+use rugpi_cli::{cli_msg, StatusSegment, VisualHeight};
+
 use russh::client::Handle;
 use russh::keys::key::PrivateKeyWithHashAlg;
 use russh::keys::{load_secret_key, ssh_key, PrivateKey};
@@ -22,10 +26,11 @@ use tokio::sync::{oneshot, Mutex};
 use tokio::{fs, time};
 use tracing::{error, info};
 
-use crate::project::config::Architecture;
+use crate::config::projects::Architecture;
+use crate::config::tests::SystemConfig;
+use crate::BakeryResult;
 
-use super::workflow::TestSystemConfig;
-use super::{RugpiTestResult, TestCtx};
+use super::TestCtx;
 
 pub struct Vm {
     #[expect(dead_code, reason = "not currently used")]
@@ -33,7 +38,7 @@ pub struct Vm {
     ssh_session: Mutex<Option<Handle<SshHandler>>>,
     sftp_session: Mutex<Option<SftpSession>>,
     #[expect(dead_code, reason = "not currently used")]
-    vm_config: TestSystemConfig,
+    vm_config: SystemConfig,
     private_key: Arc<PrivateKey>,
 }
 
@@ -257,30 +262,32 @@ impl Vm {
 pub async fn start(
     arch: Architecture,
     image_file: &str,
-    config: &TestSystemConfig,
-) -> RugpiTestResult<Vm> {
+    config: &SystemConfig,
+) -> BakeryResult<Vm> {
     let private_key = load_secret_key(&config.ssh.private_key, None)
         .whatever("unable to load private SSH key")
         .with_info(|_| format!("path: {:?}", config.ssh.private_key))?;
     fs::create_dir_all(".rugpi/")
         .await
         .whatever("unable to create .rugpi directory")?;
-    if !Command::new("qemu-img")
-        .args(&["create", "-f", "qcow2", "-F", "raw", "-o"])
-        .arg(format!("backing_file=../{}", image_file))
-        .args(&[
-            ".rugpi/vm-image.img",
-            config.disk_size.as_deref().unwrap_or("40G"),
-        ])
-        .spawn()
-        .whatever("unable to create VM image")?
-        .wait()
-        .await
-        .whatever("unable to create VM image")?
-        .success()
-    {
-        bail!("unable to create VM image");
-    }
+    run!([
+        "qemu-img",
+        "create",
+        "-f",
+        "qcow2",
+        "-F",
+        "raw",
+        "-o",
+        "backing_file=../{image_file}",
+        ".rugpi/vm-image.img",
+        config
+            .disk_size
+            .unwrap_or(NumBytes::gibibytes(40))
+            .raw
+            .to_string(),
+    ])
+    .await
+    .whatever("unable to create VM image")?;
     let mut command = match arch {
         Architecture::Amd64 => {
             let mut command = Command::new("qemu-system-x86_64");

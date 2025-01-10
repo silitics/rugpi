@@ -12,6 +12,7 @@ console = "0.15.10"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 tracing.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true
