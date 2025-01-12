@@ -2146,6 +2146,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rugix-blocking"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "rugpi-admin"
 version = "0.1.0"
 dependencies = [
