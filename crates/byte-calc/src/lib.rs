@@ -562,7 +562,6 @@ impl NumBytes {
             // calculations as `.5` means `1/2` of the unit's value.
             let fractional_value = fractional_value as u128 * unit_divisor / fractional_base;
             let unit_value = unit.num_bytes().raw as u128;
-            let unit_divisor = unit_divisor as u128;
             let fractional_part = fractional_value * unit_value / unit_divisor;
             if let Some(value) = value.checked_add(fractional_part as u64) {
                 return Ok(NumBytes::new(value));
@@ -577,6 +576,9 @@ impl NumBytes {
 impl core::fmt::Display for NumBytes {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         use core::fmt::Write;
+        if f.alternate() {
+            return self.raw.fmt(f);
+        }
         let unit = self.display_unit();
         let (whole, fractional) = self.split_fractional(unit);
         write!(f, "{}", whole)?;
@@ -592,7 +594,7 @@ impl core::fmt::Display for NumBytes {
         // truncate the fractional part to the specified precision.
         let mut fractional_value = ((fractional as u128) * (fractional_base as u128)
             / (unit.num_bytes().raw as u128)) as u64;
-        if let Some(_) = f.precision() {
+        if f.precision().is_some() {
             f.write_char('.')?;
             write!(f, "{fractional_value:0p$}", p = precision as usize)?;
         } else if fractional_value != 0 {
@@ -635,7 +637,7 @@ impl<'de> serde::Deserialize<'de> for NumBytes {
     {
         struct Visitor;
 
-        impl<'de> serde::de::Visitor<'de> for Visitor {
+        impl serde::de::Visitor<'_> for Visitor {
             type Value = NumBytes;
 
             fn expecting(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
