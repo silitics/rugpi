@@ -1,13 +1,18 @@
 use std::time::Duration;
 
-use rugix_blocking::{blocking, Aborted, BlockingCtx};
+use rugix_blocking::{block, blocking, check_abort, BlockingCtx, MaybeAborted};
 
 /// Does some work indefinitely until the task is aborted.
-pub fn infinite_work<'cx>(cx: BlockingCtx<'cx>) -> Result<(), Aborted<'cx>> {
-    loop {
-        cx.check_aborted()?;
+pub fn work_indefinitely<'cx>(cx: BlockingCtx<'cx>) -> MaybeAborted<'cx, ()> {
+    fn some_work<'cx>(cx: BlockingCtx<'cx>) -> MaybeAborted<'cx, ()> {
+        check_abort!(cx);
         eprintln!("doing some work...");
         std::thread::sleep(Duration::from_secs(10));
+        MaybeAborted::Done(())
+    }
+
+    loop {
+        block!(some_work(cx))
     }
 }
 
@@ -19,11 +24,11 @@ pub fn main() {
     runtime.block_on(async {
         // Let's race the indefinite blocking work against an asynchronous timeout.
         tokio::select! {
-            _ = blocking(|cx| infinite_work(cx)) => {
+            _ = blocking(|cx| work_indefinitely(cx)) => {
                 // This will never happen, because the work takes forever.
                 unreachable!("work done!")
             }
-            _ = tokio::time::sleep(Duration::from_secs(5)) => {
+            _ = tokio::time::sleep(Duration::from_secs(15)) => {
                 eprintln!("timeout: aborting task");
             }
         }
@@ -31,5 +36,5 @@ pub fn main() {
     eprintln!("main task terminated, waiting on background tasks");
     // Dropping the runtime will wait for background tasks to finish.
     drop(runtime);
-    eprintln!("everything has been aborted");
+    eprintln!("all tasks have terminated");
 }
