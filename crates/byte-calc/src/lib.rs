@@ -451,6 +451,16 @@ impl NumBytes {
         NumBlocks::new(self.raw.div_ceil(block_size.raw))
     }
 
+    /// Align the number of bytes to the next multiple of the block size rounding down.
+    pub const fn align_blocks_floor(self, block_size: NumBytes) -> NumBytes {
+        self.to_blocks_floor(block_size).to_bytes(block_size)
+    }
+
+    /// Align the number of bytes to the next multiple of the block size rounding up.
+    pub const fn align_blocks_ceil(self, block_size: NumBytes) -> NumBytes {
+        self.to_blocks_ceil(block_size).to_bytes(block_size)
+    }
+
     /// Splits the number into a whole and a fractional part based on the provided unit.
     pub const fn split_fractional(self, unit: ByteUnit) -> (u64, u64) {
         let whole = self.raw / unit.num_bytes().raw;
