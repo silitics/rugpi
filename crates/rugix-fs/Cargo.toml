@@ -1,0 +1,27 @@
+[package]
+name = "rugix-fs"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+tempfile = "3.15.0"
+walkdir = "2.5.0"
+
+nix.workspace = true
+tokio.workspace = true
+
+byte-calc.workspace = true
+reportify.workspace = true
+
+rugix-blocking.workspace = true
+tracing.workspace = true
+
+[features]
+unstable = []
+
+[lints]
+workspace = true
