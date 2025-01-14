@@ -129,6 +129,7 @@
     "VCDIFF",
     "VCIO",
     "vfat",
+    "walkdir",
     "workdir",
     "xscript",
     "Yocto",
