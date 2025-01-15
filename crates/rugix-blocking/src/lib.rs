@@ -218,7 +218,32 @@ pub enum MaybeAborted<'cx, T> {
     Done(T),
 }
 
+impl<'cx, T> MaybeAborted<'cx, T> {
+    /// Transform the value wrapped in [`MaybeAborted`].
+    pub fn map<M, U>(self, map: M) -> MaybeAborted<'cx, U>
+    where
+        M: FnOnce(T) -> U,
+    {
+        match self {
+            MaybeAborted::Aborted(aborted) => MaybeAborted::Aborted(aborted),
+            MaybeAborted::Done(value) => MaybeAborted::Done(map(value)),
+        }
+    }
+}
+
 impl<'cx, T, E> MaybeAborted<'cx, Result<T, E>> {
+    /// Transform the value of the result wrapped in [`MaybeAborted`].
+    pub fn map_ok<M, U>(self, map: M) -> MaybeAborted<'cx, Result<U, E>>
+    where
+        M: FnOnce(T) -> U,
+    {
+        match self {
+            MaybeAborted::Aborted(aborted) => MaybeAborted::Aborted(aborted),
+            MaybeAborted::Done(Ok(value)) => MaybeAborted::Done(Ok(map(value))),
+            MaybeAborted::Done(Err(error)) => MaybeAborted::Done(Err(error)),
+        }
+    }
+
     /// Transform the error of the result wrapped in [`MaybeAborted`].
     pub fn map_err<M, F>(self, map: M) -> MaybeAborted<'cx, Result<T, F>>
     where
