@@ -4,7 +4,7 @@ use std::fs::Metadata;
 use std::io::{self, Seek, Write};
 use std::os::fd::AsRawFd;
 use std::os::raw::c_void;
-use std::os::unix::fs::{FileExt, FileTypeExt};
+use std::os::unix::fs::{FileExt, FileTypeExt, MetadataExt};
 use std::path::Path;
 
 use tracing::{error, trace};
@@ -298,17 +298,23 @@ pub fn allocate_file<'cx>(cx: BlockingCtx<'cx>, path: &Path, size: NumBytes) -> 
     block!(try File::create(cx, path)).allocate(NumBytes::new(0), size)
 }
 
-/// Data structure for copying files.
+/// Auxiliary data structure for copying files and directories.
 #[derive(Debug, Clone)]
 pub struct Copier {
     /// Buffer for copying.
     buffer: Vec<u8>,
+    copy_permissions: bool,
+    copy_ownership: bool,
 }
 
 impl Copier {
     /// Create a new [`Copier`] with default settings.
     pub fn new() -> Self {
-        Self { buffer: Vec::new() }
+        Self {
+            buffer: Vec::new(),
+            copy_permissions: true,
+            copy_ownership: true,
+        }
     }
 
     /// Copy a directory recursively.
@@ -319,7 +325,7 @@ impl Copier {
         dst_dir: &Path,
     ) -> FsResult<'cx, ()> {
         trace!("copy directory from {src_dir:?} to {dst_dir:?}");
-        for entry in walkdir::WalkDir::new(src_dir) {
+        for entry in walkdir::WalkDir::new(src_dir).contents_first(true) {
             check_abort!(cx);
             let entry = block!(try entry
                 .whatever("unable to walk directory")
@@ -331,8 +337,13 @@ impl Copier {
                 .with_info(|_| format!("path: {:?}", entry.path()))
                 .with_info(|_| format!("src: {src_dir:?}")));
             let dst = dst_dir.join(tail);
+            if let Some(parent) = dst.parent() {
+                block!(try create_dir_recursive(cx, parent));
+            }
             if entry.file_type().is_dir() {
-                block!(try create_dir(cx, &dst));
+                if !dst.exists() {
+                    block!(try create_dir(cx, &dst));
+                }
             } else if entry.file_type().is_file() {
                 block!(try self.copy_file_contents(cx, entry.path(), &dst))
             } else if entry.file_type().is_symlink() {
@@ -343,6 +354,19 @@ impl Copier {
                 todo!("implement copy for block device");
             } else if entry.file_type().is_char_device() {
                 todo!("implement copy for char device");
+            } else {
+                todo!("unknown file type");
+            }
+            let metadata = block!(try entry.metadata().whatever("unable to read metadata"));
+            if !entry.file_type().is_symlink() {
+                if self.copy_permissions {
+                    block!(try std::fs::set_permissions(&dst, metadata.permissions()).whatever("unable to set permissions"));
+                }
+                if self.copy_ownership {
+                    let uid = metadata.uid();
+                    let gid = metadata.gid();
+                    block!(try std::os::unix::fs::chown(&dst, Some(uid), Some(gid)).whatever("unable to set ownership"));
+                }
             }
         }
         FsResult::Done(Ok(()))
@@ -400,6 +424,7 @@ impl Copier {
             block!(try lseek64(dst_raw_fd, dst_offset, Whence::SeekSet)
                 .whatever_with(|_| format!("unable to seek to {dst_offset}")));
             let mut remaining = i64::try_from(size.raw).expect("size must not overflow `i64`");
+            let mut use_copy_file_range = true;
             while remaining > 0 {
                 // If there is no hole, then `next_hole` points to the end of the file as
                 // there always is an implicit hole at the end of any file.
@@ -411,16 +436,29 @@ impl Copier {
                 let mut chunk_remaining = chunk_size.min(remaining);
                 while chunk_remaining > 0 && remaining > 0 {
                     check_abort!(cx);
-                    let chunk_read = block!(
-                        try nix::fcntl::copy_file_range(
+                    let chunk_read = if use_copy_file_range {
+                        match nix::fcntl::copy_file_range(
                             &mut src.file,
                             None,
                             &mut dst.file,
                             None,
                             chunk_remaining.min(32768) as usize,
-                        )
-                        .whatever("unable to copy file range")
-                    );
+                        ) {
+                            Ok(chunk_read) => chunk_read,
+                            Err(nix::errno::Errno::EXDEV) => {
+                                use_copy_file_range = false;
+                                continue;
+                            }
+                            result => block!(try result.whatever("unable to copy file range")),
+                        }
+                    } else {
+                        let chunk_read = chunk_remaining.min(8192);
+                        block!(try src.read_into_vec(&mut self.buffer, Some(NumBytes::new(chunk_read as u64))));
+                        block!(try dst.write(&self.buffer));
+                        let chunk_read = self.buffer.len();
+                        self.buffer.truncate(0);
+                        chunk_read
+                    };
                     chunk_remaining -= chunk_read as i64;
                     remaining -= chunk_read as i64;
                     dst_offset += chunk_read as i64;
