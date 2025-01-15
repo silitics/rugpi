@@ -337,7 +337,7 @@ pub async fn start(
             .whatever("unable to create stdout log file")?;
         let mut stdout = child.stdout.take().expect("we used Stdio::piped");
         tokio::spawn(async move {
-            let log = rugpi_cli::add_status(CliLog::default());
+            let log = rugpi_cli::add_status(CliLog::new("VM".to_owned()));
             let mut line_buffer = Vec::new();
             let mut buffer = Vec::with_capacity(8096);
             while let Ok(read) = stdout.read_buf(&mut buffer).await {

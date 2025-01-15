@@ -4,7 +4,7 @@ use rugpi_cli::style::Stylize;
 use rugpi_cli::widgets::{Heading, Text, Widget};
 use rugpi_cli::{StatusSegment, VisualHeight};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CliLog {
     state: std::sync::Mutex<CliLogState>,
     title: String,
