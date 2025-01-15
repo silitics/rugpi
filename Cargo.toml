@@ -29,9 +29,10 @@ byte-calc = { path = "crates/byte-calc", features = ["serde"] }
 reportify = { path = "crates/reportify" }
 
 # Rugix-specific crates.
+rugix-blocking = { path = "crates/rugix-blocking" }
+rugix-fs = { path = "crates/rugix-fs" }
 rugpi-cli = { path = "crates/rugpi-cli" }
 rugpi-common = { path = "crates/rugpi-common" }
-rugix-blocking = { path = "crates/rugix-blocking" }
 
 [workspace.lints.clippy]
 needless_borrows_for_generic_args = "allow"

@@ -29,16 +29,19 @@ xscript.workspace = true
 tracing.workspace = true
 tokio.workspace = true
 
+sidex-serde.workspace = true
+sidex.workspace = true
+
+byte-calc.workspace = true
 reportify.workspace = true
+
+rugix-blocking.workspace = true
+rugix-fs.workspace = true
 rugpi-cli.workspace = true
 rugpi-common.workspace = true
-byte-calc.workspace = true
-sidex.workspace = true
-sidex-serde.workspace = true
 
 [lints]
 workspace = true
-
 
 [build-dependencies]
 sidex-build-rs.workspace = true

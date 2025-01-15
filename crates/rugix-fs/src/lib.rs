@@ -10,7 +10,7 @@ use std::path::Path;
 use tracing::{error, trace};
 
 use byte_calc::{ByteLen, NumBytes};
-use reportify::{new_whatever_type, ErrorExt, Report, ResultExt};
+use reportify::{new_whatever_type, whatever, ErrorExt, Report, ResultExt};
 
 use rugix_blocking::{block, check_abort, BlockingCtx, MaybeAborted};
 
@@ -315,6 +315,28 @@ impl Copier {
             copy_permissions: true,
             copy_ownership: true,
         }
+    }
+
+    pub fn copy_file<'cx>(
+        &mut self,
+        cx: BlockingCtx<'cx>,
+        src: &Path,
+        dst: &Path,
+    ) -> FsResult<'cx, ()> {
+        let metadata = block!(try read_metadata(cx, src));
+        if !metadata.is_file() {
+            return MaybeAborted::Done(Err(whatever!("not a file")));
+        }
+        block!(try self.copy_file_contents(cx, src, dst));
+        if self.copy_permissions {
+            block!(try std::fs::set_permissions(&dst, metadata.permissions()).whatever("unable to set permissions"));
+        }
+        if self.copy_ownership {
+            let uid = metadata.uid();
+            let gid = metadata.gid();
+            block!(try std::os::unix::fs::chown(&dst, Some(uid), Some(gid)).whatever("unable to set ownership"));
+        }
+        FsResult::Done(Ok(()))
     }
 
     /// Copy a directory recursively.
