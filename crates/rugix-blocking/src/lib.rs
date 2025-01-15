@@ -48,6 +48,7 @@ use std::task::Poll;
 /// Abortable, blocking task running in the background on a thread pool.
 ///
 /// Dropping this structure will abort the task.
+#[must_use]
 pub struct BlockingTask<T> {
     /// Handle obtained from [`tokio::task::spawn_blocking`].
     ///
