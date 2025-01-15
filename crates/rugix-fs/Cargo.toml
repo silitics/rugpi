@@ -1,5 +1,6 @@
 [package]
 name = "rugix-fs"
+description = "Abortable, blocking filesystem APIs with good error reporting."
 edition = "2021"
 authors.workspace = true
 version.workspace = true
@@ -13,15 +14,12 @@ walkdir = "2.5.0"
 
 nix.workspace = true
 tokio.workspace = true
+tracing.workspace = true
 
 byte-calc.workspace = true
 reportify.workspace = true
 
 rugix-blocking.workspace = true
-tracing.workspace = true
-
-[features]
-unstable = []
 
 [lints]
 workspace = true
