@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/*", "crates/*/fuzz", "xtask"]
+members = [
+    "crates/libs/*",
+    "crates/libs/*/fuzz",
+    "crates/tools/*",
+    "xtask"
+]
 resolver = "2"
 
 [workspace.package]
@@ -25,14 +30,14 @@ sidex-serde = { git = "https://github.com/silitics/sidex.git" }
 xscript = { version = "0.4.0", features = ["tokio"] }
 
 # Colocated but not Rugix-specific crates.
-byte-calc = { path = "crates/byte-calc", features = ["serde"] }
-reportify = { path = "crates/reportify" }
+byte-calc = { path = "crates/libs/byte-calc", features = ["serde"] }
+reportify = { path = "crates/libs/reportify" }
 
 # Rugix-specific crates.
-rugix-blocking = { path = "crates/rugix-blocking" }
-rugix-fs = { path = "crates/rugix-fs" }
-rugpi-cli = { path = "crates/rugpi-cli" }
-rugpi-common = { path = "crates/rugpi-common" }
+rugix-blocking = { path = "crates/libs/rugix-blocking" }
+rugix-fs = { path = "crates/libs/rugix-fs" }
+rugpi-cli = { path = "crates/libs/rugpi-cli" }
+rugpi-common = { path = "crates/libs/rugpi-common" }
 
 [workspace.lints.clippy]
 needless_borrows_for_generic_args = "allow"

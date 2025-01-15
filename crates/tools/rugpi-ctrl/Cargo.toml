@@ -9,22 +9,26 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-clap.workspace = true
-serde.workspace = true
-nix.workspace = true
-xscript.workspace = true
-indoc = "2.0.2"
-toml = "0.7.6"
-rugpi-common = { path = "../rugpi-common" }
-tempfile = "3.8.1"
-sha2 = "0.10.8"
 hex = "0.4.3"
-tracing.workspace = true
 indexmap = "2.5.0"
+indoc = "2.0.2"
 serde_json = "1.0.133"
-reportify.workspace = true
-rugpi-cli.workspace = true
+sha2 = "0.10.8"
+tempfile = "3.8.1"
+toml = "0.7.6"
 uuid = { version = "1.11.0", features = ["v4"] }
+
+clap.workspace = true
+nix.workspace = true
+serde.workspace = true
+tracing.workspace = true
+
+xscript.workspace = true
+
+reportify.workspace = true
+
+rugpi-cli.workspace = true
+rugpi-common.workspace = true
 
 [lints]
 workspace = true
