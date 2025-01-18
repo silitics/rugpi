@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use rugix_blocking::blocking;
+use rugix_tasks::spawn_blocking_abortable;
 use tempfile::tempdir;
 use tracing::info;
 
@@ -71,11 +71,12 @@ pub async fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> Baker
                 initialize_uboot(config, &config_dir)?;
             }
             Target::GenericGrubEfi => {
-                blocking({
+                spawn_blocking_abortable({
                     let config_dir = config_dir.clone();
                     let config = config.clone();
                     move |cx| initialize_grub(cx, &config, &config_dir)
                 })
+                .join()
                 .await?;
             }
             Target::Unknown => { /* nothing to do */ }

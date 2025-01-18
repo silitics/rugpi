@@ -1,5 +1,6 @@
 [package]
-name = "rugix-blocking"
+name = "rugix-try"
+description = "Stable implementation of the `Try` trait and related functionality."
 edition = "2021"
 authors.workspace = true
 version.workspace = true
@@ -8,7 +9,9 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-tokio.workspace = true
+
+[features]
+nightly = []
 
 [lints]
 workspace = true

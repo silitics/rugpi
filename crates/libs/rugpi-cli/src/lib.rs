@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::{fmt, io};
 
 use console::Term;
+use rugix_tasks::spawn;
 use style::{Style, Styled};
 use tracing::info;
 use tracing_subscriber::fmt::MakeWriter;
@@ -74,50 +75,49 @@ impl CliBuilder {
             Interrupted,
         }
 
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .expect("unable to build Tokio runtime");
-        let reason = runtime.block_on(async move {
-            let run_task = tokio::spawn(async move {
-                if let Err(error) = future.await {
-                    cli_msg!("Error: {error:?}");
-                    TerminationReason::Failed
-                } else {
-                    TerminationReason::Success
-                }
-            });
-            tokio::select! {
-                run_result = run_task => {
-                    match run_result {
-                        Ok(reason) => reason,
-                        Err(error) => {
-                            let panic = error.into_panic();
-                            if let Some(msg) = panic.downcast_ref::<&str>() {
-                                cli_msg!("Panic: {msg}");
-                            } else if let Some(msg) = panic.downcast_ref::<String>() {
-                                cli_msg!("Panic: {msg}");
-                            } else {
-                                cli_msg!("Panic!");
+        rugix_tasks::run_blocking_unchecked(|ctx| {
+            let reason = spawn(async move {
+                let run_task = tokio::spawn(async move {
+                    if let Err(error) = future.await {
+                        cli_msg!("Error: {error:?}");
+                        TerminationReason::Failed
+                    } else {
+                        TerminationReason::Success
+                    }
+                });
+                tokio::select! {
+                    run_result = run_task => {
+                        match run_result {
+                            Ok(reason) => reason,
+                            Err(error) => {
+                                let panic = error.into_panic();
+                                if let Some(msg) = panic.downcast_ref::<&str>() {
+                                    cli_msg!("Panic: {msg}");
+                                } else if let Some(msg) = panic.downcast_ref::<String>() {
+                                    cli_msg!("Panic: {msg}");
+                                } else {
+                                    cli_msg!("Panic!");
+                                }
+                                TerminationReason::Panicked
                             }
-                            TerminationReason::Panicked
                         }
                     }
+                    _ = tokio::signal::ctrl_c() => {
+                        TerminationReason::Interrupted
+                    }
                 }
-                _ = tokio::signal::ctrl_c() => {
-                    TerminationReason::Interrupted
-                }
+            })
+            .join_blocking(ctx);
+            info!("Shutting down...");
+            rugix_tasks::shutdown_blocking(ctx);
+            hide_status();
+            force_redraw();
+            if matches!(reason, TerminationReason::Success) {
+                std::process::exit(0)
+            } else {
+                std::process::exit(1)
             }
-        });
-        info!("Shutting down...");
-        runtime.shutdown_timeout(Duration::from_secs(10));
-        hide_status();
-        force_redraw();
-        if matches!(reason, TerminationReason::Success) {
-            std::process::exit(0)
-        } else {
-            std::process::exit(1)
-        }
+        })
     }
 }
 

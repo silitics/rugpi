@@ -36,10 +36,11 @@ sidex.workspace = true
 byte-calc.workspace = true
 reportify.workspace = true
 
-rugix-blocking.workspace = true
+rugix-tasks.workspace = true
 rugix-fs.workspace = true
 rugpi-cli.workspace = true
 rugpi-common.workspace = true
+rugix-try.workspace = true
 
 [lints]
 workspace = true

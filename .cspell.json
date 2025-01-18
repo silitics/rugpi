@@ -13,6 +13,7 @@
     "/target/"
   ],
   "words": [
+    "arclist",
     "armhf",
     "Armhf",
     "Armv",
@@ -86,6 +87,8 @@
     "Pebibyte",
     "pebibytes",
     "pieeprom",
+    "pointee",
+    "Pointees",
     "postgresql",
     "Qcow",
     "raspios",
@@ -132,6 +135,7 @@
     "walkdir",
     "workdir",
     "xscript",
+    "xtry",
     "Yocto",
     "Yubi",
     "zerow"

@@ -7,12 +7,13 @@ use std::os::raw::c_void;
 use std::os::unix::fs::{FileExt, FileTypeExt, MetadataExt};
 use std::path::Path;
 
+use rugix_try::xtry;
 use tracing::{error, trace};
 
 use byte_calc::{ByteLen, NumBytes};
 use reportify::{new_whatever_type, whatever, ErrorExt, Report, ResultExt};
 
-use rugix_blocking::{block, check_abort, BlockingCtx, MaybeAborted};
+use rugix_tasks::{check_abort, spawn_blocking, BlockingCtx, MaybeAborted};
 
 #[cfg(not(target_family = "unix"))]
 compile_error!("only Unix-like systems are supported");
@@ -23,7 +24,7 @@ new_whatever_type! {
 }
 
 /// Type alias for the result of filesystem APIs.
-pub type FsResult<'cx, T> = MaybeAborted<'cx, Result<T, Report<FsError>>>;
+pub type FsResult<T> = MaybeAborted<Result<T, Report<FsError>>>;
 
 /// Slice of zeros.
 static ZEROS: &[u8] = &[0; 4096];
@@ -39,9 +40,9 @@ pub struct File<'cx> {
 
 impl<'cx> File<'cx> {
     /// Create and truncate the file.
-    pub fn create(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, Self> {
+    pub fn create(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<Self> {
         check_abort!(cx);
-        let file = block!(try std::fs::OpenOptions::new()
+        let file = xtry!(std::fs::OpenOptions::new()
             .create(true)
             .write(true)
             .read(true)
@@ -52,9 +53,9 @@ impl<'cx> File<'cx> {
     }
 
     /// Open a file for reading.
-    pub fn open(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, Self> {
+    pub fn open(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<Self> {
         check_abort!(cx);
-        let file = block!(try std::fs::OpenOptions::new()
+        let file = xtry!(std::fs::OpenOptions::new()
             .read(true)
             .open(path)
             .whatever("unable to open file"));
@@ -62,27 +63,29 @@ impl<'cx> File<'cx> {
     }
 
     /// Read the metadata of the file.
-    pub fn read_metadata(&self) -> FsResult<'cx, Metadata> {
+    pub fn read_metadata(&self) -> FsResult<Metadata> {
         check_abort!(self.cx);
-        FsResult::Done(self.file.metadata().whatever("unable to read metadata"))
+        FsResult::Done(Ok(xtry!(self
+            .file
+            .metadata()
+            .whatever("unable to read metadata"))))
     }
 
     /// Get current position of the file.
-    pub fn current_position(&mut self) -> FsResult<'cx, NumBytes> {
+    pub fn current_position(&mut self) -> FsResult<NumBytes> {
         check_abort!(self.cx);
-        FsResult::Done(
-            self.file
-                .stream_position()
-                .whatever("unable to get file position")
-                .map(NumBytes::new),
-        )
+        FsResult::Done(Ok(xtry!(self
+            .file
+            .stream_position()
+            .whatever("unable to get file position")
+            .map(NumBytes::new))))
     }
 
     /// Set the current position of the file to the given position.
-    pub fn set_current_position(&mut self, pos: NumBytes) -> FsResult<'cx, ()> {
+    pub fn set_current_position(&mut self, pos: NumBytes) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("set current position to {pos:#}");
-        block!(try self
+        xtry!(self
             .file
             .seek(std::io::SeekFrom::Start(pos.raw))
             .whatever("unable to seek to position"));
@@ -95,11 +98,7 @@ impl<'cx> File<'cx> {
     ///
     /// The file will be read in chunks of at most 32 KiB. Between reading chunks, the
     /// blocking context will be checked for aborts.
-    pub fn read_into_vec(
-        &mut self,
-        buffer: &mut Vec<u8>,
-        limit: Option<NumBytes>,
-    ) -> FsResult<'cx, ()> {
+    pub fn read_into_vec(&mut self, buffer: &mut Vec<u8>, limit: Option<NumBytes>) -> FsResult<()> {
         trace!(?limit, "reading bytes into vector");
         let raw_fd = self.file.as_raw_fd();
         let mut remaining = limit;
@@ -135,22 +134,22 @@ impl<'cx> File<'cx> {
                 }
             }
         }
-        FsResult::Done(Ok(()))
+        Ok(()).into()
     }
 
     /// Read bytes into a vector starting at the current position.
     ///
     /// For details, see [`Self::read_into_vec`].
-    pub fn read_to_vec(&mut self, limit: Option<NumBytes>) -> FsResult<'cx, Vec<u8>> {
+    pub fn read_to_vec(&mut self, limit: Option<NumBytes>) -> FsResult<Vec<u8>> {
         let mut buffer = Vec::new();
-        block!(try self.read_into_vec(&mut buffer, limit));
+        xtry!(xtry!(self.read_into_vec(&mut buffer, limit)));
         FsResult::Done(Ok(buffer))
     }
 
     /// Write the provided bytes to the file at the current position.
     ///
     /// Advances the current position by the number of bytes.
-    pub fn write(&mut self, buf: &[u8]) -> FsResult<'cx, ()> {
+    pub fn write(&mut self, buf: &[u8]) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("writing {} bytes at current position", buf.len());
         FsResult::Done(self.file.write_all(buf).whatever("unable to write to file"))
@@ -159,7 +158,7 @@ impl<'cx> File<'cx> {
     /// Write the provided bytes to the file at the given offset.
     ///
     /// Does not change the current position of the file.
-    pub fn write_at(&mut self, offset: NumBytes, buf: &[u8]) -> FsResult<'cx, ()> {
+    pub fn write_at(&mut self, offset: NumBytes, buf: &[u8]) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("writing {} bytes at offset {offset:#}", buf.len());
         FsResult::Done(
@@ -172,18 +171,18 @@ impl<'cx> File<'cx> {
     /// Write zeros to the file at the given offset with the given length.
     ///
     /// Does not change the current position of the file.
-    pub fn write_zeros(&mut self, mut offset: NumBytes, length: NumBytes) -> FsResult<'cx, ()> {
+    pub fn write_zeros(&mut self, mut offset: NumBytes, length: NumBytes) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("writing zeros at offset {offset:#} with length {length:#}");
         let mut remaining = length;
         while remaining > 0 {
             check_abort!(self.cx);
             let write_len = remaining.min(ZEROS.byte_len());
-            block!(try self.write_at(
+            xtry!(xtry!(self.write_at(
                 offset,
                 &ZEROS[..usize::try_from(write_len.raw)
-                    .expect("must fit into `usize` as it is bounded by `ZEROS.byte_len()`")]
-            ));
+                    .expect("must fit into `usize` as it is bounded by `ZEROS.byte_len()`")],
+            )));
             remaining -= write_len;
             offset += write_len;
         }
@@ -193,7 +192,7 @@ impl<'cx> File<'cx> {
     /// Punch a hole at the given offset and with the given size.
     ///
     /// Does not change the current position of the file.
-    pub fn punch_hole(&mut self, offset: NumBytes, size: NumBytes) -> FsResult<'cx, ()> {
+    pub fn punch_hole(&mut self, offset: NumBytes, size: NumBytes) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("punching hole into file at offset {offset:#} with size {size:#}");
         #[cfg(target_os = "linux")]
@@ -201,11 +200,11 @@ impl<'cx> File<'cx> {
             use std::os::fd::AsRawFd;
             use std::os::linux::fs::MetadataExt;
             // spell:ignore FALLOC, blksize, ENOTSUP
-            let metadata = block!(try self.read_metadata());
+            let metadata = xtry!(xtry!(self.read_metadata()));
             // Ensure that the file is large enough for the hole.
             let file_size = NumBytes::new(metadata.len());
             if file_size < offset + size {
-                block!(try self.allocate(offset, size));
+                xtry!(xtry!(self.allocate(offset, size)));
             };
             // Holes can only be punched in multiples of the filesystem's block size. Hence,
             // we compute the start and end of the hole aligned to the block size.
@@ -232,8 +231,8 @@ impl<'cx> File<'cx> {
                 }
             };
             // We now fill the remaining loose ends of the hole with zeros.
-            block!(try self.write_zeros(offset, start_hole - offset));
-            block!(try self.write_zeros(end_hole, offset + size - end_hole));
+            xtry!(xtry!(self.write_zeros(offset, start_hole - offset)));
+            xtry!(xtry!(self.write_zeros(end_hole, offset + size - end_hole)));
             return FsResult::Done(Ok(()));
         }
         #[cfg_attr(target_os = "linux", expect(unreachable_code))]
@@ -243,7 +242,7 @@ impl<'cx> File<'cx> {
     /// Allocate blocks for the given size at the given offset.
     ///
     /// Does not change the current position of the file.
-    pub fn allocate(&mut self, offset: NumBytes, size: NumBytes) -> FsResult<'cx, ()> {
+    pub fn allocate(&mut self, offset: NumBytes, size: NumBytes) -> FsResult<()> {
         check_abort!(self.cx);
         trace!("allocating space at offset {offset:#} with size {size:#}");
         #[cfg(target_os = "linux")]
@@ -261,10 +260,10 @@ impl<'cx> File<'cx> {
             }
             Ok(()) => return FsResult::Done(Ok(())),
         };
-        let metadata = block!(try self.read_metadata());
+        let metadata = xtry!(xtry!(self.read_metadata()));
         let size = offset + size;
         if size > metadata.len() {
-            block!(try self
+            xtry!(self
                 .file
                 .set_len(size.raw)
                 .whatever("unable to set file length"));
@@ -274,19 +273,19 @@ impl<'cx> File<'cx> {
 }
 
 /// Create a directory.
-pub fn create_dir<'cx>(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, ()> {
+pub fn create_dir(cx: BlockingCtx, path: &Path) -> FsResult<()> {
     check_abort!(cx);
     FsResult::Done(std::fs::create_dir(path).whatever("unable to create directory"))
 }
 
 /// Create a directory recursively.
-pub fn create_dir_recursive<'cx>(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, ()> {
+pub fn create_dir_recursive(cx: BlockingCtx, path: &Path) -> FsResult<()> {
     check_abort!(cx);
     FsResult::Done(std::fs::create_dir_all(path).whatever("unable to create directory"))
 }
 
 /// Read metadata from path.
-pub fn read_metadata<'cx>(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, Metadata> {
+pub fn read_metadata(cx: BlockingCtx, path: &Path) -> FsResult<Metadata> {
     check_abort!(cx);
     FsResult::Done(std::fs::metadata(path).whatever("unable to read metadata"))
 }
@@ -294,8 +293,8 @@ pub fn read_metadata<'cx>(cx: BlockingCtx<'cx>, path: &Path) -> FsResult<'cx, Me
 /// Allocate a file with the given size.
 ///
 /// If the file already exists, it will be truncated to the given size.
-pub fn allocate_file<'cx>(cx: BlockingCtx<'cx>, path: &Path, size: NumBytes) -> FsResult<'cx, ()> {
-    block!(try File::create(cx, path)).allocate(NumBytes::new(0), size)
+pub fn allocate_file(cx: BlockingCtx, path: &Path, size: NumBytes) -> FsResult<()> {
+    xtry!(xtry!(File::create(cx, path))).allocate(NumBytes::new(0), size)
 }
 
 /// Auxiliary data structure for copying files and directories.
@@ -317,42 +316,34 @@ impl Copier {
         }
     }
 
-    pub fn copy_file<'cx>(
-        &mut self,
-        cx: BlockingCtx<'cx>,
-        src: &Path,
-        dst: &Path,
-    ) -> FsResult<'cx, ()> {
-        let metadata = block!(try read_metadata(cx, src));
+    pub fn copy_file(&mut self, cx: BlockingCtx, src: &Path, dst: &Path) -> FsResult<()> {
+        let metadata = xtry!(xtry!(read_metadata(cx, src)));
         if !metadata.is_file() {
-            return MaybeAborted::Done(Err(whatever!("not a file")));
+            return FsResult::Done(Err(whatever!("not a file")));
         }
-        block!(try self.copy_file_contents(cx, src, dst));
+        xtry!(xtry!(self.copy_file_contents(cx, src, dst)));
         if self.copy_permissions {
-            block!(try std::fs::set_permissions(&dst, metadata.permissions()).whatever("unable to set permissions"));
+            xtry!(std::fs::set_permissions(&dst, metadata.permissions())
+                .whatever("unable to set permissions"));
         }
         if self.copy_ownership {
             let uid = metadata.uid();
             let gid = metadata.gid();
-            block!(try std::os::unix::fs::chown(&dst, Some(uid), Some(gid)).whatever("unable to set ownership"));
+            xtry!(std::os::unix::fs::chown(&dst, Some(uid), Some(gid))
+                .whatever("unable to set ownership"));
         }
         FsResult::Done(Ok(()))
     }
 
     /// Copy a directory recursively.
-    pub fn copy_dir<'cx>(
-        &mut self,
-        cx: BlockingCtx<'cx>,
-        src_dir: &Path,
-        dst_dir: &Path,
-    ) -> FsResult<'cx, ()> {
+    pub fn copy_dir(&mut self, cx: BlockingCtx, src_dir: &Path, dst_dir: &Path) -> FsResult<()> {
         trace!("copy directory from {src_dir:?} to {dst_dir:?}");
         for entry in walkdir::WalkDir::new(src_dir).contents_first(true) {
             check_abort!(cx);
-            let entry = block!(try entry
+            let entry = xtry!(entry
                 .whatever("unable to walk directory")
                 .with_info(|_| format!("dir: {src_dir:?}")));
-            let tail = block!(try entry
+            let tail = xtry!(entry
                 .path()
                 .strip_prefix(src_dir)
                 .whatever("unable to strip path prefix from source path")
@@ -360,18 +351,18 @@ impl Copier {
                 .with_info(|_| format!("src: {src_dir:?}")));
             let dst = dst_dir.join(tail);
             if let Some(parent) = dst.parent() {
-                block!(try create_dir_recursive(cx, parent));
+                xtry!(xtry!(create_dir_recursive(cx, parent)));
             }
             if entry.file_type().is_dir() {
                 if !dst.exists() {
-                    block!(try create_dir(cx, &dst));
+                    xtry!(xtry!(create_dir(cx, &dst)));
                 }
             } else if entry.file_type().is_file() {
-                block!(try self.copy_file_contents(cx, entry.path(), &dst))
+                xtry!(xtry!(self.copy_file_contents(cx, entry.path(), &dst)))
             } else if entry.file_type().is_symlink() {
-                let link_dst =
-                    block!(try entry.path().read_link().whatever("unable to read symlink"));
-                block!(try std::os::unix::fs::symlink(&link_dst, &dst).whatever("unable to create symlink"));
+                let link_dst = xtry!(entry.path().read_link().whatever("unable to read symlink"));
+                xtry!(std::os::unix::fs::symlink(&link_dst, &dst)
+                    .whatever("unable to create symlink"));
             } else if entry.file_type().is_block_device() {
                 todo!("implement copy for block device");
             } else if entry.file_type().is_char_device() {
@@ -379,15 +370,17 @@ impl Copier {
             } else {
                 todo!("unknown file type");
             }
-            let metadata = block!(try entry.metadata().whatever("unable to read metadata"));
+            let metadata = xtry!(entry.metadata().whatever("unable to read metadata"));
             if !entry.file_type().is_symlink() {
                 if self.copy_permissions {
-                    block!(try std::fs::set_permissions(&dst, metadata.permissions()).whatever("unable to set permissions"));
+                    xtry!(std::fs::set_permissions(&dst, metadata.permissions())
+                        .whatever("unable to set permissions"));
                 }
                 if self.copy_ownership {
                     let uid = metadata.uid();
                     let gid = metadata.gid();
-                    block!(try std::os::unix::fs::chown(&dst, Some(uid), Some(gid)).whatever("unable to set ownership"));
+                    xtry!(std::os::unix::fs::chown(&dst, Some(uid), Some(gid))
+                        .whatever("unable to set ownership"));
                 }
             }
         }
@@ -396,17 +389,17 @@ impl Copier {
 
     /// Copy the contents of one file to the other, creating the destination if it does
     /// not exist.
-    pub fn copy_file_contents<'cx>(
+    pub fn copy_file_contents(
         &mut self,
-        cx: BlockingCtx<'cx>,
+        cx: BlockingCtx,
         src_file: &Path,
         dst_file: &Path,
-    ) -> FsResult<'cx, ()> {
+    ) -> FsResult<()> {
         check_abort!(cx);
         trace!("copy file contents from {src_file:?} to {dst_file:?}");
-        let mut src = block!(try File::open(cx, src_file));
-        let mut dst = block!(try File::create(cx, dst_file));
-        let metadata = block!(try src.read_metadata());
+        let mut src = xtry!(xtry!(File::open(cx, src_file)));
+        let mut dst = xtry!(xtry!(File::create(cx, dst_file)));
+        let metadata = xtry!(xtry!(src.read_metadata()));
         self.copy_file_range(
             cx,
             &mut src,
@@ -421,15 +414,15 @@ impl Copier {
     ///
     /// On Linux, this does a sparse copy, i.e., it punches holes in the destination file
     /// where the source file has holes.
-    pub fn copy_file_range<'cx>(
+    pub fn copy_file_range(
         &mut self,
-        cx: BlockingCtx<'cx>,
-        src: &mut File<'cx>,
+        cx: BlockingCtx,
+        src: &mut File,
         src_position: NumBytes,
-        dst: &mut File<'cx>,
+        dst: &mut File,
         dst_position: NumBytes,
         size: NumBytes,
-    ) -> FsResult<'cx, ()> {
+    ) -> FsResult<()> {
         check_abort!(cx);
         trace!(
             "copying range of size {size:#} from {src_position:#} (source) to {dst_position:#} (destination)"
@@ -441,18 +434,18 @@ impl Copier {
             let mut dst_offset = i64::try_from(dst_position.raw).expect("offset must not overflow");
             let src_raw_fd = src.file.as_raw_fd();
             let dst_raw_fd = dst.file.as_raw_fd();
-            block!(try lseek64(src_raw_fd, src_offset, Whence::SeekSet)
+            xtry!(lseek64(src_raw_fd, src_offset, Whence::SeekSet)
                 .whatever_with(|_| format!("unable to seek to {src_offset}")));
-            block!(try lseek64(dst_raw_fd, dst_offset, Whence::SeekSet)
+            xtry!(lseek64(dst_raw_fd, dst_offset, Whence::SeekSet)
                 .whatever_with(|_| format!("unable to seek to {dst_offset}")));
             let mut remaining = i64::try_from(size.raw).expect("size must not overflow `i64`");
             let mut use_copy_file_range = true;
             while remaining > 0 {
                 // If there is no hole, then `next_hole` points to the end of the file as
                 // there always is an implicit hole at the end of any file.
-                let next_hole = block!(try lseek64(src_raw_fd, src_offset, Whence::SeekHole)
+                let next_hole = xtry!(lseek64(src_raw_fd, src_offset, Whence::SeekHole)
                     .whatever("unable to seek to next hole"));
-                block!(try lseek64(src.file.as_raw_fd(), src_offset, Whence::SeekSet)
+                xtry!(lseek64(src.file.as_raw_fd(), src_offset, Whence::SeekSet)
                     .whatever("unable to set source offset"));
                 let chunk_size = next_hole - src_offset;
                 let mut chunk_remaining = chunk_size.min(remaining);
@@ -471,12 +464,15 @@ impl Copier {
                                 use_copy_file_range = false;
                                 continue;
                             }
-                            result => block!(try result.whatever("unable to copy file range")),
+                            result => xtry!(result.whatever("unable to copy file range")),
                         }
                     } else {
                         let chunk_read = chunk_remaining.min(8192);
-                        block!(try src.read_into_vec(&mut self.buffer, Some(NumBytes::new(chunk_read as u64))));
-                        block!(try dst.write(&self.buffer));
+                        xtry!(xtry!(src.read_into_vec(
+                            &mut self.buffer,
+                            Some(NumBytes::new(chunk_read as u64)),
+                        )));
+                        xtry!(xtry!(dst.write(&self.buffer)));
                         let chunk_read = self.buffer.len();
                         self.buffer.truncate(0);
                         chunk_read
@@ -490,21 +486,21 @@ impl Copier {
                     src_offset = match lseek64(src_raw_fd, next_hole, Whence::SeekData) {
                         Ok(src_offset) => src_offset,
                         Err(nix::errno::Errno::ENXIO) => {
-                            block!(try dst.punch_hole(
+                            xtry!(xtry!(dst.punch_hole(
                                 NumBytes::new(dst_offset as u64),
                                 NumBytes::new(remaining as u64),
-                            ));
+                            )));
                             break;
                         }
-                        error => block!(try error.whatever("unable to seek in src")),
+                        error => xtry!(error.whatever("unable to seek in src")),
                     };
                     let hole_size = src_offset - next_hole;
-                    block!(try dst.punch_hole(
+                    xtry!(xtry!(dst.punch_hole(
                         NumBytes::new(dst_offset as u64),
-                        NumBytes::new(hole_size as u64)
-                    ));
+                        NumBytes::new(hole_size as u64),
+                    )));
                     dst_offset += hole_size;
-                    block!(try lseek64(dst_raw_fd, hole_size, Whence::SeekCur)
+                    xtry!(lseek64(dst_raw_fd, hole_size, Whence::SeekCur)
                         .whatever("unable to seek in dst"));
                     remaining -= hole_size;
                 }
@@ -513,14 +509,17 @@ impl Copier {
         }
         #[cfg_attr(target_os = "linux", expect(unreachable_code))]
         {
-            block!(try src.set_current_position(src_position));
-            block!(try dst.set_current_position(dst_position));
+            xtry!(xtry!(src.set_current_position(src_position)));
+            xtry!(xtry!(dst.set_current_position(dst_position)));
             let mut remaining = size;
             while remaining > 0 {
                 check_abort!(cx);
                 const CHUNK_SIZE: NumBytes = NumBytes::kibibytes(8);
-                block!(try src.read_into_vec(&mut self.buffer, Some(remaining.min(CHUNK_SIZE))));
-                block!(try dst.write(&self.buffer));
+                xtry!(xtry!(src.read_into_vec(
+                    &mut self.buffer,
+                    Some(remaining.min(CHUNK_SIZE))
+                )));
+                xtry!(xtry!(dst.write(&self.buffer)));
                 remaining -= self.buffer.byte_len();
                 self.buffer.truncate(0);
             }
@@ -541,9 +540,9 @@ pub struct TempDir {
 
 impl TempDir {
     /// Create a new temporary directory.
-    pub fn create(_: BlockingCtx<'_>) -> FsResult<'_, Self> {
+    pub fn create(_: BlockingCtx<'_>) -> FsResult<Self> {
         FsResult::Done(Ok(Self {
-            tempdir: Some(block!(try
+            tempdir: Some(xtry!(
                 tempfile::tempdir().whatever("unable to create temporary directory")
             )),
         }))
@@ -560,11 +559,12 @@ impl Drop for TempDir {
         // `TempDir` may be dropped from an asynchronous context, so let's
         // schedule the cleanup in a separate thread.
         let tempdir = self.tempdir.take().unwrap();
-        tokio::task::spawn_blocking(move || {
+        spawn_blocking(move |_| {
             trace!("cleaning up temporary directory {:?}", tempdir.path());
             if let Err(error) = tempdir.close() {
                 error!("error cleaning up temporary directory: {:?}", error);
             }
-        });
+        })
+        .detach();
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "rugpi-cli"
+name = "rugix-tasks"
 edition = "2021"
 authors.workspace = true
 version.workspace = true
@@ -7,14 +7,16 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 
+[features]
+default = []
+nightly = ["rugix-try/nightly"]
+
 [dependencies]
-console = "0.15.10"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-
 tokio.workspace = true
-tracing.workspace = true
+flume = { version = "0.11.1", features = ["async"] }
 
-rugix-tasks.workspace = true
+rugix-try.workspace = true
+futures = "0.3.31"
 
 [lints]
 workspace = true

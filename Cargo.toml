@@ -34,8 +34,9 @@ byte-calc = { path = "crates/libs/byte-calc", features = ["serde"] }
 reportify = { path = "crates/libs/reportify" }
 
 # Rugix-specific crates.
-rugix-blocking = { path = "crates/libs/rugix-blocking" }
 rugix-fs = { path = "crates/libs/rugix-fs" }
+rugix-tasks = { path = "crates/libs/rugix-tasks" }
+rugix-try = { path = "crates/libs/rugix-try" }
 rugpi-cli = { path = "crates/libs/rugpi-cli" }
 rugpi-common = { path = "crates/libs/rugpi-common" }
 
