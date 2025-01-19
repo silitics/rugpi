@@ -14,14 +14,14 @@ pub mod args;
 pub(crate) mod status;
 
 /// Run Rugix Bakery with the provided command line arguments.
-pub async fn run(args: args::Args) -> BakeryResult<()> {
+pub fn run(args: args::Args) -> BakeryResult<()> {
     match &args.cmd {
-        args::Command::Bake(cmd) => cmds::run_bake::run(&args, cmd).await,
-        args::Command::Test(cmd) => cmds::run_test::run(&args, cmd).await,
-        args::Command::List(cmd) => cmds::run_list::run(&args, cmd).await,
-        args::Command::Pull => cmds::run_pull::run(&args).await,
-        args::Command::Init(cmd) => cmds::run_init::run(cmd).await,
-        args::Command::Shell => cmds::run_shell::run().await,
+        args::Command::Bake(cmd) => cmds::run_bake::run(&args, cmd),
+        args::Command::Test(cmd) => cmds::run_test::run(&args, cmd),
+        args::Command::List(cmd) => cmds::run_list::run(&args, cmd),
+        args::Command::Pull => cmds::run_pull::run(&args),
+        args::Command::Init(cmd) => cmds::run_init::run(cmd),
+        args::Command::Shell => cmds::run_shell::run(),
     }
 }
 
@@ -31,9 +31,8 @@ fn current_dir() -> BakeryResult<PathBuf> {
 }
 
 /// Load the project from the current working directory.
-async fn load_project(args: &args::Args) -> BakeryResult<ProjectRef> {
+fn load_project(args: &args::Args) -> BakeryResult<ProjectRef> {
     ProjectLoader::current_dir()?
         .with_config_file(args.config.as_deref())
         .load()
-        .await
 }

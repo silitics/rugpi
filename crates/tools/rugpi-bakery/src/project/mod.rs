@@ -1,12 +1,11 @@
 //! In-memory project representation.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use library::Library;
 use reportify::ResultExt;
 use repositories::ProjectRepositories;
-use tokio::sync::OnceCell;
 
 use crate::config::load_config;
 use crate::config::projects::ProjectConfig;
@@ -38,24 +37,27 @@ impl ProjectRef {
     /// Retrieve the repositories of the project.
     ///
     /// This may load the repositories lazily.
-    pub async fn repositories(&self) -> BakeryResult<&Arc<ProjectRepositories>> {
-        self.shared
-            .lazy
-            .repositories
-            .get_or_try_init(|| async { ProjectRepositories::load(self).await.map(Arc::new) })
-            .await
+    pub fn repositories(&self) -> BakeryResult<Arc<ProjectRepositories>> {
+        let mut repositories = self.shared.lazy.repositories.lock().unwrap();
+        if let Some(repositories) = &*repositories {
+            Ok(repositories.clone())
+        } else {
+            *repositories = Some(ProjectRepositories::load(self).map(Arc::new)?);
+            Ok(repositories.clone().unwrap())
+        }
     }
 
     /// Retrieve the library of the project.
     ///
     /// This may load the library lazily.
-    pub async fn library(&self) -> BakeryResult<&Arc<Library>> {
-        let repositories = self.repositories().await?.clone();
-        self.shared
-            .lazy
-            .library
-            .get_or_try_init(|| async { Library::load(repositories).await.map(Arc::new) })
-            .await
+    pub fn library(&self) -> BakeryResult<Arc<Library>> {
+        let mut library = self.shared.lazy.library.lock().unwrap();
+        if let Some(library) = &*library {
+            Ok(library.clone())
+        } else {
+            *library = Some(Library::load(self.repositories()?).map(Arc::new)?);
+            Ok(library.clone().unwrap())
+        }
     }
 }
 
@@ -72,8 +74,8 @@ struct ProjectShared {
 
 #[derive(Debug, Default)]
 struct ProjectLazy {
-    repositories: OnceCell<Arc<ProjectRepositories>>,
-    library: OnceCell<Arc<Library>>,
+    repositories: Mutex<Option<Arc<ProjectRepositories>>>,
+    library: Mutex<Option<Arc<Library>>>,
 }
 
 /// Project loader.
@@ -117,8 +119,8 @@ impl ProjectLoader {
     }
 
     /// Load the project.
-    pub async fn load(self) -> BakeryResult<ProjectRef> {
-        let config = load_config(&self.config_path()).await?;
+    pub fn load(self) -> BakeryResult<ProjectRef> {
+        let config = load_config(&self.config_path())?;
         Ok(ProjectRef {
             shared: Arc::new(ProjectShared {
                 dir: self.project_dir,

@@ -1,11 +1,12 @@
 //! Data structures and other functionality for the various configuration files.
 
-use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
+use std::{fmt, fs};
 
 use images::{Filesystem, ImageConfig, PartitionTableType};
 use projects::ProjectConfig;
+use rugix_tasks::check_canceled;
 use serde::Deserialize;
 
 use reportify::{whatever, ResultExt};
@@ -118,17 +119,11 @@ where
 }
 
 /// Load a configuration of type `T` from the provided path.
-pub async fn load_config<T>(path: &Path) -> BakeryResult<T>
+pub fn load_config<T>(path: &Path) -> BakeryResult<T>
 where
     T: 'static + for<'de> Deserialize<'de>,
 {
-    async {
-        parse_config(
-            &tokio::fs::read_to_string(path)
-                .await
-                .whatever("unable to read configuration file")?,
-        )
-    }
-    .await
-    .with_info(|_| format!("loading configuration from {path:?}"))
+    check_canceled();
+    parse_config(&fs::read_to_string(path).whatever("unable to read configuration file")?)
+        .with_info(|_| format!("loading configuration from {path:?}"))
 }

@@ -3,6 +3,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use rugix_tasks::block_on;
 use tracing::info;
 
 use reportify::{ErrorExt, ResultExt};
@@ -18,8 +19,8 @@ use crate::{oven, BakeryResult};
 
 pub mod qemu;
 
-pub async fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
-    let test_config = load_config::<TestConfig>(test_path).await?;
+pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
+    let test_config = load_config::<TestConfig>(test_path)?;
 
     let test_name = test_path
         .file_stem()
@@ -35,9 +36,7 @@ pub async fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
             let output = output.clone();
             let project = project.clone();
             let disk_image = system.disk_image.clone();
-            oven::bake_image(&project, &disk_image, &output)
-                .await
-                .whatever("error baking image")?;
+            oven::bake_image(&project, &disk_image, &output).whatever("error baking image")?;
         }
 
         let test_status = rugpi_cli::add_status(TestCliStatus {
@@ -48,68 +47,79 @@ pub async fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
 
         let image_config = project.config().resolve_image_config(&system.disk_image)?;
 
-        let vm = qemu::start(image_config.architecture, &output.to_string_lossy(), system).await?;
+        let test_config = test_config.clone();
 
-        info!("VM started");
+        block_on(async move {
+            let vm = qemu::start(
+                image_config.architecture,
+                &output.to_string_lossy(),
+                &system,
+            )
+            .await?;
 
-        let ctx = TestCtx {
-            status: test_status.clone(),
-        };
+            info!("VM started");
 
-        for (idx, step) in test_config.steps.iter().enumerate() {
-            test_status.state.lock().unwrap().current_step = idx as u64 + 1;
-            rugpi_cli::redraw();
-            match step {
-                crate::config::tests::TestStep::Run(RunStep {
-                    description,
-                    script,
-                    stdin_file,
-                    may_disconnect,
-                    may_fail,
-                }) => {
-                    info!("running script");
-                    ctx.status
-                        .set_description(description.clone().unwrap_or_default());
-                    vm.wait_for_ssh()
-                        .await
-                        .whatever("unable to connect to VM via SSH")?;
-                    if let Err(report) = vm
-                        .run_script(&ctx, script, stdin_file.as_ref().map(|p| p.as_ref()))
-                        .await
-                    {
-                        match report.error() {
-                            qemu::ExecError::Disconnected => {
-                                if !may_disconnect.unwrap_or(false) {
+            let ctx = TestCtx {
+                status: test_status.clone(),
+            };
+
+            for (idx, step) in test_config.steps.iter().enumerate() {
+                test_status.state.lock().unwrap().current_step = idx as u64 + 1;
+                rugpi_cli::redraw();
+                match step {
+                    crate::config::tests::TestStep::Run(RunStep {
+                        description,
+                        script,
+                        stdin_file,
+                        may_disconnect,
+                        may_fail,
+                    }) => {
+                        info!("running script");
+                        ctx.status
+                            .set_description(description.clone().unwrap_or_default());
+                        vm.wait_for_ssh()
+                            .await
+                            .whatever("unable to connect to VM via SSH")?;
+                        if let Err(report) = vm
+                            .run_script(&ctx, script, stdin_file.as_ref().map(|p| p.as_ref()))
+                            .await
+                        {
+                            match report.error() {
+                                qemu::ExecError::Disconnected => {
+                                    if !may_disconnect.unwrap_or(false) {
+                                        return Err(report.whatever("script execution failed"));
+                                    }
+                                }
+                                qemu::ExecError::Failed { code } => {
+                                    if *code != 0 && !may_fail.unwrap_or(false) {
+                                        return Err(report.whatever("script execution failed"));
+                                    }
+                                }
+                                qemu::ExecError::Other => {
                                     return Err(report.whatever("script execution failed"));
                                 }
-                            }
-                            qemu::ExecError::Failed { code } => {
-                                if *code != 0 && !may_fail.unwrap_or(false) {
-                                    return Err(report.whatever("script execution failed"));
-                                }
-                            }
-                            qemu::ExecError::Other => {
-                                return Err(report.whatever("script execution failed"));
                             }
                         }
                     }
-                }
-                crate::config::tests::TestStep::Wait(WaitStep {
-                    description,
-                    duration,
-                }) => {
-                    ctx.status
-                        .set_description(description.clone().unwrap_or_else(|| {
-                            if *duration == 1.0 {
-                                "wait for 1 second".to_owned()
-                            } else {
-                                format!("wait for {duration:.1} seconds")
-                            }
-                        }));
-                    tokio::time::sleep(Duration::from_secs_f64(*duration)).await;
+                    crate::config::tests::TestStep::Wait(WaitStep {
+                        description,
+                        duration,
+                    }) => {
+                        ctx.status
+                            .set_description(description.clone().unwrap_or_else(|| {
+                                if *duration == 1.0 {
+                                    "wait for 1 second".to_owned()
+                                } else {
+                                    format!("wait for {duration:.1} seconds")
+                                }
+                            }));
+                        tokio::time::sleep(Duration::from_secs_f64(*duration)).await;
+                    }
                 }
             }
-        }
+
+            Ok(())
+        })?;
     }
 
     Ok(())

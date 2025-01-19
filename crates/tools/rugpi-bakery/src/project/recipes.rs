@@ -3,7 +3,7 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{fmt, ops};
+use std::{fmt, fs, ops};
 
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +40,7 @@ impl RecipeLoader {
     }
 
     /// Loads a recipe from the given path.
-    pub async fn load(&self, path: &Path) -> BakeryResult<Recipe> {
+    pub fn load(&self, path: &Path) -> BakeryResult<Recipe> {
         let path = path.to_path_buf();
         let modified = mtime_recursive(&path).whatever("unable to determine mtime")?;
         let name = path
@@ -49,19 +49,14 @@ impl RecipeLoader {
             .to_string_lossy()
             .into();
         let config_path = path.join("recipe.toml");
-        let config = load_config(&config_path).await?;
+        let config = load_config(&config_path)?;
         let mut steps = Vec::new();
         let steps_dir = path.join("steps");
         if steps_dir.exists() {
-            let mut read_dir = tokio::fs::read_dir(&steps_dir)
-                .await
-                .whatever("unable to read recipe steps")?;
-            while let Some(entry) = read_dir
-                .next_entry()
-                .await
-                .whatever("error reading next directory entry")?
-            {
-                steps.push(RecipeStep::load(&entry.path()).await?);
+            let mut read_dir = fs::read_dir(&steps_dir).whatever("unable to read recipe steps")?;
+            while let Some(entry) = read_dir.next() {
+                let entry = entry.whatever("error reading next directory entry")?;
+                steps.push(RecipeStep::load(&entry.path())?);
             }
         }
         steps.sort_by_key(|step| step.position);
@@ -131,7 +126,7 @@ pub struct RecipeStep {
 
 impl RecipeStep {
     /// Tries to load a recipe step from the provided path.
-    async fn load(path: &Path) -> BakeryResult<Self> {
+    fn load(path: &Path) -> BakeryResult<Self> {
         let filename = path
             .file_name()
             .and_then(OsStr::to_str)
@@ -143,8 +138,7 @@ impl RecipeStep {
         let position = position.parse().whatever("unable to parse step position")?;
         let kind = match kind.split('.').next().unwrap() {
             "packages" => {
-                let packages = tokio::fs::read_to_string(path)
-                    .await
+                let packages = fs::read_to_string(path)
                     .whatever("unable to read packages step")?
                     .split_whitespace()
                     .map(str::to_owned)

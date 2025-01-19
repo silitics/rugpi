@@ -6,7 +6,7 @@ use std::sync::Arc;
 use sha1::{Digest, Sha1};
 use tracing::debug;
 
-use xscript::{read_str, run, LocalEnv, RunAsync};
+use xscript::{read_str, run, LocalEnv, Run};
 
 use reportify::{bail, ResultExt};
 
@@ -27,22 +27,18 @@ pub struct ProjectRepositories {
 }
 
 impl ProjectRepositories {
-    pub async fn load(project: &ProjectRef) -> BakeryResult<Self> {
+    pub fn load(project: &ProjectRef) -> BakeryResult<Self> {
         let mut repositories = RepositoriesLoader::new(project.dir());
-        let core = repositories
-            .load_source(
-                SourceConfig::Path(PathSourceConfig {
-                    path: "/usr/share/rugpi/repositories/core".into(),
-                }),
-                false,
-            )
-            .await?;
-        let root = repositories
-            .load_root(
-                project.config().repositories.clone().unwrap_or_default(),
-                true,
-            )
-            .await?;
+        let core = repositories.load_source(
+            SourceConfig::Path(PathSourceConfig {
+                path: "/usr/share/rugpi/repositories/core".into(),
+            }),
+            false,
+        )?;
+        let root = repositories.load_root(
+            project.config().repositories.clone().unwrap_or_default(),
+            true,
+        )?;
         Ok(Self {
             repositories: repositories.repositories.map(|_, repo| repo.unwrap()),
             root_repository: root,
@@ -89,7 +85,7 @@ impl RepositoriesLoader {
     /// Load the repository from the project's root directory.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub async fn load_root(
+    pub fn load_root(
         &mut self,
         repositories: HashMap<String, SourceConfig>,
         update: bool,
@@ -99,8 +95,7 @@ impl RepositoriesLoader {
                 SourceConfig::Path(PathSourceConfig { path: "".into() }),
                 &self.root_dir,
                 update,
-            )
-            .await?,
+            )?,
             RepositoryConfig {
                 name: Some("root".to_owned()),
                 description: None,
@@ -108,13 +103,12 @@ impl RepositoriesLoader {
             },
             update,
         )
-        .await
     }
 
     /// Load a repository from the given source and return its id.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub async fn load_source(
+    pub fn load_source(
         &mut self,
         config: SourceConfig,
         update: bool,
@@ -134,7 +128,7 @@ impl RepositoriesLoader {
                 );
             }
         } else {
-            let source = Source::materialize(config.clone(), &self.root_dir, update).await?;
+            let source = Source::materialize(config.clone(), &self.root_dir, update)?;
             let config_path = source.dir.join("rugpi-repository.toml");
             let config =
                 toml::from_str(&std::fs::read_to_string(&config_path).whatever_with(|_| {
@@ -143,13 +137,12 @@ impl RepositoriesLoader {
                 .whatever_with(|_| {
                     format!("unable to parse repository configuration file {config_path:?}")
                 })?;
-            // This function is recursive, so we need to box it here.
-            Box::pin(self.load_repository(source, config, update)).await
+            self.load_repository(source, config, update)
         }
     }
 
     /// Load a repository from an already materialized source and given config.
-    async fn load_repository(
+    fn load_repository(
         &mut self,
         source: Source,
         config: RepositoryConfig,
@@ -165,10 +158,7 @@ impl RepositoriesLoader {
         let mut repositories = HashMap::new();
         if let Some(dependencies) = &config.repositories {
             for (name, source) in dependencies {
-                repositories.insert(
-                    name.clone(),
-                    self.load_source(source.clone(), update).await?,
-                );
+                repositories.insert(name.clone(), self.load_source(source.clone(), update)?);
             }
         }
         let repository = Repository {
@@ -215,11 +205,7 @@ impl Source {
     /// Materialize the source within the given project root directory.
     ///
     /// The *update* flag indicates whether remote repositories should be updated.
-    pub async fn materialize(
-        config: SourceConfig,
-        root_dir: &Path,
-        update: bool,
-    ) -> BakeryResult<Self> {
+    pub fn materialize(config: SourceConfig, root_dir: &Path, update: bool) -> BakeryResult<Self> {
         let id = compute_source_id(&config);
         debug!("materializing source {id}");
         let path = match &config {
@@ -227,7 +213,7 @@ impl Source {
             SourceConfig::Git(config) => {
                 let mut path = root_dir.join(".rugpi/repositories");
                 path.push(id.as_str());
-                check_out_git_source(config, &path, update).await?;
+                check_out_git_source(config, &path, update)?;
                 if let Some(repository_path) = &config.dir {
                     path.push(repository_path);
                 }
@@ -288,27 +274,17 @@ fn compute_source_id(config: &SourceConfig) -> SourceId {
 /// Check out the Git repository in the given directory.
 ///
 /// The *fetch* flag indicates whether updates should be fetched from the remote.
-async fn check_out_git_source(
-    config: &GitSourceConfig,
-    path: &Path,
-    fetch: bool,
-) -> BakeryResult<()> {
+fn check_out_git_source(config: &GitSourceConfig, path: &Path, fetch: bool) -> BakeryResult<()> {
     if !path.exists() {
-        run!(["git", "clone", &config.url, path])
-            .await
-            .whatever("unable to clone repository")?;
+        run!(["git", "clone", &config.url, path]).whatever("unable to clone repository")?;
     }
     let env = LocalEnv::new(path);
     if fetch {
-        run!(env, ["git", "fetch", "--all"])
-            .await
-            .whatever("unable to fetch updates of repository")?;
+        run!(env, ["git", "fetch", "--all"]).whatever("unable to fetch updates of repository")?;
     }
     macro_rules! rev_parse {
         ($rev:literal) => {
-            read_str!(env, ["git", "rev-parse", "--verify", $rev])
-                .await
-                .whatever("unable to parse rev")
+            read_str!(env, ["git", "rev-parse", "--verify", $rev]).whatever("unable to parse rev")
         };
     }
     let mut commit = rev_parse!("refs/remotes/origin/HEAD^{{commit}}")?;
@@ -323,9 +299,7 @@ async fn check_out_git_source(
     }
     let head = rev_parse!("HEAD^{{commit}}")?;
     if head != commit {
-        run!(env, ["git", "checkout", commit])
-            .await
-            .whatever("error checking out commit")?;
+        run!(env, ["git", "checkout", commit]).whatever("error checking out commit")?;
     }
     Ok(())
 }

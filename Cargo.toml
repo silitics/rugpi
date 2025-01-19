@@ -18,7 +18,12 @@ homepage = "https://oss.silitics.com/rugpi/"
 # Third-party crates.
 bytes = "1.7.1"
 clap = { version = "4.5.24", features = ["derive"] }
+ctrlc = { version = "3.4.5", features = ["termination"] }
+flume = { version = "0.11.1", features = ["async"] }
+futures = "0.3.31"
 nix = { version = "0.29", features = ["ioctl", "fs", "mount", "process", "zerocopy"] }
+pin-project = "1.1.8"
+scoped-tls = "1.0.1"
 serde = { version = "1.0.217", features = ["derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tracing = "0.1"
@@ -36,7 +41,6 @@ reportify = { path = "crates/libs/reportify" }
 # Rugix-specific crates.
 rugix-fs = { path = "crates/libs/rugix-fs" }
 rugix-tasks = { path = "crates/libs/rugix-tasks" }
-rugix-try = { path = "crates/libs/rugix-try" }
 rugpi-cli = { path = "crates/libs/rugpi-cli" }
 rugpi-common = { path = "crates/libs/rugpi-common" }
 

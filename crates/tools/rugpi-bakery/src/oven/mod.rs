@@ -21,15 +21,15 @@ pub mod customize;
 pub mod image;
 pub mod targets;
 
-pub async fn bake_image(project: &ProjectRef, image: &str, output: &Path) -> BakeryResult<()> {
+pub fn bake_image(project: &ProjectRef, image: &str, output: &Path) -> BakeryResult<()> {
     let image_config = project
         .config()
         .get_image_config(image)
         .ok_or_else(|| whatever!("unable to find image {image}"))?;
     info!("baking image `{image}`");
     let layer_bakery = LayerBakery::new(project, image_config.architecture);
-    let baked_layer = layer_bakery.bake_root(&image_config.layer).await?;
-    image::make_image(image_config, &baked_layer, output).await
+    let baked_layer = layer_bakery.bake_root(&image_config.layer)?;
+    image::make_image(image_config, &baked_layer, output)
 }
 
 pub struct LayerBakery<'p> {
@@ -42,17 +42,17 @@ impl<'p> LayerBakery<'p> {
         Self { project, arch }
     }
 
-    pub async fn bake_root(&self, layer: &str) -> BakeryResult<PathBuf> {
-        let library = self.project.library().await?;
+    pub fn bake_root(&self, layer: &str) -> BakeryResult<PathBuf> {
+        let library = self.project.library()?;
         let Some(layer) = library.lookup_layer(library.repositories.root_repository, layer) else {
             bail!("unable to find layer {layer}");
         };
-        self.bake(layer).await
+        self.bake(layer)
     }
 
-    pub async fn bake(&self, layer: LayerIdx) -> BakeryResult<PathBuf> {
-        let repositories = &self.project.repositories().await?.repositories;
-        let library = self.project.library().await?;
+    pub fn bake(&self, layer: LayerIdx) -> BakeryResult<PathBuf> {
+        let repositories = &self.project.repositories()?.repositories;
+        let library = self.project.library()?;
         let layer = &library.layers[layer];
         info!("baking layer `{}`", layer.name);
         let Some(config) = layer.config(self.arch) else {
@@ -78,7 +78,7 @@ impl<'p> LayerBakery<'p> {
             let Some(parent) = library.lookup_layer(layer.repo, parent) else {
                 bail!("unable to find layer `{parent}`");
             };
-            let src = Box::pin(self.bake(parent)).await?;
+            let src = self.bake(parent)?;
             let layer_id = layer_id.finalize();
             let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
             let target = self.project.dir().join(&layer_path).join("system.tar");
@@ -90,8 +90,7 @@ impl<'p> LayerBakery<'p> {
                 Some(&src),
                 &target,
                 &layer_path,
-            )
-            .await?;
+            )?;
             Ok(target)
         } else if config.root.unwrap_or(false) {
             layer_id.push("bare", "true");
@@ -99,8 +98,7 @@ impl<'p> LayerBakery<'p> {
             let layer_path = PathBuf::from(format!(".rugpi/layers/{layer_id}"));
             let target = self.project.dir().join(&layer_path).join("system.tar");
             fs::create_dir_all(target.parent().unwrap()).ok();
-            customize::customize(self.project, self.arch, layer, None, &target, &layer_path)
-                .await?;
+            customize::customize(self.project, self.arch, layer, None, &target, &layer_path)?;
             Ok(target)
         } else {
             bail!("invalid layer configuration")

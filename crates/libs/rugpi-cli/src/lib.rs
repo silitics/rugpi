@@ -1,13 +1,13 @@
 //! Common functionality for Rugpi's various CLIs.
 
-use std::future::Future;
 use std::ops::Deref;
+use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::time::{Duration, Instant};
 use std::{fmt, io};
 
 use console::Term;
-use rugix_tasks::spawn;
+use rugix_tasks::{is_canceled_payload, spawn_blocking};
 use style::{Style, Styled};
 use tracing::info;
 use tracing_subscriber::fmt::MakeWriter;
@@ -60,9 +60,9 @@ impl CliBuilder {
         }
     }
 
-    pub fn run_async<Fut, E>(self, future: Fut) -> !
+    pub fn run<F, E>(self, closure: F) -> !
     where
-        Fut: 'static + Send + Future<Output = Result<(), E>>,
+        F: 'static + Send + FnOnce() -> Result<(), E>,
         E: Send + fmt::Debug,
     {
         self.init();
@@ -72,52 +72,56 @@ impl CliBuilder {
             Success,
             Failed,
             Panicked,
-            Interrupted,
+            Cancelled,
         }
 
-        rugix_tasks::run_blocking_unchecked(|ctx| {
-            let reason = spawn(async move {
-                let run_task = tokio::spawn(async move {
-                    if let Err(error) = future.await {
-                        cli_msg!("Error: {error:?}");
-                        TerminationReason::Failed
-                    } else {
-                        TerminationReason::Success
-                    }
-                });
-                tokio::select! {
-                    run_result = run_task => {
-                        match run_result {
-                            Ok(reason) => reason,
-                            Err(error) => {
-                                let panic = error.into_panic();
-                                if let Some(msg) = panic.downcast_ref::<&str>() {
-                                    cli_msg!("Panic: {msg}");
-                                } else if let Some(msg) = panic.downcast_ref::<String>() {
-                                    cli_msg!("Panic: {msg}");
-                                } else {
-                                    cli_msg!("Panic!");
-                                }
-                                TerminationReason::Panicked
-                            }
-                        }
-                    }
-                    _ = tokio::signal::ctrl_c() => {
-                        TerminationReason::Interrupted
-                    }
+        let (main_tx, main_rx) = flume::bounded(5);
+
+        let mut main_task = Some(spawn_blocking(move || {
+            match std::panic::catch_unwind(AssertUnwindSafe(closure)) {
+                Ok(Ok(_)) => {
+                    main_tx.send(TerminationReason::Success).ok();
                 }
-            })
-            .join_blocking(ctx);
-            info!("Shutting down...");
-            rugix_tasks::shutdown_blocking(ctx);
-            hide_status();
-            force_redraw();
-            if matches!(reason, TerminationReason::Success) {
-                std::process::exit(0)
-            } else {
-                std::process::exit(1)
+                Ok(Err(error)) => {
+                    cli_msg!("Error: {error:?}");
+                    main_tx.send(TerminationReason::Failed).ok();
+                }
+                Err(payload) => {
+                    if is_canceled_payload(&payload) {
+                        main_tx.send(TerminationReason::Cancelled).ok();
+                        return;
+                    }
+                    if let Some(msg) = payload.downcast_ref::<&str>() {
+                        cli_msg!("Panic: {msg}");
+                    } else if let Some(msg) = payload.downcast_ref::<String>() {
+                        cli_msg!("Panic: {msg}");
+                    } else {
+                        cli_msg!("Panic!");
+                    }
+                    main_tx.send(TerminationReason::Panicked).ok();
+                }
+            }
+        }));
+
+        ctrlc::set_handler(move || {
+            // Will abort the task by dropping it.
+            if main_task.take().is_some() {
+                info!("Shutting down...");
             }
         })
+        .unwrap();
+
+        let Ok(reason) = main_rx.recv() else {
+            panic!("main task terminated without sending a termination reason");
+        };
+        rugix_tasks::shutdown_blocking();
+        hide_status();
+        force_redraw();
+        if matches!(reason, TerminationReason::Success) {
+            std::process::exit(0)
+        } else {
+            std::process::exit(1)
+        }
     }
 }
 

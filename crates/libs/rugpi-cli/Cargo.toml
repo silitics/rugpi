@@ -10,11 +10,12 @@ homepage.workspace = true
 [dependencies]
 console = "0.15.10"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-
+ctrlc.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
 rugix-tasks.workspace = true
+flume.workspace = true
 
 [lints]
 workspace = true

@@ -1,11 +1,8 @@
-#![cfg_attr(feature = "nightly", feature(try_trait_v2))]
-//! Functionality for running abortable tasks in asynchronous contexts.
+//! Functionality for running cancelable blocking and asynchronous tasks.
 
 use std::any::Any;
-use std::convert::Infallible;
 use std::fmt::{self, Debug};
 use std::future::Future;
-use std::ops::ControlFlow;
 use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -13,7 +10,94 @@ use std::time::Duration;
 
 use flume::Receiver;
 use futures::FutureExt;
+use pin_project::pin_project;
+use scoped_tls::scoped_thread_local;
 use tokio::runtime::{Handle, Runtime};
+use tokio::sync::Notify;
+
+scoped_thread_local! {
+    /// Used to implicitly make [`TaskContext`] available to each task.
+    static TASK_CONTEXT: TaskContext
+}
+
+/// Context in which a task is executed.
+#[derive(Debug)]
+struct TaskContext {
+    /// Shared task state.
+    shared_state: Arc<SharedTaskState>,
+}
+
+/// Used to make [`TaskContext`] available to a future.
+#[pin_project]
+pub struct TaskContextFuture<F> {
+    context: TaskContext,
+    #[pin]
+    future: F,
+}
+
+impl<F: Future> Future for TaskContextFuture<F> {
+    type Output = F::Output;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        let this = self.project();
+        TASK_CONTEXT.set(&this.context, || this.future.poll(cx))
+    }
+}
+
+/// Used as a cancellation signal with [`std::panic::resume_unwind`].
+#[derive(Debug, Clone, Copy)]
+struct Canceled;
+
+/// Check whether the task has been canceled and unwinds the stack if so.
+#[inline]
+pub fn check_canceled() {
+    if !TASK_CONTEXT.is_set() {
+        log_missing_context();
+    } else if TASK_CONTEXT.with(|ctx| ctx.shared_state.should_abort()) {
+        throw_canceled();
+    }
+}
+
+/// Check whether the panic payload signals cancellation.
+pub fn is_canceled_payload(payload: &Box<dyn Any + Send>) -> bool {
+    payload.downcast_ref::<Canceled>().is_some()
+}
+
+pub fn block_on<F: Future>(future: F) -> F::Output {
+    check_canceled();
+    match TOKIO_RUNTIME.handle.block_on(async move {
+        tokio::select! { result = future => Some(result), _ = wait_for_cancellation() => None }
+    }) {
+        None => {
+            throw_canceled();
+            panic!("received canceled notification without unwinding?!?")
+        }
+        Some(value) => value,
+    }
+}
+
+/// Unwind the stack with [`Canceled`].
+#[inline(never)]
+#[cold]
+fn throw_canceled() -> () {
+    // Canceling a future will unwind the stack. We use the same mechanism here to cancel
+    // non-asynchronous tasks. Note that this requires unwinding support. If unwinding is
+    // not supported, we will simply ignore the cancellation signal.
+    #[cfg(panic = "unwind")]
+    std::panic::resume_unwind(Box::new(Canceled));
+    #[cfg(not(panic = "unwind"))]
+    tracing::warn!("task has been canceled but will keep running")
+}
+
+/// Log an error in case the task context is missing.
+#[inline(never)]
+#[cold]
+fn log_missing_context() -> () {
+    tracing::error!("task context is required but not available");
+}
 
 /// Spawn an asynchronous task.
 pub fn spawn<F>(future: F) -> Task<F::Output>
@@ -23,12 +107,20 @@ where
 {
     let (task_msg_tx, task_msg_rx) = flume::bounded(1);
     let shared_state = Arc::new(SharedTaskState::default());
+    let context = TaskContext {
+        shared_state: shared_state.clone(),
+    };
     let join_handle = JoinHandle::Tokio(TOKIO_RUNTIME.handle.spawn(async move {
         task_msg_tx
-            .send(match AssertUnwindSafe(future).catch_unwind().await {
-                Ok(output) => TaskStatusMsg::Finished { output },
-                Err(payload) => TaskStatusMsg::Panicked { payload },
-            })
+            .send(
+                match AssertUnwindSafe(TaskContextFuture { future, context })
+                    .catch_unwind()
+                    .await
+                {
+                    Ok(output) => TaskStatusMsg::Finished { output },
+                    Err(payload) => TaskStatusMsg::Panicked { payload },
+                },
+            )
             .ok();
     }));
     Task {
@@ -42,82 +134,32 @@ where
 /// Spawn a blocking task.
 pub fn spawn_blocking<F, T>(closure: F) -> Task<T>
 where
-    F: 'static + Send + FnOnce(BlockingCtx) -> T,
+    F: 'static + Send + FnOnce() -> T,
     T: 'static + Send,
 {
     let (task_msg_tx, task_msg_rx) = flume::bounded(1);
     let shared_state = Arc::new(SharedTaskState::default());
-    let join_handle = JoinHandle::Tokio(TOKIO_RUNTIME.handle.spawn_blocking({
-        let shared_state = shared_state.clone();
-        move || {
-            // We ignore send errors here as we do not care about the receiver.
-            let ctx = BlockingCtx {
-                shared: &shared_state,
-            };
-            task_msg_tx
-                .send(
-                    match std::panic::catch_unwind(AssertUnwindSafe(move || closure(ctx))) {
-                        Ok(output) => TaskStatusMsg::Finished { output },
-                        Err(payload) => TaskStatusMsg::Panicked { payload },
-                    },
-                )
-                .ok();
-        }
-    }));
-    Task {
-        task_msg_rx,
-        join_handle: Some(join_handle),
-        shared_state,
-        detached: false,
-    }
-}
-
-/// Spawn a blocking task.
-pub fn spawn_blocking_abortable<F, T>(closure: F) -> Task<T>
-where
-    F: 'static + Send + FnOnce(BlockingCtx) -> MaybeAborted<T>,
-    T: 'static + Send,
-{
-    let (task_msg_tx, task_msg_rx) = flume::bounded(1);
-    let shared_state = Arc::new(SharedTaskState::default());
-    let join_handle = JoinHandle::Tokio(TOKIO_RUNTIME.handle.spawn_blocking({
-        let shared_state = shared_state.clone();
-        move || {
-            // We ignore send errors here as we do not care about the receiver.
-            let ctx = BlockingCtx {
-                shared: &shared_state,
-            };
-            task_msg_tx
-                .send(
-                    match std::panic::catch_unwind(AssertUnwindSafe(move || closure(ctx))) {
-                        Ok(output) => match output {
-                            MaybeAborted::Aborted => TaskStatusMsg::Aborted,
-                            MaybeAborted::Done(output) => TaskStatusMsg::Finished { output },
-                        },
-                        Err(payload) => TaskStatusMsg::Panicked { payload },
-                    },
-                )
-                .ok();
-        }
-    }));
-    Task {
-        task_msg_rx,
-        join_handle: Some(join_handle),
-        shared_state,
-        detached: false,
-    }
-}
-
-/// Run a blocking closure to completion in the current thread.
-pub fn run_blocking_unchecked<F, T>(closure: F) -> T
-where
-    F: FnOnce(BlockingCtx) -> T,
-{
-    let shared_state = Arc::new(SharedTaskState::default());
-    let ctx = BlockingCtx {
-        shared: &shared_state,
+    let context = TaskContext {
+        shared_state: shared_state.clone(),
     };
-    closure(ctx)
+    let join_handle = JoinHandle::Tokio(TOKIO_RUNTIME.handle.spawn_blocking(move || {
+        task_msg_tx
+            .send(
+                match std::panic::catch_unwind(AssertUnwindSafe(move || {
+                    TASK_CONTEXT.set(&context, closure)
+                })) {
+                    Ok(output) => TaskStatusMsg::Finished { output },
+                    Err(payload) => TaskStatusMsg::Panicked { payload },
+                },
+            )
+            .ok();
+    }));
+    Task {
+        task_msg_rx,
+        join_handle: Some(join_handle),
+        shared_state,
+        detached: false,
+    }
 }
 
 /// Global Tokio runtime.
@@ -139,11 +181,20 @@ static TOKIO_RUNTIME: LazyLock<GlobalTokioRuntime> = LazyLock::new(|| {
 });
 
 /// Shutdown the Tokio runtime and abort all tasks.
-pub fn shutdown_blocking(_: BlockingCtx) {
+pub fn shutdown_blocking() {
     let Some(runtime) = TOKIO_RUNTIME.runtime.lock().unwrap().take() else {
         panic!("runtime has already been taken")
     };
     runtime.shutdown_timeout(Duration::from_secs(10));
+}
+
+async fn wait_for_cancellation() {
+    let shared_state = TASK_CONTEXT.with(|ctx| ctx.shared_state.clone());
+    let notified = shared_state.notify_canceled.notified();
+    if shared_state.should_abort() {
+        return;
+    }
+    notified.await
 }
 
 /// Owned handle to a task.
@@ -170,7 +221,7 @@ impl<T> Task<T> {
     }
 
     /// Wait for the task to terminate and return it's result.
-    pub fn join_blocking(&self, _: BlockingCtx<'_>) -> T {
+    pub fn join_blocking(&self) -> T {
         let Ok(msg) = self.task_msg_rx.recv() else {
             panic!("task panicked without sending us a final message?!?");
         };
@@ -182,9 +233,6 @@ impl<T> Task<T> {
         match msg {
             TaskStatusMsg::Finished { output } => output,
             TaskStatusMsg::Panicked { payload } => std::panic::resume_unwind(payload),
-            TaskStatusMsg::Aborted => {
-                panic!("task has been aborted without being dropped?!?")
-            }
         }
     }
 
@@ -226,8 +274,6 @@ enum TaskStatusMsg<T> {
     Finished { output: T },
     /// Task has panicked.
     Panicked { payload: Box<dyn Any + Send> },
-    /// Task has been aborted.
-    Aborted,
 }
 
 /// Task join handle.
@@ -245,178 +291,19 @@ enum JoinHandle {
 struct SharedTaskState {
     /// Indicates wether the task should be aborted.
     should_abort: AtomicBool,
+    notify_canceled: Notify,
 }
 
 impl SharedTaskState {
     /// Signals to the task that it should be aborted.
     pub fn signal_abort(&self) {
         self.should_abort.store(true, Ordering::Relaxed);
+        #[cfg(panic = "unwind")]
+        self.notify_canceled.notify_waiters();
     }
 
     /// Check whether the task should be aborted.
     pub fn should_abort(&self) -> bool {
         self.should_abort.load(Ordering::Relaxed)
     }
-}
-
-/// Context corresponding to a [`Task`] in which blocking work can be performed.
-#[derive(Debug, Clone, Copy)]
-pub struct BlockingCtx<'ctx> {
-    /// Shared task data.
-    shared: &'ctx Arc<SharedTaskState>,
-}
-
-impl BlockingCtx<'_> {
-    /// Check whether the work should be aborted.
-    pub fn should_abort(self) -> bool {
-        self.shared.should_abort()
-    }
-}
-
-/// Result of an abortable operation.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[must_use]
-pub enum MaybeAborted<T> {
-    /// Operation has been aborted.
-    Aborted,
-    /// Operation has been completed.
-    Done(T),
-}
-
-impl<T> From<T> for MaybeAborted<T> {
-    fn from(value: T) -> Self {
-        MaybeAborted::Done(value)
-    }
-}
-
-impl<T> MaybeAborted<T> {
-    /// Unwrap the inner value.
-    pub fn unwrap(self) -> T {
-        match self {
-            MaybeAborted::Aborted => {
-                panic!("operation has been aborted, no value");
-            }
-            MaybeAborted::Done(value) => value,
-        }
-    }
-
-    /// Transform the value wrapped in [`MaybeAborted`].
-    pub fn map<M, U>(self, map: M) -> MaybeAborted<U>
-    where
-        M: FnOnce(T) -> U,
-    {
-        match self {
-            MaybeAborted::Done(value) => MaybeAborted::Done(map(value)),
-            MaybeAborted::Aborted => MaybeAborted::Aborted,
-        }
-    }
-}
-
-impl<T, E> MaybeAborted<Result<T, E>> {
-    /// Transpose the [`MaybeAborted`] into the error.
-    pub fn transpose_aborted(self) -> Result<T, MaybeAborted<E>> {
-        match self {
-            MaybeAborted::Aborted => Err(MaybeAborted::Aborted),
-            MaybeAborted::Done(Ok(value)) => Ok(value),
-            MaybeAborted::Done(Err(error)) => Err(MaybeAborted::Done(error)),
-        }
-    }
-
-    /// Transform the value of the result wrapped in [`MaybeAborted`].
-    pub fn map_ok<M, U>(self, map: M) -> MaybeAborted<Result<U, E>>
-    where
-        M: FnOnce(T) -> U,
-    {
-        match self {
-            MaybeAborted::Aborted => MaybeAborted::Aborted,
-            MaybeAborted::Done(Ok(value)) => MaybeAborted::Done(Ok(map(value))),
-            MaybeAborted::Done(Err(error)) => MaybeAborted::Done(Err(error)),
-        }
-    }
-
-    /// Transform the error of the result wrapped in [`MaybeAborted`].
-    pub fn map_err<M, F>(self, map: M) -> MaybeAborted<Result<T, F>>
-    where
-        M: FnOnce(E) -> F,
-    {
-        match self {
-            MaybeAborted::Aborted => MaybeAborted::Aborted,
-            MaybeAborted::Done(Ok(value)) => MaybeAborted::Done(Ok(value)),
-            MaybeAborted::Done(Err(error)) => MaybeAborted::Done(Err(map(error))),
-        }
-    }
-}
-
-impl<T> rugix_try::Try for MaybeAborted<T> {
-    type Output = T;
-    type Residual = MaybeAborted<Infallible>;
-
-    #[inline]
-    fn from_output(output: Self::Output) -> Self {
-        Self::Done(output)
-    }
-
-    #[inline]
-    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
-        match self {
-            Self::Aborted => ControlFlow::Break(MaybeAborted::Aborted),
-            Self::Done(value) => ControlFlow::Continue(value),
-        }
-    }
-}
-
-impl<T> rugix_try::FromResidual<MaybeAborted<Infallible>> for MaybeAborted<T> {
-    #[inline]
-    fn from_residual(residual: MaybeAborted<Infallible>) -> Self {
-        match residual {
-            MaybeAborted::Aborted => MaybeAborted::Aborted,
-        }
-    }
-}
-
-impl<T, E, F> rugix_try::FromResidual<Result<Infallible, E>> for MaybeAborted<Result<T, F>>
-where
-    E: Into<F>,
-{
-    #[inline]
-    fn from_residual(residual: Result<Infallible, E>) -> Self {
-        match residual {
-            Err(error) => MaybeAborted::Done(Err(error.into())),
-        }
-    }
-}
-
-impl<T> rugix_try::FromResidual<Option<Infallible>> for MaybeAborted<Option<T>> {
-    #[inline]
-    fn from_residual(residual: Option<Infallible>) -> Self {
-        match residual {
-            None => MaybeAborted::Done(None),
-        }
-    }
-}
-
-/// Return early if a task should be aborted.
-///
-/// This macro is used to check whether a blocking task should be aborted and propagate
-/// the abort signal if necessary. It ensures that the task can be gracefully terminated
-/// at specific points in the code.
-///
-/// # Examples
-///
-/// ```
-/// # use rugix_blocking::{BlockingCtx, MaybeAborted, check_abort};
-/// fn do_work<'cx>(cx: BlockingCtx<'cx>) -> MaybeAborted<'cx, ()> {
-///     // Check if the task should be aborted and return early if so.
-///     check_abort!(cx);
-///     // Continue with the work if not aborted.
-///     todo!("do some work")
-/// }
-/// ```
-#[macro_export]
-macro_rules! check_abort {
-    ($cx:expr) => {
-        if $cx.should_abort() {
-            return $crate::MaybeAborted::Aborted;
-        }
-    };
 }

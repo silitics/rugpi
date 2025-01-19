@@ -7,9 +7,9 @@ use crate::config::repositories::SourceConfig;
 use crate::BakeryResult;
 
 /// Run the `pull` command.
-pub async fn run(args: &args::Args) -> BakeryResult<()> {
-    let project = load_project(args).await?;
-    for (_, repository) in project.repositories().await?.iter() {
+pub fn run(args: &args::Args) -> BakeryResult<()> {
+    let project = load_project(args)?;
+    for (_, repository) in project.repositories()?.iter() {
         rugpi_cli::suspend(|| {
             println!(
                 "{} {} {}",

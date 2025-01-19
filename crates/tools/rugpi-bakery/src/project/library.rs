@@ -29,7 +29,7 @@ pub struct Library {
 
 impl Library {
     #[allow(clippy::assigning_clones)]
-    pub async fn load(repositories: Arc<ProjectRepositories>) -> BakeryResult<Self> {
+    pub fn load(repositories: Arc<ProjectRepositories>) -> BakeryResult<Self> {
         let mut recipes = IdxVec::new();
         let mut tables = IdxVec::<RepositoryIdx, _>::new();
         for (idx, repository) in repositories.iter() {
@@ -45,7 +45,7 @@ impl Library {
                     if !path.is_dir() || should_ignore_path(&path) {
                         continue;
                     }
-                    let recipe = loader.load(&entry.path()).await?;
+                    let recipe = loader.load(&entry.path())?;
                     let recipe_idx = recipes.push(Arc::new(recipe));
                     table.insert(recipes[recipe_idx].name.deref().to_owned(), recipe_idx);
                 }
@@ -82,7 +82,7 @@ impl Library {
                     name = layer_name.to_owned();
                 }
                 let modified = mtime(&path).whatever("unable to obtain layer mtime")?;
-                let layer_config = load_config(&path).await?;
+                let layer_config = load_config(&path)?;
                 let layer_idx = *table
                     .entry(name.clone())
                     .or_insert_with(|| layers.push(Layer::new(name, idx, modified)));

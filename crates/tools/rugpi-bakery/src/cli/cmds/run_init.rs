@@ -1,6 +1,7 @@
 //! The `init` command.
 
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
 
 use colored::Colorize;
@@ -14,11 +15,10 @@ use crate::cli::{args, current_dir};
 use crate::BakeryResult;
 
 /// Run the `init` command.
-pub async fn run(cmd: &args::InitCommand) -> BakeryResult<()> {
+pub fn run(cmd: &args::InitCommand) -> BakeryResult<()> {
     let Some(template_name) = &cmd.template else {
         let templates: HashMap<String, TemplateInfo> = toml::from_str(
-            &tokio::fs::read_to_string(Path::new(TEMPLATE_PATH).join("templates.toml"))
-                .await
+            &fs::read_to_string(Path::new(TEMPLATE_PATH).join("templates.toml"))
                 .whatever("error reading templates list")?,
         )
         .whatever("error parsing templates list")?;
@@ -43,10 +43,7 @@ pub async fn run(cmd: &args::InitCommand) -> BakeryResult<()> {
     }
     let cwd = current_dir()?;
     let template_dir = Path::new(TEMPLATE_PATH).join(template_name);
-    tokio::task::spawn_blocking(|| copy_recursive(template_dir, cwd))
-        .await
-        .expect("panic copying template")
-        .whatever("error copying template to project directory")?;
+    copy_recursive(template_dir, cwd).whatever("error copying template to project directory")?;
     Ok(())
 }
 

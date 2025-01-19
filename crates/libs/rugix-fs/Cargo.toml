@@ -19,7 +19,6 @@ byte-calc.workspace = true
 reportify.workspace = true
 
 rugix-tasks.workspace = true
-rugix-try.workspace = true
 
 [lints]
 workspace = true

@@ -21,5 +21,5 @@ pub type BakeryResult<T> = Result<T, Report<BakeryError>>;
 
 /// Entrypoint of the executable.
 pub fn main() {
-    rugpi_cli::CliBuilder::new().run_async(cli::run(cli::args::Args::parse()))
+    rugpi_cli::CliBuilder::new().run(|| cli::run(cli::args::Args::parse()))
 }

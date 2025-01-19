@@ -3,16 +3,16 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs;
+use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::Path;
-use std::process::Stdio;
-use std::sync::Arc;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 
 use reportify::{bail, ResultExt};
 use rugpi_cli::StatusSegmentRef;
 use rugpi_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info};
 use xscript::{cmd, run, vars, Cmd, ParentEnv, Run};
 
@@ -29,31 +29,30 @@ use crate::BakeryResult;
 
 struct Logger {
     cli_log: StatusSegmentRef<CliLog>,
-    state: tokio::sync::Mutex<LoggerState>,
+    state: Mutex<LoggerState>,
 }
 
 struct LoggerState {
-    log_file: tokio::fs::File,
+    log_file: fs::File,
     line_buffer: Vec<u8>,
 }
 
 impl Logger {
-    pub async fn new(layer_name: &str, layer_path: &Path) -> BakeryResult<Self> {
-        let log_file = tokio::fs::File::create(layer_path.join("build.log"))
-            .await
+    pub fn new(layer_name: &str, layer_path: &Path) -> BakeryResult<Self> {
+        let log_file = fs::File::create(layer_path.join("build.log"))
             .whatever("error creating layer log file")?;
         Ok(Self {
             cli_log: rugpi_cli::add_status(CliLog::new(format!("Layer: {layer_name}"))),
-            state: tokio::sync::Mutex::new(LoggerState {
+            state: Mutex::new(LoggerState {
                 log_file,
                 line_buffer: Vec::new(),
             }),
         })
     }
 
-    pub async fn write(&self, bytes: &[u8]) {
-        let mut state = self.state.lock().await;
-        let _ = state.log_file.write_all(&bytes).await;
+    pub fn write(&self, bytes: &[u8]) {
+        let mut state = self.state.lock().unwrap();
+        let _ = state.log_file.write_all(&bytes);
         for b in bytes {
             if *b == b'\n' {
                 self.cli_log
@@ -66,7 +65,7 @@ impl Logger {
     }
 }
 
-pub async fn customize(
+pub fn customize(
     project: &ProjectRef,
     arch: Architecture,
     layer: &Layer,
@@ -74,10 +73,10 @@ pub async fn customize(
     target: &Path,
     layer_path: &Path,
 ) -> BakeryResult<()> {
-    let library = project.library().await?;
+    let library = project.library()?;
     // Collect the recipes to apply.
     let config = layer.config(arch).unwrap();
-    let jobs = recipe_schedule(layer.repo, config, library)?;
+    let jobs = recipe_schedule(layer.repo, config, &library)?;
     if jobs.is_empty() {
         bail!("layer must have recipes")
     }
@@ -124,11 +123,10 @@ pub async fn customize(
     }
     let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
-    let logger = Logger::new(&layer.name, layer_path).await?;
+    let logger = Logger::new(&layer.name, layer_path)?;
     apply_recipes(
         &logger, project, arch, &jobs, bundle_dir, &root_dir, layer_path,
-    )
-    .await?;
+    )?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;
@@ -227,8 +225,8 @@ fn recipe_schedule(
     Ok(recipes)
 }
 
-async fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
-    let mut command = tokio::process::Command::new(cmd.prog());
+fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
+    let mut command = Command::new(cmd.prog());
     command.args(cmd.args());
     if let Some(vars) = cmd.vars() {
         if vars.is_clean() {
@@ -245,30 +243,28 @@ async fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true);
+        .stderr(Stdio::piped());
     let mut child = command
         .spawn()
         .whatever_with(|_| format!("unable to spawn command {cmd}"))?;
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
-    async fn copy_log<R: Unpin + AsyncRead>(logger: &Logger, mut reader: R) {
-        let mut buffer = Vec::with_capacity(8192);
-        while let Ok(read) = reader.read_buf(&mut buffer).await {
+    fn copy_log<R: Read>(logger: &Logger, mut reader: R) {
+        let mut buffer = vec![0; 8192];
+        while let Ok(read) = reader.read(&mut buffer) {
             if read == 0 {
                 break;
             }
-            logger.write(&buffer[..read]).await;
-            buffer.clear();
+            logger.write(&buffer[..read]);
         }
     }
 
-    let (_, _, status) = tokio::join!(
-        copy_log(logger, stdout),
-        copy_log(logger, stderr),
+    let status = std::thread::scope(|scope| {
+        scope.spawn(|| copy_log(logger, stdout));
+        scope.spawn(|| copy_log(logger, stderr));
         child.wait()
-    );
+    });
 
     let status = status.whatever_with(|_| format!("unable to spawn command {cmd}"))?;
     if !status.success() {
@@ -277,7 +273,7 @@ async fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
     Ok(())
 }
 
-async fn apply_recipes(
+fn apply_recipes(
     logger: &Logger,
     project: &ProjectRef,
     arch: Architecture,
@@ -410,8 +406,7 @@ async fn apply_recipes(
                             .add_arg(&script)
                             .clone()
                             .with_vars(vars),
-                    )
-                    .await?;
+                    )?;
                 }
                 StepKind::Run => {
                     let script = recipe.path.join("steps").join(&step.filename);
@@ -428,7 +423,7 @@ async fn apply_recipes(
                     for (name, value) in &job.parameters {
                         vars.set(format!("RECIPE_PARAM_{}", name.to_uppercase()), value);
                     }
-                    run_cmd(logger, Cmd::new(&script).with_vars(vars)).await?;
+                    run_cmd(logger, Cmd::new(&script).with_vars(vars))?;
                 }
             }
         }
