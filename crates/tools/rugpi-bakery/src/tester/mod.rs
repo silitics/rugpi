@@ -47,9 +47,7 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
 
         let image_config = project.config().resolve_image_config(&system.disk_image)?;
 
-        let test_config = test_config.clone();
-
-        block_on(async move {
+        block_on(async {
             let vm = qemu::start(
                 image_config.architecture,
                 &output.to_string_lossy(),
@@ -77,9 +75,21 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
                         info!("running script");
                         ctx.status
                             .set_description(description.clone().unwrap_or_default());
+                        {
+                            let mut state = ctx.status.state.lock().unwrap();
+                            state.step_progress = Some(StepProgress {
+                                message: "waiting for SSH to connect",
+                                position: 0,
+                                length: None,
+                            });
+                        }
                         vm.wait_for_ssh()
                             .await
                             .whatever("unable to connect to VM via SSH")?;
+                        {
+                            let mut state = ctx.status.state.lock().unwrap();
+                            state.step_progress = None;
+                        }
                         if let Err(report) = vm
                             .run_script(&ctx, script, stdin_file.as_ref().map(|p| p.as_ref()))
                             .await
@@ -172,9 +182,13 @@ impl StatusSegment for TestCliStatus {
         }
         if let Some(step_progress) = &state.step_progress {
             write!(ctx, "\n╰╴{} ", step_progress.message);
-            ProgressBar::new(step_progress.position, step_progress.length)
-                .hide_percentage()
-                .draw(ctx);
+            if let Some(length) = step_progress.length {
+                ProgressBar::new(step_progress.position, length)
+                    .hide_percentage()
+                    .draw(ctx);
+            } else {
+                ctx.start_line();
+            }
         }
         if !state.log_lines.is_empty() {
             let show_lines = VisualHeight::from_usize(state.log_lines.len())
@@ -194,5 +208,5 @@ impl StatusSegment for TestCliStatus {
 pub struct StepProgress {
     message: &'static str,
     position: u64,
-    length: u64,
+    length: Option<u64>,
 }

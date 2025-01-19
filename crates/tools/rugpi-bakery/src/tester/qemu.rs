@@ -20,7 +20,7 @@ use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, Command};
 use tokio::sync::{oneshot, Mutex};
 use tokio::{fs, time};
-use tracing::{error, info};
+use tracing::{debug, error};
 
 use crate::cli::status::CliLog;
 use crate::config::projects::Architecture;
@@ -145,7 +145,7 @@ impl Vm {
                     state.step_progress = Some(super::StepProgress {
                         message: "sending `stdin-file`",
                         position: bytes_written,
-                        length: stdin_length,
+                        length: Some(stdin_length),
                     });
                 }
                 let mut state = ctx.status.state.lock().unwrap();
@@ -220,7 +220,7 @@ impl Vm {
                 .whatever("unable to construct SSH key for SSH authentication")?;
         time::timeout(Duration::from_secs(120), async {
             loop {
-                info!("trying to connect to VM via SSH");
+                debug!("trying to connect to VM via SSH");
                 if let Ok(Ok(mut ssh_session)) = time::timeout(
                     Duration::from_secs(5),
                     russh::client::connect(config.clone(), ("127.0.0.1", 2233), SshHandler),
@@ -237,7 +237,7 @@ impl Vm {
                     let channel = ssh_session.channel_open_session().await.unwrap();
                     channel.request_subsystem(true, "sftp").await.unwrap();
                     let sftp = SftpSession::new(channel.into_stream()).await.unwrap();
-                    info!(
+                    debug!(
                         "current SFTP path: {:?}",
                         sftp.canonicalize(".").await.unwrap()
                     );
