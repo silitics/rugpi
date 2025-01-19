@@ -19,6 +19,7 @@ use xscript::{cmd, run, vars, Cmd, ParentEnv, Run};
 use crate::cli::status::CliLog;
 use crate::config::layers::LayerConfig;
 use crate::config::projects::Architecture;
+use crate::oven::layer::LayerContext;
 use crate::project::layers::Layer;
 use crate::project::library::Library;
 use crate::project::recipes::{PackageManager, Recipe, StepKind};
@@ -121,12 +122,15 @@ pub fn customize(
         info!("Creating empty layer.");
         std::fs::create_dir_all(&bundle_dir).whatever("unable ot create layer directory")?;
     }
+    let layer_ctx = LayerContext {
+        project: project.clone(),
+        build_dir: bundle_dir.to_path_buf(),
+        output_dir: layer_path.to_path_buf(),
+    };
     let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
     let logger = Logger::new(&layer.name, layer_path)?;
-    apply_recipes(
-        &logger, project, arch, &jobs, bundle_dir, &root_dir, layer_path,
-    )?;
+    apply_recipes(&layer_ctx, &logger, project, arch, &jobs, &root_dir)?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;
@@ -274,13 +278,12 @@ fn run_cmd(logger: &Logger, cmd: Cmd<OsString>) -> BakeryResult<()> {
 }
 
 fn apply_recipes(
+    layer_ctx: &LayerContext,
     logger: &Logger,
     project: &ProjectRef,
     arch: Architecture,
     jobs: &[RecipeJob],
-    bundle_dir: &Path,
     root_dir_path: &Path,
-    layer_path: &Path,
 ) -> BakeryResult<()> {
     let mut mount_stack = MountStack::new();
 
@@ -383,16 +386,17 @@ fn apply_recipes(
                     let chroot_layer_dir = root_dir_path.join("run/rugpi/bakery/bundle/");
                     fs::create_dir_all(&chroot_layer_dir)
                         .whatever("unable to create layer bundle directory")?;
-                    let _mounted_layer_dir = Mounted::bind(&bundle_dir, &chroot_layer_dir)
+                    let _mounted_layer_dir = Mounted::bind(&layer_ctx.build_dir, &chroot_layer_dir)
                         .whatever("unable to bind mount layer bundle")?;
                     let script = format!("/run/rugpi/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGPI_BUNDLE_DIR = "/run/rugpi/bakery/bundle/",
+                        RUGIX_LAYER_DIR = "/run/rugpi/bakery/bundle/",
                         RUGPI_ROOT_DIR = "/",
                         RUGPI_PROJECT_DIR = "/run/rugpi/bakery/project/",
                         RUGPI_ARCH = arch.as_str(),
-                        LAYER_REBUILD_IF_CHANGED = Path::new("/run/rugpi/bakery/project").join(layer_path).join("rebuild-if-changed.txt"),
+                        LAYER_REBUILD_IF_CHANGED = Path::new("/run/rugpi/bakery/project").join(&layer_ctx.output_dir).join("rebuild-if-changed.txt"),
                         RECIPE_DIR = "/run/rugpi/bakery/recipe/",
                         RECIPE_STEP_PATH = &script,
                     };
@@ -412,11 +416,12 @@ fn apply_recipes(
                     let script = recipe.path.join("steps").join(&step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGPI_BUNDLE_DIR = bundle_dir,
+                        RUGPI_BUNDLE_DIR = &layer_ctx.build_dir,
+                        RUGIX_LAYER_DIR = &layer_ctx.build_dir,
                         RUGPI_ROOT_DIR = root_dir_path,
                         RUGPI_PROJECT_DIR = &project_dir,
                         RUGPI_ARCH = arch.as_str(),
-                        LAYER_REBUILD_IF_CHANGED = project_dir.join(layer_path).join("rebuild-if-changed.txt"),
+                        LAYER_REBUILD_IF_CHANGED = project_dir.join(&layer_ctx.output_dir).join("rebuild-if-changed.txt"),
                         RECIPE_DIR = &recipe.path,
                         RECIPE_STEP_PATH = &script,
                     };
@@ -425,6 +430,12 @@ fn apply_recipes(
                     }
                     run_cmd(logger, Cmd::new(&script).with_vars(vars))?;
                 }
+            }
+        }
+
+        if let Some(artifacts) = &recipe.config.artifacts {
+            for (name, artifact) in artifacts {
+                layer_ctx.extract_artifact(name, artifact)?;
             }
         }
     }

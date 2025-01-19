@@ -1,0 +1,16 @@
+alias ArtifactsDecl: [string: ArtifactDecl]
+
+#[json(tag = "type", rename_all = "lowercase")]
+variant ArtifactDecl {
+    File: FileArtifactProps,
+    Directory: DirectoryArtifactProps,
+}
+
+record FileArtifactProps {
+    path: string,
+}
+
+record DirectoryArtifactProps {
+    path: string,
+    as_tar?: bool,
+}

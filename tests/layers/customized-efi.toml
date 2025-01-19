@@ -12,6 +12,7 @@ recipes = [
     # Setup the network.
     "setup-network",
     "rugpi-system-assert",
+    "simple-sbom",
 ]
 
 [parameters."core/set-hostname"]

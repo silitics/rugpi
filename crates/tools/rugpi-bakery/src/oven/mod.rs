@@ -19,6 +19,7 @@ use crate::BakeryResult;
 
 pub mod customize;
 pub mod image;
+pub mod layer;
 pub mod targets;
 
 pub fn bake_image(project: &ProjectRef, image: &str, output: &Path) -> BakeryResult<()> {

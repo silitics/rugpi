@@ -1,0 +1,6 @@
+description = "create a simple software bill of materials (SBOM)"
+priority = -990_000  # Execute after everything else.
+
+[artifacts.sbom]
+type = "file"
+path = "artifacts/sbom.txt"
