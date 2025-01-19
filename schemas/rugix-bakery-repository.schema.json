@@ -20,97 +20,70 @@
   "required": [],
   "unevaluatedProperties": false,
   "$defs": {
-    "rugix_bakery.projects.ProjectConfig": {
-      "$id": "rugix_bakery.projects.ProjectConfig",
-      "type": "object",
-      "description": "Project configuration.",
-      "properties": {
-        "repositories": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.repositories.SourceConfig"
-          }
-        },
-        "images": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.images.ImageConfig"
-          }
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.repositories.SourceConfig": {
-      "$id": "rugix_bakery.repositories.SourceConfig",
-      "description": "Repository source.",
-      "anyOf": [
+    "rugix_bakery.artifacts.ArtifactDecl": {
+      "$id": "rugix_bakery.artifacts.ArtifactDecl",
+      "description": "",
+      "oneOf": [
         {
           "type": "object",
           "properties": {
-            "git": {
-              "type": "string"
+            "type": {
+              "const": "file"
             },
-            "tag": {
-              "type": "string"
-            },
-            "branch": {
-              "type": "string"
-            },
-            "rev": {
-              "type": "string"
-            },
-            "dir": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "git"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
             "path": {
               "type": "string"
             }
           },
           "required": [
+            "type",
+            "path"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "directory"
+            },
+            "path": {
+              "type": "string"
+            },
+            "as-tar": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
             "path"
           ]
         }
       ]
     },
-    "rugix_bakery.repositories.GitSourceConfig": {
-      "$id": "rugix_bakery.repositories.GitSourceConfig",
+    "rugix_bakery.artifacts.ArtifactsDecl": {
+      "$id": "rugix_bakery.artifacts.ArtifactsDecl",
+      "description": "A map type."
+    },
+    "rugix_bakery.artifacts.DirectoryArtifactProps": {
+      "$id": "rugix_bakery.artifacts.DirectoryArtifactProps",
       "type": "object",
-      "description": "Git repository source.",
+      "description": "",
       "properties": {
-        "git": {
+        "path": {
           "type": "string"
         },
-        "tag": {
-          "type": "string"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "rev": {
-          "type": "string"
-        },
-        "dir": {
-          "type": "string"
+        "as-tar": {
+          "type": "boolean"
         }
       },
       "required": [
-        "git"
+        "path"
       ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.repositories.PathSourceConfig": {
-      "$id": "rugix_bakery.repositories.PathSourceConfig",
+    "rugix_bakery.artifacts.FileArtifactProps": {
+      "$id": "rugix_bakery.artifacts.FileArtifactProps",
       "type": "object",
-      "description": "Local repository source.",
+      "description": "",
       "properties": {
         "path": {
           "type": "string"
@@ -120,6 +93,18 @@
         "path"
       ],
       "unevaluatedProperties": false
+    },
+    "rugix_bakery.foreign.NumBytes": {
+      "$id": "rugix_bakery.foreign.NumBytes",
+      "description": "Number of bytes."
+    },
+    "rugix_bakery.images.Filesystem": {
+      "$id": "rugix_bakery.images.Filesystem",
+      "enum": [
+        "ext4",
+        "fat32"
+      ],
+      "description": "Filesystem."
     },
     "rugix_bakery.images.ImageConfig": {
       "$id": "rugix_bakery.images.ImageConfig",
@@ -148,31 +133,6 @@
       ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.projects.Architecture": {
-      "$id": "rugix_bakery.projects.Architecture",
-      "enum": [
-        "amd64",
-        "arm64",
-        "armv7",
-        "armhf",
-        "arm"
-      ],
-      "description": "Architecture."
-    },
-    "rugix_bakery.images.Target": {
-      "$id": "rugix_bakery.images.Target",
-      "enum": [
-        "generic-grub-efi",
-        "rpi-tryboot",
-        "rpi-uboot",
-        "unknown"
-      ],
-      "description": "Target."
-    },
-    "rugix_bakery.foreign.NumBytes": {
-      "$id": "rugix_bakery.foreign.NumBytes",
-      "description": "Number of bytes."
-    },
     "rugix_bakery.images.ImageLayout": {
       "$id": "rugix_bakery.images.ImageLayout",
       "type": "object",
@@ -190,14 +150,6 @@
       },
       "required": [],
       "unevaluatedProperties": false
-    },
-    "rugix_bakery.images.PartitionTableType": {
-      "$id": "rugix_bakery.images.PartitionTableType",
-      "enum": [
-        "mbr",
-        "gpt"
-      ],
-      "description": "Partition table type."
     },
     "rugix_bakery.images.ImagePartition": {
       "$id": "rugix_bakery.images.ImagePartition",
@@ -220,17 +172,27 @@
       "required": [],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.images.Filesystem": {
-      "$id": "rugix_bakery.images.Filesystem",
+    "rugix_bakery.images.PartitionTableType": {
+      "$id": "rugix_bakery.images.PartitionTableType",
       "enum": [
-        "ext4",
-        "fat32"
+        "mbr",
+        "gpt"
       ],
-      "description": "Filesystem."
+      "description": "Partition table type."
     },
     "rugix_bakery.images.PartitionType": {
       "$id": "rugix_bakery.images.PartitionType",
       "description": "Partition type."
+    },
+    "rugix_bakery.images.Target": {
+      "$id": "rugix_bakery.images.Target",
+      "enum": [
+        "generic-grub-efi",
+        "rpi-tryboot",
+        "rpi-uboot",
+        "unknown"
+      ],
+      "description": "Target."
     },
     "rugix_bakery.layers.LayerConfig": {
       "$id": "rugix_bakery.layers.LayerConfig",
@@ -280,6 +242,50 @@
       "required": [],
       "unevaluatedProperties": false
     },
+    "rugix_bakery.projects.Architecture": {
+      "$id": "rugix_bakery.projects.Architecture",
+      "enum": [
+        "amd64",
+        "arm64",
+        "armv7",
+        "armhf",
+        "arm"
+      ],
+      "description": "Architecture."
+    },
+    "rugix_bakery.projects.ProjectConfig": {
+      "$id": "rugix_bakery.projects.ProjectConfig",
+      "type": "object",
+      "description": "Project configuration.",
+      "properties": {
+        "repositories": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_bakery.repositories.SourceConfig"
+          }
+        },
+        "images": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_bakery.images.ImageConfig"
+          }
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bakery.recipes.ParameterDef": {
+      "$id": "rugix_bakery.recipes.ParameterDef",
+      "type": "object",
+      "description": "Recipe parameter definition.",
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/rugix_bakery.recipes.ParameterValue"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
     "rugix_bakery.recipes.ParameterValue": {
       "$id": "rugix_bakery.recipes.ParameterValue",
       "description": "Value of a parameter.",
@@ -295,10 +301,6 @@
           "type": "number"
         }
       ]
-    },
-    "rugix_bakery.artifacts.ArtifactsDecl": {
-      "$id": "rugix_bakery.artifacts.ArtifactsDecl",
-      "description": "A map type."
     },
     "rugix_bakery.recipes.RecipeConfig": {
       "$id": "rugix_bakery.recipes.RecipeConfig",
@@ -328,109 +330,123 @@
       "required": [],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.recipes.ParameterDef": {
-      "$id": "rugix_bakery.recipes.ParameterDef",
+    "rugix_bakery.repositories.GitSourceConfig": {
+      "$id": "rugix_bakery.repositories.GitSourceConfig",
       "type": "object",
-      "description": "Recipe parameter definition.",
+      "description": "Git repository source.",
       "properties": {
-        "default": {
-          "$ref": "#/$defs/rugix_bakery.recipes.ParameterValue"
+        "git": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string"
+        },
+        "dir": {
+          "type": "string"
         }
       },
-      "required": [],
+      "required": [
+        "git"
+      ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.artifacts.ArtifactDecl": {
-      "$id": "rugix_bakery.artifacts.ArtifactDecl",
-      "description": "",
-      "oneOf": [
+    "rugix_bakery.repositories.PathSourceConfig": {
+      "$id": "rugix_bakery.repositories.PathSourceConfig",
+      "type": "object",
+      "description": "Local repository source.",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_bakery.repositories.SourceConfig": {
+      "$id": "rugix_bakery.repositories.SourceConfig",
+      "description": "Repository source.",
+      "anyOf": [
         {
           "type": "object",
           "properties": {
-            "type": {
-              "const": "file"
+            "git": {
+              "type": "string"
             },
-            "path": {
+            "tag": {
+              "type": "string"
+            },
+            "branch": {
+              "type": "string"
+            },
+            "rev": {
+              "type": "string"
+            },
+            "dir": {
               "type": "string"
             }
           },
           "required": [
-            "type",
-            "path"
+            "git"
           ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "const": "directory"
-            },
             "path": {
               "type": "string"
-            },
-            "asTar": {
-              "type": "boolean"
             }
           },
           "required": [
-            "type",
             "path"
           ]
         }
       ]
     },
-    "rugix_bakery.artifacts.FileArtifactProps": {
-      "$id": "rugix_bakery.artifacts.FileArtifactProps",
+    "rugix_bakery.tests.RunStep": {
+      "$id": "rugix_bakery.tests.RunStep",
       "type": "object",
-      "description": "",
+      "description": "Run step.",
       "properties": {
-        "path": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.artifacts.DirectoryArtifactProps": {
-      "$id": "rugix_bakery.artifacts.DirectoryArtifactProps",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "path": {
+        "description": {
           "type": "string"
         },
-        "asTar": {
+        "script": {
+          "type": "string"
+        },
+        "stdin-file": {
+          "type": "string"
+        },
+        "may-disconnect": {
+          "type": "boolean"
+        },
+        "may-fail": {
           "type": "boolean"
         }
       },
       "required": [
-        "path"
+        "script"
       ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.tests.TestConfig": {
-      "$id": "rugix_bakery.tests.TestConfig",
+    "rugix_bakery.tests.SshConfig": {
+      "$id": "rugix_bakery.tests.SshConfig",
       "type": "object",
-      "description": "Test configuration.",
+      "description": "SSH configuration.",
       "properties": {
-        "systems": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/rugix_bakery.tests.SystemConfig"
-          }
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/rugix_bakery.tests.TestStep"
-          }
+        "private-key": {
+          "type": "string"
         }
       },
       "required": [
-        "systems",
-        "steps"
+        "private-key"
       ],
       "unevaluatedProperties": false
     },
@@ -455,17 +471,27 @@
       ],
       "unevaluatedProperties": false
     },
-    "rugix_bakery.tests.SshConfig": {
-      "$id": "rugix_bakery.tests.SshConfig",
+    "rugix_bakery.tests.TestConfig": {
+      "$id": "rugix_bakery.tests.TestConfig",
       "type": "object",
-      "description": "SSH configuration.",
+      "description": "Test configuration.",
       "properties": {
-        "private-key": {
-          "type": "string"
+        "systems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rugix_bakery.tests.SystemConfig"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rugix_bakery.tests.TestStep"
+          }
         }
       },
       "required": [
-        "private-key"
+        "systems",
+        "steps"
       ],
       "unevaluatedProperties": false
     },
@@ -519,32 +545,6 @@
           ]
         }
       ]
-    },
-    "rugix_bakery.tests.RunStep": {
-      "$id": "rugix_bakery.tests.RunStep",
-      "type": "object",
-      "description": "Run step.",
-      "properties": {
-        "description": {
-          "type": "string"
-        },
-        "script": {
-          "type": "string"
-        },
-        "stdin-file": {
-          "type": "string"
-        },
-        "may-disconnect": {
-          "type": "boolean"
-        },
-        "may-fail": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "script"
-      ],
-      "unevaluatedProperties": false
     },
     "rugix_bakery.tests.WaitStep": {
       "$id": "rugix_bakery.tests.WaitStep",

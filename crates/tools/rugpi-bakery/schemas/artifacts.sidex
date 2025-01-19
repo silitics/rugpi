@@ -6,10 +6,12 @@ variant ArtifactDecl {
     Directory: DirectoryArtifactProps,
 }
 
+#[json(rename_all = "kebab-case")]
 record FileArtifactProps {
     path: string,
 }
 
+#[json(rename_all = "kebab-case")]
 record DirectoryArtifactProps {
     path: string,
     as_tar?: bool,
