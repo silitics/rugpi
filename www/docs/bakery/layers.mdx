@@ -37,7 +37,7 @@ recipes = [
 
 This file defines a layer, named `customized`, that is based on the layer `core/debian-bookworm`, a general-purpose layer to build Debian-based systems shipped with Rugix Bakery. The configuration file then specifies a bunch of recipes to set up and customize the system, for instance, setting up a bootloader integration with Grub and providing a network configuration.
 
-In addition to project-specific layers and recipes defined in the project directory, you can use layers and recipes provided by [repositories](./repositories.mdx). In case of the example, these repositories are `core` and `rugix-extra`. We will explain them in detail later. The `core` repository is shipped with Rugix Bakery and includes the following layers for you to use as a parent layer:
+In addition to project-specific layers and recipes defined in the project directory, you can use layers and recipes provided by [repositories](./repositories.mdx). In case of the example, these repositories are `core` and `rugix-extra`. We will explain repositories in detail later. The `core` repository is shipped with Rugix Bakery and includes the following layers for you to use as a parent layer:
 
 - `core/debian-bookworm` for Debian Bookworm,
 - `core/alpine-3-20` for Alpine Linux 3.20,
