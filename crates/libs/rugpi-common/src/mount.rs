@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use reportify::{Report, ResultExt};
-use tracing::info;
+use tracing::debug;
 use xscript::{run, Run};
 
 reportify::new_whatever_type! {
@@ -17,7 +17,7 @@ impl Mounted {
     pub fn mount(dev: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<Self, Report<MountError>> {
         let dst = dst.as_ref();
         let dev = dev.as_ref();
-        info!("Mounting {dev:?} to {dst:?}.");
+        debug!("Mounting {dev:?} to {dst:?}.");
         // FIXME: The `mount` command works without specifying the filesystem type,
         // which is not the case for `nix::mount::mount`.
         run!(["/usr/bin/mount", dev, dst])
@@ -39,7 +39,7 @@ impl Mounted {
         let dst = dst.as_ref();
         let src = src.as_ref();
         let fstype = fstype.as_ref();
-        info!("Mounting {src:?} with {fstype:?} to {dst:?}.");
+        debug!("Mounting {src:?} with {fstype:?} to {dst:?}.");
         nix::mount::mount(
             Some(src),
             dst,
@@ -57,7 +57,7 @@ impl Mounted {
     pub fn bind(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<Self, Report<MountError>> {
         let dst = dst.as_ref();
         let src = src.as_ref();
-        info!("Mounting {src:?} to {dst:?}.");
+        debug!("Mounting {src:?} to {dst:?}.");
         nix::mount::mount(
             Some(src),
             dst,
