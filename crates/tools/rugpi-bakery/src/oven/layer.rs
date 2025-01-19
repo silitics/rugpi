@@ -6,7 +6,7 @@ use reportify::ResultExt;
 
 use rugix_fs::Copier;
 
-use crate::config::artifacts::ArtifactDecl;
+use crate::config::artifacts::{ArtifactDecl, ArtifactsDecl};
 use crate::project::ProjectRef;
 use crate::BakeryResult;
 
@@ -17,6 +17,15 @@ pub struct LayerContext {
 }
 
 impl LayerContext {
+    pub fn extract_artifacts(&self, artifacts: Option<&ArtifactsDecl>) -> BakeryResult<()> {
+        if let Some(artifacts) = artifacts {
+            for (name, artifact) in artifacts {
+                self.extract_artifact(name, artifact)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn extract_artifact(&self, name: &str, artifact: &ArtifactDecl) -> BakeryResult<()> {
         let mut output_path = self.project.dir().join(&self.output_dir);
         output_path.push("artifacts");

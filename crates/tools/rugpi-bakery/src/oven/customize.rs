@@ -131,6 +131,7 @@ pub fn customize(
     std::fs::create_dir_all(&root_dir).ok();
     let logger = Logger::new(&layer.name, layer_path)?;
     apply_recipes(&layer_ctx, &logger, project, arch, &jobs, &root_dir)?;
+    layer_ctx.extract_artifacts(config.artifacts.as_ref())?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;
@@ -432,12 +433,7 @@ fn apply_recipes(
                 }
             }
         }
-
-        if let Some(artifacts) = &recipe.config.artifacts {
-            for (name, artifact) in artifacts {
-                layer_ctx.extract_artifact(name, artifact)?;
-            }
-        }
+        layer_ctx.extract_artifacts(recipe.config.artifacts.as_ref())?;
     }
 
     Ok(())
