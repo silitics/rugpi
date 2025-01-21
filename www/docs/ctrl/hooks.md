@@ -8,7 +8,9 @@ _Hooks_ provide a powerful mechanism to inject custom behavior at various _stage
 
 Hooks are scripts that are executed at specific points in the execution flow of an operation. For instance, you can run custom scripts after an update is installed (but before the system is rebooted) or before it is committed. Hooks are organized based on the type of the operation and the point in time, referred to as stage, when they should run. In addition, each hook has a priority. You can use hooks to customize and extend various parts of Rugix Ctrl based on your needs and requirements.
 
-Hooks are placed in `/etc/rugix/hooks`. Each operation gets its own directory, for instance, `/etc/rugix/hooks/bootstrap` contains [bootstrapping hooks](./bootstrapping.md) and `/etc/rugix/hooks/system-commit` contains [system commit hooks](./over-the-air-updates.md). Each directory has a subdirectory for each stage of the respective operation. For instance, `system-commit` has a `prepare` stage the hooks of which will run prior to performing the commit. To add a hook to the respective stage, a file with the name `<priority>-<name>` is placed in the stage directory. For instance, you may add the following file to add a check before committing to an update:
+Hooks are placed in `/etc/rugix/hooks`. Each operation gets its own directory, for instance, `/etc/rugix/hooks/bootstrap` contains [bootstrapping hooks](./bootstrapping.md) and `/etc/rugix/hooks/system-commit` contains [system commit hooks](./over-the-air-updates.md). Each directory has a subdirectory for each stage of the respective operation. For instance, `system-commit` has a `prepare` stage. The hooks of this stage will run before performing the commit. To add a hook to the respective stage, a file with the name `<rank>-<name>` is placed in the stage directory. Importantly, hooks with a lower `<rank>` run earlier than those with a higher `<rank>`.
+
+For instance, you may add the following file to add a check before committing to an update:
 
 ```bash title="/etc/rugix/hooks/system-commit/prepare/10-check_system_health.sh"
 #!/bin/bash
@@ -34,4 +36,4 @@ If hooks fail, the operation is typically aborted right then and there. So, in c
 You can perform various checks outside of Rugix Ctrl. For instance, you can check the system health prior to trying to commit an update. While it is generally a good idea to do that, it is certainly also recommended to perform checks with hooks, as these are always guaranteed to run, no matter how the operation is triggered.
 :::
 
-Hooks are provided with the operation as the first and the stage as the second argument. This allows you to write a hook that should run at multiple stages in a single file and then symlink this file into the respective locations.
+Hooks are provided with the operation as the first and the stage as the second argument. This allows you to write a hook that should run at multiple stages in a single file and then symlink this file into the respective locations. As certain operations and stages may be added in the future, and those may provide further arguments, **a hook should do nothing in case of unknown arguments**.
