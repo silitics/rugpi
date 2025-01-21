@@ -2190,6 +2190,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rugix-hooks"
+version = "0.1.0"
+dependencies = [
+ "reportify",
+ "rugix-tasks",
+ "tracing",
+ "xscript 0.4.0",
+]
+
+[[package]]
 name = "rugix-tasks"
 version = "0.1.0"
 dependencies = [
@@ -2309,6 +2319,7 @@ dependencies = [
  "indoc",
  "nix",
  "reportify",
+ "rugix-hooks",
  "rugpi-cli",
  "rugpi-common",
  "serde",

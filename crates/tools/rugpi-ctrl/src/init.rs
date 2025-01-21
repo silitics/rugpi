@@ -5,6 +5,7 @@ use std::{fs, io, thread};
 
 use nix::mount::MntFlags;
 use reportify::{bail, ensure, ErrorExt, ResultExt};
+use rugix_hooks::HooksLoader;
 use rugpi_common::ctrl_config::{load_config, Config, Overlay, CTRL_CONFIG_PATH};
 use rugpi_common::disk::blkpg::update_kernel_partitions;
 use rugpi_common::disk::repart::{
@@ -54,6 +55,9 @@ const DEFAULT_STATE_DIR: &str = "/run/rugpi/mounts/data/state/default";
 
 fn init() -> SystemResult<()> {
     println!(include_str!("../assets/BANNER.txt"));
+
+    rugpi_cli::CliBuilder::new().init();
+
     let config = load_config(CTRL_CONFIG_PATH)?;
 
     // Mount essential filesystems.
@@ -90,7 +94,19 @@ fn init() -> SystemResult<()> {
         root.resolve_partition(partition).is_some()
     };
 
+    let bootstrap_hooks = HooksLoader::default()
+        .load_hooks("bootstrap")
+        .whatever("unable to load bootstrap hooks")?;
+
     if !has_data_partition {
+        bootstrap_hooks
+            .run_hooks("prepare")
+            .whatever("unable to run `bootstrap/prepare` hooks")?;
+
+        bootstrap_hooks
+            .run_hooks("pre-layout")
+            .whatever("unable to run `bootstrap/pre-layout` hooks")?;
+
         // If the data partitions already exists, we do not repartition the disk or
         // create any filesystems on it.
         let mut partition_schema = config.partition_schema.clone();
@@ -112,6 +128,9 @@ fn init() -> SystemResult<()> {
                 &system_config.data_partition,
             )?;
         }
+        bootstrap_hooks
+            .run_hooks("post-layout")
+            .whatever("unable to run `bootstrap/post-layout` hooks")?;
     }
 
     let Some(config_partition) =

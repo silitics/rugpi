@@ -1,0 +1,20 @@
+[package]
+name = "rugix-hooks"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+tracing.workspace = true
+
+xscript.workspace = true
+
+reportify.workspace = true
+
+rugix-tasks.workspace = true
+
+[lints]
+workspace = true

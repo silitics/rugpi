@@ -29,6 +29,7 @@ reportify.workspace = true
 
 rugpi-cli.workspace = true
 rugpi-common.workspace = true
+rugix-hooks.workspace = true
 
 [lints]
 workspace = true
