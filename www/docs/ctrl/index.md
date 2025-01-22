@@ -4,7 +4,7 @@ _Rugix Ctrl_ is a powerful tool for robust over-the-air system updates and syste
 
 To set the stage, let's first focus on the things that could go wrong and the ideal features and properties of an update solution.
 
-1. **Interrupted Updates:** If something interrupts the update process, such as an unplanned power outage, a partially installed update may leave the system in an inoperable state. Therefore, a robust update solution must be _transactional_, ensuring that updates are either installed completely or not at all, always leaving the system in an operational state, no matter what happens.
+1. **Interrupted Updates:** If something interrupts the update process, such as an unplanned power outage, a partially installed update may leave the system in an inoperable state. Therefore, a robust update solution must be _atomic_, ensuring that updates are either installed completely or not at all, always leaving the system in an operational state, no matter what happens.
 
 2. **Uncertain Production Environment:** While extensive testing should be done prior to deploying any updates, replicating the exact production environment and conditions can be difficult. An update that turns out to be incompatible with the particularities of the production environment under difficult to replicate conditions may leave the system in an inoperable state. Therefore, a robust update solution must have the possibility for _on-device validation and rollback_ of updates. If any problems are detected with an update on a particular device, a rollback to the previous, known-good version should be automatically triggered.
 
@@ -12,7 +12,7 @@ To set the stage, let's first focus on the things that could go wrong and the id
 
 4. **Cyber Attacks:** A malicious actor may try to compromise a device by installing a manipulated update. Therefore, an update solution should provide mechanisms to prevent manipulated updates from being installed.
 
-Rugix Ctrl addresses these challenges by ensuring transactional updates, on-device validation with rollback capabilities, reliable state management, and protection against malicious updates. By utilizing Rugix Ctrl, you can rest assured that your devices remain reliable, secure, and up-to-date, **allowing you to focus on delivering value to your users**.
+Rugix Ctrl addresses these challenges by ensuring atomic updates, on-device validation with rollback capabilities, reliable state management, and protection against malicious updates. By utilizing Rugix Ctrl, you can rest assured that your devices remain reliable, secure, and up-to-date, **allowing you to focus on delivering value to your users**.
 
 
 ## High-Level Overview

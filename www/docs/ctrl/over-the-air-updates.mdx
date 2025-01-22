@@ -10,18 +10,24 @@ import ConfigSchema from "@site/schemas/rugix-ctrl-system.schema.json";
 
 # Over-the-Air Updates
 
-Rugpi supports robust *over-the-air* (OTA) updates with rollback support to the previous version.
-OTA updates comprise the full system including firmware files and the boot configuration.
-Rugpi uses an A/B approach ensuring that a working copy of the previous version is always kept.
-This approach drastically reduces the likelihood of bricking devices in the field due to corrupted software caused by a failed or incomplete update, thereby reducing any related support effort.
-In addition, it has the following advantages:
+Rugix Ctrl's core functionality is the safe installation of _over-the-air_ (OTA) system updates.
+
+**A/B Update Scheme.** A typical Rugix Ctrl setup uses an _A/B update scheme_ with redundant system partitions (A and B). When an update is available, it is installed on the inactive partition (e.g., if the device is currently using partition A, the update is installed on partition B). This allows the device to temporarily switch to the updated partition upon reboot, ensuring a seamless and fail-safe update process as the previous partition remains untouched and can be reverted to in case of any issues. After on-device validation of the update, the update is then committed by permanently switching to the now active partition as the default boot partition. This approach drastically reduces the likelihood of bricking devices in the field due to corrupted or incompatible software and failed or incomplete updates, thereby minimizing any related support effort. In addition, it has the following advantages:
 
 - OTA updates can almost completely run in the background, without adversely affecting any users of a device.
 The only service interruption is caused, when the device reboots into the new version.
 Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
-- As the previous version is kept, a rollback to the old version is possible if users experience any problems with the new version.[^1]
+- As the previous version is kept, a rollback to the old version is possible if users experience any problems with the new version.[^rollback]
 
-[^1]: This requires application support.
+[^rollback]: This requires application support.
+
+**Other Update Schemes.** We generally recommend using an A/B update scheme due to the advantages stated above. For cases where an A/B update scheme is not the right choice, Rugix Ctrl can flexibly be configured for other update schemes, for instance, an asymmetric setup with a recovery partition or a setup with more than two redundant system partitions.
+
+To commit and switch between systems, Rugix Ctrl needs to integrate with the bootloader of the system.
+
+:::tip
+When building a system with Rugix Bakery for one of the generic and specific targets, you will get a system with a working OTA update integration out-of-the-box using an A/B update scheme. In that case, no configuration is necessary.
+:::
 
 
 ### A/B Update Scheme

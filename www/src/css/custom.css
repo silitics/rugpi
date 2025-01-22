@@ -36,6 +36,7 @@
 /* Styling for inline code. Colors copied from Prism theme. */
 code {
   line-height: 1em;
+  padding: 0.05em 0.1em;
 }
 code.keyword,
 code.builtin-type {

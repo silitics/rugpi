@@ -20,13 +20,13 @@ The bootstrapping process can include a variety of steps such as:
 - Generating unique device identifiers and security certificates.
 - Customizing configurations to suit device-specific requirements.
 
-When [configured to run before the init process](./state-management.md), Rugix Ctrl can also carry out bootstrapping steps. For instance, unless configured otherwise, it will grow the partition table and initialize the data partition where the persistent state lives. Rugix Ctrl's bootstrapping process is flexible and you can adapt it to your specific needs by adding bootstrapping hooks.
+When [configured to run before the init system](./state-management.md), Rugix Ctrl can also carry out bootstrapping steps. For instance, unless configured otherwise, it will grow the partition table and initialize the data partition where the persistent state lives. Rugix Ctrl's bootstrapping process is flexible and you can adapt it to your specific needs by adding bootstrapping hooks.
 
 :::info
 The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` configuration file. It requires a config partition to be configured and present. The config partition must contain a file `/.rugpi/bootstrap` to trigger the bootstrapping process. This file is deleted after the bootstrapping process to ensure that it does not run again.[^bootstrap-in-production]
 :::
 
-[^bootstrap-in-production]: Note that a malicious actor may be able to create this file on a production device and then trigger the bootstrapping process, even if secure boot and other security measurements are in place. This may pose a security risk. In those cases, it is recommended to use a user-defined early bootstrapping step that will check whether the device should be bootstrapped using some other source, such as one-time-programmable memory, and abort the process based on the outcome of that check.
+[^bootstrap-in-production]: Note that a malicious actor may be able to create this file on a production device and then trigger the bootstrapping process, even if secure boot and other security measures are in place. This may pose a security risk. In those cases, it is recommended to use a user-defined `prepare` bootstrapping hook that will check whether the device should be bootstrapped using some other source, such as one-time-programmable memory, and abort the process based on the outcome of that check.
 
 
 ## System Layout
@@ -39,7 +39,7 @@ The layout always affects the disk of the booted root filesystem. Unless configu
 
 Rugix Ctrl supports MBR (DOS) partition tables and GPT partition tables. Here are two example layouts:
 
-```toml title="bootstrapping.toml"
+```toml title="/etc/rugix/bootstrapping.toml"
 [layout]
 type = "mbr"
 partitions = [
@@ -53,7 +53,7 @@ partitions = [
 ]
 ```
 
-```toml title="bootstrapping.toml"
+```toml title="/etc/rugix/bootstrapping.toml"
 [layout]
 type = "gpt"
 partitions = [
@@ -84,7 +84,7 @@ type = "none"
 ```
 
 :::note
-Rugix Ctrl will only create new partitions that do not already exist and grow partitions that already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
+Rugix Ctrl will only create new partitions that do not already exist and grow partitions that do already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
 :::
 
 
@@ -110,6 +110,10 @@ In addition, the config partition is mounted read-only (usually at `/run/rugix/m
 
 ## Configuration Reference
 
+For reference, here is the complete schema for the bootstrapping configuration file:
+
 <JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-bootstrapping.schema.json).
