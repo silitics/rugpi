@@ -2,6 +2,12 @@
 sidebar_position: 3
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-bootstrapping.schema.json";
+
+
 # Bootstrapping
 
 During the production and provisioning of devices, a standard image is usually flashed onto each device. This image is identical across all devices to maintain consistency and simplify the provisioning process. After flashing the image, each device is then typically booted for the first time as part of an end-of-line configuration and quality assurance testing procedure. This initial boot process can also be used for setting up and initializing device-specific configurations, a process to which we refer as _bootstrapping_.
@@ -100,3 +106,10 @@ When writing your custom hooks, you can assume the following environment:
 - `/run` is mounted to a temporary, in-memory filesystem and will be passed through to the final system. If you need to communicate anything to processes after the bootstrapping process, place it in `/run`.
 
 In addition, the config partition is mounted read-only (usually at `/run/rugix/mounts/config`).
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>

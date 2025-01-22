@@ -1,0 +1,45 @@
+//! State management configuration.
+
+/// State management configuration.
+record StateConfig {
+    /// Configuration of the root overlay.
+    overlay?: OverlayConfig,
+    /// Files and directories to persist.
+    persist?: [PersistConfig],
+}
+
+/// Configuration of the root overlay.
+#[json(tagged = externally, rename_all = "kebab-case")]
+variant OverlayConfig {
+    /// Put the overlay on the data partition and persist it across boots.
+    Persist,
+    /// Put the overlay on the data partition and discard it on each boot.
+    Discard,
+    /// Put the overlay in a temporary, in-memory filesystem.
+    InMemory,
+    /// Disable the overlay.
+    Disabled,
+}
+
+/// Configuration to persist a file or directory.
+#[json(tagged = implicitly)]
+variant PersistConfig {
+    /// Configuration to persist a file.
+    File: PersistFileConfig,
+    /// Configuration to persist a directory.
+    Directory: PersistDirectoryConfig,
+}
+
+/// Configuration to persist a file.
+record PersistFileConfig {
+    /// Path of the file to persist.
+    file: string,
+    /// Default contents to initialize the file with if it does not exist.
+    default?: string,
+}
+
+/// Configuration to persist a directory.
+record PersistDirectoryConfig {
+    /// Path of the directory to persist.
+    directory: string,
+}

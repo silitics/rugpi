@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rugix_ctrl.system.SystemConfig",
+  "type": "object",
+  "description": "",
+  "properties": {
+    "config-partition": {
+      "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
+    },
+    "data-partition": {
+      "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
+    }
+  },
+  "required": [],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "rugix_ctrl.bootstrapping.BootstrappingConfig": {
+      "$id": "rugix_ctrl.bootstrapping.BootstrappingConfig",
+      "type": "object",
+      "description": "Bootstrapping configuration.",
+      "properties": {
+        "disabled": {
+          "type": "boolean"
+        },
+        "layout": {
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.SystemLayoutConfig"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.DefaultLayoutConfig": {
+      "$id": "rugix_ctrl.bootstrapping.DefaultLayoutConfig",
+      "type": "object",
+      "description": "Default layout configuration.",
+      "properties": {
+        "system-size": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "system-size"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.LayoutPartitionConfig": {
+      "$id": "rugix_ctrl.bootstrapping.LayoutPartitionConfig",
+      "type": "object",
+      "description": "Configuration of a partition of a layout.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "filesystem": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.PartitionLayoutConfig": {
+      "$id": "rugix_ctrl.bootstrapping.PartitionLayoutConfig",
+      "type": "object",
+      "description": "Partition layout configuration.",
+      "properties": {
+        "partitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rugix_ctrl.bootstrapping.LayoutPartitionConfig"
+          }
+        }
+      },
+      "required": [
+        "partitions"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.SystemLayoutConfig": {
+      "$id": "rugix_ctrl.bootstrapping.SystemLayoutConfig",
+      "description": "System layout configuration.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "mbr"
+            },
+            "partitions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rugix_ctrl.bootstrapping.LayoutPartitionConfig"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "partitions"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "gpt"
+            },
+            "partitions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rugix_ctrl.bootstrapping.LayoutPartitionConfig"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "partitions"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "default"
+            },
+            "system-size": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "system-size"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "none"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "rugix_ctrl.state.OverlayConfig": {
+      "$id": "rugix_ctrl.state.OverlayConfig",
+      "enum": [
+        "persist",
+        "discard",
+        "in-memory",
+        "disabled"
+      ],
+      "description": "Configuration of the root overlay."
+    },
+    "rugix_ctrl.state.PersistConfig": {
+      "$id": "rugix_ctrl.state.PersistConfig",
+      "description": "Configuration to persist a file or directory.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "default": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "file"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "directory": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "directory"
+          ]
+        }
+      ]
+    },
+    "rugix_ctrl.state.PersistDirectoryConfig": {
+      "$id": "rugix_ctrl.state.PersistDirectoryConfig",
+      "type": "object",
+      "description": "Configuration to persist a directory.",
+      "properties": {
+        "directory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "directory"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.state.PersistFileConfig": {
+      "$id": "rugix_ctrl.state.PersistFileConfig",
+      "type": "object",
+      "description": "Configuration to persist a file.",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "default": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.state.StateConfig": {
+      "$id": "rugix_ctrl.state.StateConfig",
+      "type": "object",
+      "description": "State management configuration.",
+      "properties": {
+        "overlay": {
+          "$ref": "#/$defs/rugix_ctrl.state.OverlayConfig"
+        },
+        "persist": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rugix_ctrl.state.PersistConfig"
+          }
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.system.PartitionConfig": {
+      "$id": "rugix_ctrl.system.PartitionConfig",
+      "type": "object",
+      "description": "Partition configuration.",
+      "properties": {
+        "disabled": {
+          "type": "boolean"
+        },
+        "device": {
+          "type": "string"
+        },
+        "partition": {
+          "type": "integer",
+          "format": "uint32"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    }
+  }
+}

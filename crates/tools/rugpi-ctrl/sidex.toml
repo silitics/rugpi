@@ -1,7 +1,7 @@
 [bundle]
-name = "rugix_bakery"
+name = "rugix_ctrl"
 version = "1"
-description = "Sidex schema for Rugix Bakery."
+description = "Sidex schema for Rugix Ctrl."
 authors = ["Silitics GmbH <info@silitics.com>"]
 
 [backend.json-schema]

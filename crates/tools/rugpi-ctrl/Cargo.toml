@@ -23,6 +23,8 @@ nix.workspace = true
 serde.workspace = true
 tracing.workspace = true
 
+sidex-serde.workspace = true
+sidex.workspace = true
 xscript.workspace = true
 
 reportify.workspace = true
@@ -33,3 +35,6 @@ rugix-hooks.workspace = true
 
 [lints]
 workspace = true
+
+[build-dependencies]
+sidex-build-rs.workspace = true

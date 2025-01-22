@@ -19,9 +19,11 @@ Rugix Ctrl addresses these challenges by ensuring transactional updates, on-devi
 
 Rugix Ctrl is designed around _full system updates_. That is, instead of updating individual parts of your system, such as individual libraries or just your application, Rugix Ctrl will always update the system as a whole.[^delta-updates] Full system updates are advantageous because they allow you to test all components together and ensure a consistent environment across devices.
 
-Rugix Ctrl ships as a binary, `rugix-ctrl`, running on your device. This binary is used to query and manage the state of the system, to install updates, and to initiate rollbacks. Rugix Ctrl does not include any remote _delivery mechanism_ for updates. That is, it implements the mechanism for installing updates without prescribing the way in which updates find their way onto the device. Rugix Ctrl is compatible with several [device management solutions](./advanced/device-management.md) and can also easily be integrated into custom setups, for instance, by including a firmware upload page in your application's UI that hands the update itself off to Rugix Ctrl. We believe that this separation is crucial as it avoids vendor lock-in and gives you the flexibility to integrate updates in the way that makes sense for your device.
-
 [^delta-updates]: In case this leaves you concerned with the size of updates, we are actively working towards support for _delta updates_. Delta updates allow for full system updates while minimizing the update size based on the actual changes over the old version.
+
+Rugix Ctrl ships as a binary, `rugix-ctrl`, running on your device. This binary is used to query and manage the state of the system, to install updates, and to initiate rollbacks. The state management functionality provided by Rugix Ctrl is optional and you can use it as an update installer only.
+
+Rugix Ctrl does not include any remote _delivery mechanism_ for updates. That is, it implements the mechanism for installing updates without prescribing the way in which updates find their way onto the device. Rugix Ctrl is compatible with several [device management solutions](./advanced/device-management.md) and can also easily be integrated into custom setups, for instance, by including a firmware upload page in your application's UI that hands the update itself off to Rugix Ctrl. We believe that this separation is crucial as it avoids vendor lock-in and gives you the flexibility to integrate updates in the way that makes sense for your device.
 
 In addition to `rugix-ctrl`, which runs on your device, Rugix Ctrl provides a tool `rugix-bundler` to create _update bundles_. Update bundles contain the actual data required to install an update, like filesystems and meta information.
 

@@ -1,0 +1,16 @@
+#[json(rename_all = "kebab-case")]
+record SystemConfig {
+    config_partition?: PartitionConfig,
+    data_partition?: PartitionConfig,
+}
+
+/// Partition configuration.
+record PartitionConfig {
+    disabled?: bool,
+    /// Path to the partition block device.
+    device?: string,
+    /// Partition number of the root device.
+    partition?: u32,
+    /// Path where the partition is or should be mounted.
+    path?: string,
+}

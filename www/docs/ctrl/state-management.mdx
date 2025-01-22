@@ -1,0 +1,128 @@
+---
+sidebar_position: 2
+---
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-state.schema.json";
+
+
+# State Management
+
+Managing and persisting system state can be quite challenging. In particular, if state needs to persist through updates. Rugix Ctrl provides a robust state management mechanism, simplifying state management and improving a system's resiliency, 
+
+Rugix Ctrl's state management mechanism has been inspired by Docker. The basic idea is to construct a virtual read-write root filesystem by layering a writeable overlay on top of a read-only system partition. Instead of modifying the system partition, any writes will go to the overlay stored on a data partition. In addition, certain files or directories can be explicitly bind mounted from the data partition, thereby ensuring that their contents persists through updates. The overlay itself is typically ephemeral and will be discarded whenever the system boots. This ensures that no accidental state survives a reboot. The following diagram visualizes the idea:
+
+```
+           ╭───────────────────────────────────────────────────────────────╮
+           │                  Read-Write Root Filesystem                   │
+           ╰───────────────────────────────────────────────────────────────╯
+                          ▲                                ▲
+                          │ reads                          │ reads/writes
+                          │                                ▼
+           ╭──────────────────────────────╮  ╭─────────────────────────────╮
+Storage    │  Read-Only System Partition  │  │  Read-Write Data Partition  │
+           ╰──────────────────────────────╯  ╰─────────────────────────────╯
+```
+
+If you are familiar with Docker, you may view your system as running in an ephemeral low-level container[^container] using bind mounts from the data partition to selectively persist the state of your system, such as your database, application data, and user settings.
+
+[^container]: This is only an analogy to explain the idea. There is no container runtime and your system will not run in an isolated environment. In fact, your system will run as usual with the only difference being the virtual root filesystem.
+
+This approach has several advantages:
+
+- It simplifies system development by providing a writable root filesystem. While you can run Linux on a read-only root filesystem, this usually comes with some caveats as some tools assume directories such as `/etc` to be writeable. Also, at least `/var` needs to be writable and thus needs to live on another partition anyway. By using a writable overlay, you do not have to worry about any of that and everything should work as it normally would.
+- As the system partition is read-only, it will stay in a known-good, well-defined state. This adds an extra layer of protection against power outages or bugs that could otherwise corrupt the system.
+- Discarding the overlay on each boot means that only explicitly declared state is selectively preserved. This prevents issues with accidental state. After a reboot you can be sure that any modifications to the root filesystem, that are not meant to persist and that may have caused problems, have been discarded. In addition, it reduces the risk for data loss during an update, as you will notice very early when the state that would be preserved by an update is insufficient.
+- Controlling the state of the system enables Rugix Ctrl to provide off-the-shelf state management functionality such as factory resets. Instead of wasting your engineers' time to implement such functionality, you can rely on Rugix Ctrl.
+
+Rugix Ctrl's state management mechanism is configurable. You can also configure it to keep the overlay, to put the overlay into main memory instead of on the data partition, or to disable the writable overlay altogether falling back to an actual read-only root filesystem and only setting up bind mounts for the files and directories you want to persist on the data partition.
+
+:::important
+As Rugix Ctrl's state management mechanism sets up the root filesystem of your system, it needs to run very early, before even the init system (like Systemd) takes over. Running that early, allows it to set everything up as required and then start the actual system within the virtual root filesystem. To do all that, Rugix Ctrl cannot just run as another service in your system, instead, it will take over the role as an early-stage init system delegating to the actual init system once it set everything up properly. To this end, you must ensure that Rugix Ctrl runs as the init system, e.g., with the `init=/usr/bin/rugix-ctrl` Kernel commandline option. Typically, when using Rugix Bakery with a generic or specific target, this will be handled for you.
+:::
+
+
+## Selective Persistent State
+
+As explain above, state that should persist through updates (and reboots) must be explicitly declared and is then managed by Rugix Ctrl. In general, any data stored in `/var/rugix/state` survives updates and reboots. However, storing data there is not always possible or convenient. Hence, Rugix Ctrl can be configured to use bind mounts to persist certain parts of the filesystem on the data partition. To this end, _state configuration_ files must be placed in `/etc/rugix/state`.
+
+For instance, to persist the home directory of the root user the following state configuration file may be added:
+
+```toml title="/etc/rugix/state/root-home.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-ctrl-state.schema.json
+
+[[persist]]
+directory = "/root"
+```
+
+This instructs Rugix Ctrl to bind mount `/root` to a persistent and writable directory on the data partition, thereby persisting the entire home directory of the root user. The directory on the data partition is automatically determined based on the path in the system. In this case, it would be `/var/rugix/state/persist/root`.
+
+:::tip
+When using Rugix Bakery, you can simply install state configuration files for your application with custom recipes. Have a look at the [`core/persist-root-home`](https://github.com/silitics/rugpi/tree/main/bakery/repositories/core/recipes/persist-root-home) recipe as an example that installs the configuration stated above.
+:::
+
+Note that you can put multiple `[[persist]]` sections into a single file and also use a section with `file = "/path/to/file"` to persist a file instead of a directory. You will find the full schema for these configuration files below.
+
+### Factory Reset
+
+As the state is managed by Rugix Ctrl, a factory reset is simply done with:
+
+```shell
+rugix-ctrl state reset
+```
+
+This command will reboot the system and throw away any state replacing it with factory defaults. These factory defaults are taken from the system partition. Persisted directories and files are initially copied from the system partition, if they exist.
+
+
+## Overlay Configuration
+
+By default, the overlay is discarded to prevent accidental state from corrupting the system and to give you an early indication that not all necessary state is declared. You can, however, make the overlay persistent with the following configuration:
+
+```toml title="/etc/rugix/state.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-ctrl-state.schema.json
+
+overlay = "persist"
+```
+
+:::danger
+Enabling persistency of the overlay, while convenient for certain use cases, requires careful consideration. Note that there is a separate overlay per system partition and that the overlay will be overwritten when an update is installed to the respective system partition. Indiscriminate persistency can easily lead to system corruption due to accidental state or data loss during updates. **We strongly recommend selectively persisting state as described above to avoid potential issues.**
+:::
+
+For **development purposes**, you can also force persistency of the overlay at runtime.
+To this end, run:
+
+```shell
+rugix-ctrl state overlay force-persist true
+```
+
+To disable force persistency of the overlay, run:
+
+```shell
+rugix-ctrl state overlay force-persist false
+```
+
+Note that this will discard the overlay and thereby any modifications which have been made with persistency set to `true`.
+
+In addition to persisting the overlay, the `overlay` option can also be set to the following values:
+
+- `discard`: Discards the overlay on each boot (default setting).
+- `in-memory`: Puts the overlay in the main memory instead of on the data partition.
+- `disabled`: Disables the overlay completely.
+
+
+## Disabling State Management
+
+If you do not want to use the state management feature, do not configure your system to run `rugix-ctrl` as the init system. To disable only the writable overlay, use the `disabled` setting as described above.
+
+
+## Configuration Reference
+
+For reference, here is the complete schema for state configuration files:
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-state.schema.json).

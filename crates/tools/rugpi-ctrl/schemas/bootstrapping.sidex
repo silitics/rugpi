@@ -1,0 +1,48 @@
+//! Bootstrapping configuration.
+
+/// Bootstrapping configuration.
+record BootstrappingConfig {
+    /// Disable bootstrapping altogether.
+    disabled?: bool,
+    /// System layout configuration to use for bootstrapping.
+    layout?: SystemLayoutConfig
+}
+
+/// System layout configuration.
+#[json(tag = "type", rename_all = "lowercase")]
+variant SystemLayoutConfig {
+    /// MBR partition layout.
+    Mbr: PartitionLayoutConfig,
+    /// GPT partition layout.
+    Gpt: PartitionLayoutConfig,
+    /// Default partition layout.
+    Default: DefaultLayoutConfig,
+    /// No partition layout.
+    None,
+}
+
+/// Partition layout configuration.
+record PartitionLayoutConfig {
+    /// Partitions of the layout.
+    partitions: [LayoutPartitionConfig],
+}
+
+/// Configuration of a partition of a layout.
+record LayoutPartitionConfig {
+    /// Optional name of the partition.
+    name?: string,
+    /// Size of the partition.
+    size?: string,
+    /// Type of the partition (one byte hex or GUID).
+    #[json(name = "type")]
+    ty?: string,
+    /// Filesystem of the partition.
+    filesystem?: string,
+}
+
+/// Default layout configuration.
+#[json(rename_all = "kebab-case")]
+record DefaultLayoutConfig {
+    /// Size of the system partitions.
+    system_size: string,
+}

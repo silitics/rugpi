@@ -2,6 +2,12 @@
 sidebar_position: 1
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-system.schema.json";
+
+
 # Over-the-Air Updates
 
 Rugpi supports robust *over-the-air* (OTA) updates with rollback support to the previous version.
@@ -123,3 +129,10 @@ Then, after rebooting, commit the rollback with:
 ```shell
 rugpi-ctrl system commit
 ```
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
