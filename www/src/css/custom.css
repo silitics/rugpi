@@ -34,6 +34,9 @@
 }
 
 /* Styling for inline code. Colors copied from Prism theme. */
+code {
+  line-height: 1em;
+}
 code.keyword,
 code.builtin-type {
   color: rgb(197, 165, 197);
