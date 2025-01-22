@@ -31,5 +31,7 @@ exec $DOCKER run --rm --privileged \
     $DOCKER_FLAGS \
     -v "$(pwd)":/project \
     -v /dev:/dev \
+    -p "127.0.0.1:2222:2222" \
+    -p "[::1]:2222:2222" \
     "${RUGIX_BAKERY_IMAGE}" \
     "$@"
