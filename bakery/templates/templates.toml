@@ -27,3 +27,8 @@ Debian images for Raspberry Pi 4 and 5.
 description = """
 Raspberry Pi OS images for all Raspberry Pi models.
 """
+
+[quickstart-guide]
+description = """
+Template for the quickstart guide.
+"""
