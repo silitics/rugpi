@@ -36,7 +36,7 @@ pub struct Vm {
     sftp_session: Mutex<Option<SftpSession>>,
     #[expect(dead_code, reason = "not currently used")]
     vm_config: SystemConfig,
-    private_key: Arc<PrivateKey>,
+    private_key: Option<Arc<PrivateKey>>,
 }
 
 #[derive(Debug, Default)]
@@ -215,15 +215,17 @@ impl Vm {
             }
         }
         let config = Arc::new(russh::client::Config::default());
-        let key =
-            PrivateKeyWithHashAlg::new(self.private_key.clone(), Some(ssh_key::HashAlg::Sha512))
-                .whatever("unable to construct SSH key for SSH authentication")?;
+        let Some(private_key) = self.private_key.clone() else {
+            bail!("no private key");
+        };
+        let key = PrivateKeyWithHashAlg::new(private_key, Some(ssh_key::HashAlg::Sha512))
+            .whatever("unable to construct SSH key for SSH authentication")?;
         time::timeout(Duration::from_secs(120), async {
             loop {
                 debug!("trying to connect to VM via SSH");
                 if let Ok(Ok(mut ssh_session)) = time::timeout(
                     Duration::from_secs(5),
-                    russh::client::connect(config.clone(), ("127.0.0.1", 2233), SshHandler),
+                    russh::client::connect(config.clone(), ("127.0.0.1", 2222), SshHandler),
                 )
                 .await
                 {
@@ -261,9 +263,15 @@ pub async fn start(
     image_file: &str,
     config: &SystemConfig,
 ) -> BakeryResult<Vm> {
-    let private_key = load_secret_key(&config.ssh.private_key, None)
-        .whatever("unable to load private SSH key")
-        .with_info(|_| format!("path: {:?}", config.ssh.private_key))?;
+    let private_key = if let Some(ssh_config) = &config.ssh {
+        Some(
+            load_secret_key(&ssh_config.private_key, None)
+                .whatever("unable to load private SSH key")
+                .with_info(|_| format!("path: {:?}", ssh_config.private_key))?,
+        )
+    } else {
+        None
+    };
     fs::create_dir_all(".rugpi/")
         .await
         .whatever("unable to create .rugpi directory")?;
@@ -310,7 +318,7 @@ pub async fn start(
     command.arg("-drive");
     command.arg("file=.rugpi/vm-image.img,format=qcow2,if=virtio");
     command.args(&["-device", "virtio-net-pci,netdev=net0", "-netdev"]);
-    command.arg("user,id=net0,hostfwd=tcp:127.0.0.1:2233-:22");
+    command.arg("user,id=net0,hostfwd=tcp:0.0.0.0:2222-:22");
     let efi_code = match arch {
         Architecture::Amd64 => "/usr/share/OVMF/OVMF_CODE.fd",
         Architecture::Arm64 => "/usr/share/AAVMF/AAVMF_CODE.fd",
@@ -376,7 +384,7 @@ pub async fn start(
             ssh_session: Mutex::default(),
             sftp_session: Mutex::default(),
             vm_config: config.clone(),
-            private_key: Arc::new(private_key),
+            private_key: private_key.map(Arc::new),
         })
     }
 }

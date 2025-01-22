@@ -26,6 +26,8 @@ pub enum Command {
     Bake(BakeCommand),
     /// Run integration tests.
     Test(TestCommand),
+    /// Run an image in a VM.
+    Run(RunCommand),
     /// List images, recipes, and layers.
     #[clap(subcommand)]
     List(ListCommand),
@@ -68,6 +70,12 @@ pub enum BakeCommand {
 #[derive(Debug, Parser)]
 pub struct TestCommand {
     pub workflows: Vec<String>,
+}
+
+/// The `run` command.
+#[derive(Debug, Parser)]
+pub struct RunCommand {
+    pub image: String,
 }
 
 /// The `bake` command.

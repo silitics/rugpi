@@ -18,6 +18,7 @@ pub fn run(args: args::Args) -> BakeryResult<()> {
     match &args.cmd {
         args::Command::Bake(cmd) => cmds::run_bake::run(&args, cmd),
         args::Command::Test(cmd) => cmds::run_test::run(&args, cmd),
+        args::Command::Run(cmd) => cmds::run_run::run(&args, cmd),
         args::Command::List(cmd) => cmds::run_list::run(&args, cmd),
         args::Command::Pull => cmds::run_pull::run(&args),
         args::Command::Init(cmd) => cmds::run_init::run(cmd),

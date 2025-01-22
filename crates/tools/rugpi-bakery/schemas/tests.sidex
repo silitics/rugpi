@@ -18,7 +18,7 @@ record SystemConfig {
     /// Size of the disk.
     disk_size?: NumBytes,
     /// SSH configuration.
-    ssh: SshConfig,
+    ssh?: SshConfig,
 }
 
 /// SSH configuration.
