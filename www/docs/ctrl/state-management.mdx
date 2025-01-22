@@ -10,29 +10,36 @@ import ConfigSchema from "@site/schemas/rugix-ctrl-state.schema.json";
 
 # State Management
 
-Managing and persisting system state can be quite challenging. In particular, if state needs to persist through updates. Rugix Ctrl provides a robust state management mechanism, simplifying state management and improving a system's resiliency, 
+Managing and persisting system state can be quite challenging. In particular, if state needs to persist through updates. Rugix Ctrl provides a robust state management mechanism, simplifying state management and improving a system's resiliency.
 
-Rugix Ctrl's state management mechanism has been inspired by Docker. The basic idea is to construct a virtual read-write root filesystem by layering a writeable overlay on top of a read-only system partition. Instead of modifying the system partition, any writes will go to the overlay stored on a data partition. In addition, certain files or directories can be explicitly bind mounted from the data partition, thereby ensuring that their contents persists through updates. The overlay itself is typically ephemeral and will be discarded whenever the system boots. This ensures that no accidental state survives a reboot. The following diagram visualizes the idea:
+<p style={{marginLeft: "2rem"}}>
+    **✨ Feature Highlights ✨**<br/>
+    ✅ Straightforward selective persistence of system state through updates.<br />
+    ✅ Protection against accidental state and system partition corruption.<br />
+    ✅ Off-the-shelf factory reset functionality.
+</p>
+
+Rugix Ctrl's state management mechanism has been inspired by Docker. The basic idea is to construct a virtual writable root filesystem by layering a writeable overlay on top of a read-only system partition. Instead of modifying the system partition, any writes will go to the overlay stored on a data partition. In addition, certain files or directories can be explicitly bind mounted from the data partition, thereby ensuring that their contents persists through updates. The overlay itself is typically ephemeral and will be discarded whenever the system boots. This ensures that no accidental state survives a reboot. The following diagram visualizes the idea:
 
 ```
-           ╭───────────────────────────────────────────────────────────────╮
-           │                  Read-Write Root Filesystem                   │
-           ╰───────────────────────────────────────────────────────────────╯
-                          ▲                                ▲
-                          │ reads                          │ reads/writes
-                          │                                ▼
-           ╭──────────────────────────────╮  ╭─────────────────────────────╮
-Storage    │  Read-Only System Partition  │  │  Read-Write Data Partition  │
-           ╰──────────────────────────────╯  ╰─────────────────────────────╯
+           ╭─────────────────────────────────────────────────────────────╮
+           │                  Writable Root Filesystem                   │
+           ╰─────────────────────────────────────────────────────────────╯
+                          ▲                               ▲
+                          │ reads                         │ reads/writes
+                          │                               ▼
+           ╭──────────────────────────────╮  ╭───────────────────────────╮
+Storage    │  Read-Only System Partition  │  │  Writable Data Partition  │
+           ╰──────────────────────────────╯  ╰───────────────────────────╯
 ```
 
-If you are familiar with Docker, you may view your system as running in an ephemeral low-level container[^container] using bind mounts from the data partition to selectively persist the state of your system, such as your database, application data, and user settings.
+If you are familiar with Docker, you may view your system as running in an ephemeral low-level container[^container] using bind mounts from the data partition to persist the state of your system, such as your database, application data, and user settings.
 
 [^container]: This is only an analogy to explain the idea. There is no container runtime and your system will not run in an isolated environment. In fact, your system will run as usual with the only difference being the virtual root filesystem.
 
 This approach has several advantages:
 
-- It simplifies system development by providing a writable root filesystem. While you can run Linux on a read-only root filesystem, this usually comes with some caveats as some tools assume directories such as `/etc` to be writeable. Also, at least `/var` needs to be writable and thus needs to live on another partition anyway. By using a writable overlay, you do not have to worry about any of that and everything should work as it normally would.
+- It simplifies system development by providing a writable root filesystem. While you can run Linux on a read-only root filesystem, this usually comes with some caveats as some tools assume directories such as `/etc` to be writeable. Also, at least `/var` needs to be writable and thus needs to live on a separate partition anyway. By using a writable overlay, you do not have to worry about any of these issues and everything should work as it normally would.
 - As the system partition is read-only, it will stay in a known-good, well-defined state. This adds an extra layer of protection against power outages or bugs that could otherwise corrupt the system.
 - Discarding the overlay on each boot means that only explicitly declared state is selectively preserved. This prevents issues with accidental state. After a reboot you can be sure that any modifications to the root filesystem, that are not meant to persist and that may have caused problems, have been discarded. In addition, it reduces the risk for data loss during an update, as you will notice very early when the state that would be preserved by an update is insufficient.
 - Controlling the state of the system enables Rugix Ctrl to provide off-the-shelf state management functionality such as factory resets. Instead of wasting your engineers' time to implement such functionality, you can rely on Rugix Ctrl.
@@ -46,7 +53,7 @@ As Rugix Ctrl's state management mechanism sets up the root filesystem of your s
 
 ## Selective Persistent State
 
-As explain above, state that should persist through updates (and reboots) must be explicitly declared and is then managed by Rugix Ctrl. In general, any data stored in `/var/rugix/state` survives updates and reboots. However, storing data there is not always possible or convenient. Hence, Rugix Ctrl can be configured to use bind mounts to persist certain parts of the filesystem on the data partition. To this end, _state configuration_ files must be placed in `/etc/rugix/state`.
+As explain above, state that should persist through updates (and reboots) must be explicitly declared and is then managed by Rugix Ctrl. In general, any data stored in `/var/rugix/state` survives updates and reboots. However, storing data there is not always possible or convenient. Hence, Rugix Ctrl can be configured to use bind mounts to persist certain parts of the root filesystem on the data partition. To this end, _state configuration_ files must be placed in `/etc/rugix/state`.
 
 For instance, to persist the home directory of the root user the following state configuration file may be added:
 
@@ -87,10 +94,10 @@ overlay = "persist"
 ```
 
 :::danger
-Enabling persistency of the overlay, while convenient for certain use cases, requires careful consideration. Note that there is a separate overlay per system partition and that the overlay will be overwritten when an update is installed to the respective system partition. Indiscriminate persistency can easily lead to system corruption due to accidental state or data loss during updates. **We strongly recommend selectively persisting state as described above to avoid potential issues.**
+Enabling persistency of the overlay, while convenient for certain use cases, requires careful consideration. Note that there is a separate overlay per boot group and that the overlay will be overwritten when an update is installed to the respective boot group. Indiscriminate persistency can easily lead to system corruption due to accidental state or data loss during updates. **We strongly recommend selectively persisting state as described above to avoid potential issues.**
 :::
 
-For **development purposes**, you can also force persistency of the overlay at runtime.
+For **development or debugging purposes**, you can also force persistency of the overlay at runtime.
 To this end, run:
 
 ```shell
@@ -110,6 +117,24 @@ In addition to persisting the overlay, the `overlay` option can also be set to t
 - `discard`: Discards the overlay on each boot (default setting).
 - `in-memory`: Puts the overlay in the main memory instead of on the data partition.
 - `disabled`: Disables the overlay completely.
+
+
+## State Management Hooks
+
+As explained above, parts of the state management functionality run very early during the boot process, before even the init system. You can hook into the state management process at various stages. Please read the [general documentation about hooks](./hooks.md) first.
+
+The stages of `state` hooks are:
+
+- `pre-reset`: Runs directly before a factory reset.
+- `post-reset`: Runs directly after a factory reset.
+
+When writing your custom hooks, you can assume the following environment:
+
+- `/` is mounted read-only to the respective root filesystem.
+- `/sys`, `/proc`, and `/dev` are mounted.
+- `/run` is mounted to a temporary, in-memory filesystem and will be passed through to the final system. If you need to communicate anything to processes after the bootstrapping process, place it in `/run`.
+
+In addition, the config partition is mounted read-only (usually at `/run/rugix/mounts/config`).
 
 
 ## Disabling State Management
