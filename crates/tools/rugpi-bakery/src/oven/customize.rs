@@ -319,6 +319,13 @@ fn apply_recipes(
         let project_dir = root_dir_path.join("run/rugpi/bakery/project");
         fs::create_dir_all(&project_dir).whatever("unable to create project directory")?;
 
+        let resolved_resolv = root_dir_path.join("run/systemd/resolve/stub-resolv.conf");
+        fs::create_dir_all(resolved_resolv.parent().unwrap())
+            .whatever("unable to create `systemd/resolve` directory")?;
+        let resolv_conf =
+            fs::read("/etc/resolv.conf").whatever("unable to read `/etc/resolv.conf")?;
+        fs::write(resolved_resolv, resolv_conf).whatever("unable to write `resolv.conf`")?;
+
         stack.push(
             Mounted::bind(project.dir(), &project_dir)
                 .whatever("unable to bind mount project directory")?,
