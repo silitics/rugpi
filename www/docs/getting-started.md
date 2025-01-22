@@ -19,7 +19,7 @@ So, let's get started and unlock the potential of Rugix for your embedded projec
 
 First, you need to set up Rugix Bakery.
 Rugix Bakery is distributed as a Docker image (for `arm64` and `amd64`).
-To build an image, a working [Docker](https://www.docker.com/) or [Podman](https://podman.io/) installation is required.
+Thus, to run Rugix Bakery, a working [Docker](https://www.docker.com/) or [Podman](https://podman.io/) installation is required.
 On MacOS, please make sure to use the [MacOS virtualization framework and VirtioFS](https://docs.docker.com/desktop/settings/mac/#general), which is the default with recent versions of Docker Desktop.
 On Windows, please use [WSL](https://learn.microsoft.com/en-us/windows/wsl/about).
 
@@ -67,10 +67,10 @@ To initialize the project with this template run:
 
 You will notice that this command places various files and directories in the current working directory.
 The file `rugix-bakery.toml` is the global project configuration file.
-It declares build artifacts, such as images for potentially different types of systems.
+It declares build artifacts, such as images for potentially different types of devices.
 In addition, there are two directories `recipes` and `layers`.
 A _recipe_ describes additions and modifications that should be made to a system being build and a _layer_ combines multiple recipes.
-Let's now make some changes and customize our Debian variant a bit.
+Let's now make some changes and customize our Debian derivate a bit.
 
 
 ## System Customization
@@ -193,7 +193,7 @@ For further details regarding the update process, [check out Rugix Ctrl's docume
 ## Conclusion
 
 Congratulations on completing the Rugix quickstart guide! 🙌
-You have successfully set up Rugix Bakery, customized your Debian-based system, built images for different devices, and learned how to manage over-the-air updates with Rugix Ctrl. 
+You have successfully set up Rugix Bakery, customized your Debian-based system, built images for different devices, and learned how to install over-the-air updates with Rugix Ctrl. 
 Rugix is designed to simplify the development of embedded Linux devices, making it easier for you to innovate and deploy reliable systems.
 
 While this guide has covered the basics, there's more to learn and explore. We encourage you to dive deeper into the [Rugix Bakery documentation](./bakery/) and [Rugix Ctrl documentation](./ctrl/) to discover additional functionalities and best practices.
