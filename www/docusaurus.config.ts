@@ -54,17 +54,17 @@ const config: Config = {
       respectPrefersColorScheme: false,
     },
 
-    announcementBar: {
-      // id: "release",
-      content: `
-          We are excited to announce the release of Rugpi version 0.7! 🎉
-          Read the <a href="/rugpi/blog/releases/0.7">release blog post</a>.
-        `,
-      backgroundColor: "#bdddfb",
-      // backgroundColor: "#bdddfb",
-      // textColor: "#000000",
-      isCloseable: false,
-    },
+    // announcementBar: {
+    //   // id: "release",
+    //   content: `
+    //       We are excited to announce the release of Rugpi version 0.7! 🎉
+    //       Read the <a href="/rugpi/blog/releases/0.7">release blog post</a>.
+    //     `,
+    //   backgroundColor: "#bdddfb",
+    //   // backgroundColor: "#bdddfb",
+    //   // textColor: "#000000",
+    //   isCloseable: false,
+    // },
     navbar: {
       title: "Rugpi",
       logo: {
