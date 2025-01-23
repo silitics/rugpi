@@ -1,3 +1,10 @@
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-system.schema.json";
+
+
 # System Configuration
 
 This page provides an in-depth guide to configuring a Rugpi system with OTA update capabilities for users who require fine-grained control or are migrating from a different OTA solution.
@@ -90,3 +97,10 @@ Currently, Rugpi supports the following boot flows:
 - `tryboot`: Uses Raspberry Pi's `tryboot` mechanism (A/B setups only).
 - `u-boot`: Uses an U-Boot environment file to switch between partitions (A/B setups only).
 - `grub-efi`: Uses a Grub environment file to switch between partitions (A/B setups only).
+
+
+## Configuration Reference
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>

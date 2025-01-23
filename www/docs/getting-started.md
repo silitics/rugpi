@@ -196,6 +196,10 @@ Congratulations on completing the Rugix quickstart guide! 🙌
 You have successfully set up Rugix Bakery, customized your Debian-based system, built images for different devices, and learned how to install over-the-air updates with Rugix Ctrl. 
 Rugix is designed to simplify the development of embedded Linux devices, making it easier for you to innovate and deploy reliable systems.
 
-While this guide has covered the basics, there's more to learn and explore. We encourage you to dive deeper into both [Rugix Bakery's documentation](./bakery/) and [Rugix Ctrl's documentation](./ctrl/) to discover additional functionalities and best practices.
+While this guide has covered the basics, there's more to learn and explore.
+We encourage you to dive deeper into both [Rugix Bakery's documentation](./bakery/) and [Rugix Ctrl's documentation](./ctrl/) to discover additional functionalities and best practices.
+In particular, you should read the section on [State Management](./ctrl/state-management.mdx) to understand why any changes that you make to a running system may be lost after a reboot.[^state-management]
+
+[^state-management]: This may be surprising at first, but we consider it a feature that with Rugix the systems you build will typically be immutable and you have to be explicit about the state of the system you want to persist through updates and reboots.
 
 Happy building! 🚀

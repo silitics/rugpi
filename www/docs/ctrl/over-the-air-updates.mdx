@@ -2,129 +2,132 @@
 sidebar_position: 1
 ---
 
-import JSONSchemaViewer from "@theme/JSONSchemaViewer";
-import ReactMarkdown from "react-markdown";
-
-import ConfigSchema from "@site/schemas/rugix-ctrl-system.schema.json";
-
-
 # Over-the-Air Updates
 
 Rugix Ctrl's core functionality is the safe installation of _over-the-air_ (OTA) system updates.
 
-**A/B Update Scheme.** A typical Rugix Ctrl setup uses an _A/B update scheme_ with redundant system partitions (A and B). When an update is available, it is installed on the inactive partition (e.g., if the device is currently using partition A, the update is installed on partition B). This allows the device to temporarily switch to the updated partition upon reboot, ensuring a seamless and fail-safe update process as the previous partition remains untouched and can be reverted to in case of any issues. After on-device validation of the update, the update is then committed by permanently switching to the now active partition as the default boot partition. This approach drastically reduces the likelihood of bricking devices in the field due to corrupted or incompatible software and failed or incomplete updates, thereby minimizing any related support effort. In addition, it has the following advantages:
+**A/B Update Scheme.** A typical Rugix Ctrl setup uses an _A/B update scheme_ with redundant system partitions (A and B).
+When an update is available, it is installed on the inactive partition (e.g., if the device is currently using partition A, the update is installed on partition B).
+This allows the device to temporarily switch to the updated partition upon reboot, ensuring a seamless and fail-safe update process as the previous partition remains untouched and can be reverted to in case of any issues.
+After on-device validation of the update, the update is then committed by permanently switching to the now active partition as the default boot partition.
+This approach drastically reduces the likelihood of bricking devices in the field due to corrupted or incompatible software and failed or incomplete updates, thereby avoiding any related repair and maintenance costs.
+In addition, it has the following advantages:
 
 - OTA updates can almost completely run in the background, without adversely affecting any users of a device.
 The only service interruption is caused, when the device reboots into the new version.
 Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
 - As the previous version is kept, a rollback to the old version is possible if users experience any problems with the new version.[^rollback]
 
-[^rollback]: This requires application support.
+[^rollback]: This requires suppert by your application.
 
-**Other Update Schemes.** We generally recommend using an A/B update scheme due to the advantages stated above. For cases where an A/B update scheme is not the right choice, Rugix Ctrl can flexibly be configured for other update schemes, for instance, an asymmetric setup with a recovery partition or a setup with more than two redundant system partitions.
+**Other Update Schemes.** We generally recommend using an A/B update scheme due to the advantages stated above.
+For cases where an A/B update scheme is not the right choice, Rugix Ctrl can flexibly be configured for other update schemes, for instance, an asymmetric setup with a recovery partition or a setup with more than two redundant system partitions.
+To configure Rugix Ctrl for such custom use cases, please have a look at the [System Configuration](./advanced/system-configuration.mdx) section of this documentation.
 
-To commit and switch between systems, Rugix Ctrl needs to integrate with the bootloader of the system.
+**Bootloader Integration.** To commit and switch between systems, Rugix Ctrl needs to integrate with the bootloader of the system.
+Rugix Ctrl offers ready-made integrations with popular bootloaders.
+Currently, it provides integrations for:
+
+- [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting)
+- [U-Boot](https://docs.u-boot.org/en/latest/) (popular on single board computers, GPL-2.0)
+- [Grub](https://www.gnu.org/software/grub/) (well-established standard option, GPL-3.0)
 
 :::tip
-When building a system with Rugix Bakery for one of the generic and specific targets, you will get a system with a working OTA update integration out-of-the-box using an A/B update scheme. In that case, no configuration is necessary.
+When building a system with Rugix Bakery for a generic or specific target, you will get a system with a bootloader integration for A/B OTA updates out-of-the-box. In that case, no further configuration is necessary and you do not have to worry about how the bootloader integration works.
+If you want your own integration, check out the [documentation on boot flows](./advanced/boot-flows.md).
 :::
 
+**Typical Partition Layout.** A typical partition layout of a Rugix system following the A/B update scheme comprises six partitions:
 
-### A/B Update Scheme
+- Partition 1: Contains the bootloader configuration for switching between the A and B system.
+- Partition 2: Contains boot data, such as the Linux kernel, for the A system.
+- Partition 3: Contains boot data, such as the Linux kernel, for the B system.
+- Partition 4: Contains the root filesystem of the A system.
+- Partition 5: Contains the root filesystem of the B system.
+- Partition 6: Contains any persistent data and state (see [State Management](./state-management)).
 
-The A/B update scheme uses two sets of system and boot partitions, the A set and the B set.
-We call the currently booted set *hot set* and to the other *cold set*.
-The usual partition layout of a Rugpi installation comprises seven partitions:
+We also refer to Partition 1 as the _config partition_ and to Partition 6 as the _data partition_.
 
-- Partition 1: Contains the bootloader configuration for switching between the A and B set.
-- Partition 2: The boot partition of the A set.
-- Partition 3: The boot partition of the B set.
-- Partition 4: The root partition of the A set.
-- Partition 5: The root partition of the B set.
-- Partition 6: Contains any persistent state (see [State Management](./state-management)).
-
-The bootloader configuration specifies the default set of partitions.
-We call the other, non-default set, the *spare set*.
-An update is only possible if the hot set is also the default set.
-That way, if anything goes wrong while installing the update, the system will boot into the previous known-good version by default.
-The Rugpi update mechanism installs the update to the cold spare set of partitions.
-After installing the update, it tries booting into the newly installed version, crucially without changing the default set.
-Hence, if anything goes wrong, the system automatically reboots into the previous version by default.
-Only after booting successfully into the newly installed system, by which the set of partitions with the new version becomes the hot set, and verifying that everything is in working order, the update is made permanent by making the hot set the default set.
-
-In case of an MBR partition table, the fourth partition is an EBR partition and the subsequent partitions are shifted by one.
 
 ## Updating a System
 
-To update a system, first an image needs to be [build using Rugpi Bakery](/docs/getting-started).
-Further, this image needs to find its way[^2] onto the Raspberry Pi running Rugpi.
-The image is then installed to the cold spare set of partitions with:
+To update a system, you first need to build a system image, e.g., using Rugix Bakery, or a Rugix Ctrl update bundle.
+Further, the image or bundle need to find their way onto the system that you want to update.
+As explained earlier, how exactly this happens is up to you as Rugix Ctrl does not prescribe any delivery mechanism.
+Once the image or bundle is on the device, you can install it with:
 
 ```shell
-rugpi-ctrl update install <path to the artifact>
+rugpi-ctrl update install <path to the image or bundle>
 ```
 
 This command will also automatically try rebooting into the new version after it has been installed.
 To prevent this from happening, use the `--no-reboot` command line flag.
 Note that this command will not make the update permanent in any way.
 
-When using the `--no-reboot` flag, a reboot to the cold spare can later be triggered with:
+When using the `--no-reboot` flag, a reboot to the inactive, _spare_ system[^spare-system] can later be triggered with:
+
+[^spare-system]: This is the inactive system (A or B) to which we install updates.
 
 ```shell
 rugpi-ctrl system reboot --spare
 ```
 
-Note that a persistent overlay that may exist for the spare partition is deleted prior to installing the update  (see [State Management](./state-management.md)).
-To avoid the overlay from being discarded, use the `--keep-overlay` option when installing the update.
-Please be aware that this may lead to incompatibilities between the overlay and the freshly installed system.
-
-Rugpi also has support for streaming updates directly to the SD card instead of first storing the image and then installing it.
-You can use `-` as artifact path to install an image streamed via stdin to Rugpi Ctrl.
-This also allows using compressed images.
-For instance, to download, decompress, and install an image on-the-fly, use:
+Rugix Ctrl also has support for _streaming updates_, i.e., installing updates without intermediately storing them on the device.
+A streaming update will typically be directly written to the underlying storage while it is downloaded from the network.
+You can use `-` as the input path to install an image streamed via stdin to Rugix Ctrl.
+For instance, to download and install an image on-the-fly run:
 
 ```shell
-curl <url to the image> | xz -d | rugpi-ctrl update install -
+curl <url to the image> | rugpi-ctrl update install -
 ```
 
-In case the internet connection is unstable, you may also want to use
+Rugix Ctrl will also transparently decompress `xz` compressed images and update bundles provided to it via stdin. For other compression formats, you can pipe the image or bundle through the respective decompression tool before feeding it into Rugix Ctrl.
+
+In case the internet connection of the device is unstable, you may also want to continue downloading and installing the update in the presence of intermittent network failures.
+This can be achieved by running:
 
 ```shell
 wget -q -t 0 -O - <url to the image> | rugpi-ctrl update install -
 ```
 
-to retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
+This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
 
-
-Streaming an image is faster because the data only has to be written to the SD card once.
-Furthermore, it has the advantage that the image does not take up precious space on the data partition during the installation.
-
-[^2]: How this happens is outside the scope of Rugpi's core functionality.
+:::info
+We highly recommend that you stream updates to devices.
+This is not only faster, since the update has to be written to storage only once, but also has the advantage that it does not take up precious space on the data partition during the installation.
+If your device is running low on space on the data partition, non-streaming updates may become impossible.
+:::
 
 ### Committing an Update
 
-After rebooting into the new version and verifying that everything is in working order, the update is made permanent with:
+Recall that Rugix Ctrl implements a two-stage update process where updates need to be committed to be permanent.
+After rebooting into the new version and validating that everything is in working order, the update is made permanent with:
 
 ```shell
 rugpi-ctrl system commit
 ```
 
-Note that this command always makes the hot set of partitions, i.e., the currently booted system, the default set.
+Note that this command always makes the currently booted system the default system.
 Hence, it must be run from within the updated version.
-To prevent breaking the system, it is impossible to make the cold set the default set.[^3]
+To prevent breaking the system, it is impossible to make the inactive system the default.[^inactive-default]
 
-Committing an update is up to the concrete update workflow of the application.
-If you want to automatically commit the hot set during the boot process, you may enable the `rugpi-auto-commit` recipe.
-Note that this recipe installs an equally named Systemd service which will also commit an old version if booted into with the rollback feature (see below).
+[^inactive-default]: At least with the `rugpi-ctrl` command line tool.
 
-[^3]: Using the `rugpi-ctrl` command line tool.
+When to commit an update is up to the concrete update workflow of your application.
+If you want to automatically commit the currently booted system during the boot process and are using Rugix Bakery, you can enable the recipe `core/rugpi-auto-commit`.
+This recipe will install a system service that commits the currently booted system whenever it runs.
+Note that this also means that it will commit an old version if booted into, for instance, when performing a rollback (see below).
+
+:::tip
+Use a [_pre-commit hook_](./hooks.md#system-update-hooks) to ensure that a commit is only possible when the system is in proper working order.
+:::
 
 ### Performing a Rollback
 
-Like updating, performing a rollback is a two-step process.
-A full rollback consists of first rebooting into the spare set (containing the previous version) and then committing the rollback after verifying that it is in proper working order.
+Like updating, performing a rollback is a two-stage process.
+A full rollback consists of first rebooting into the spare system (containing the previous version) and then committing the rollback after verifying that it is in proper working order.
 
-To boot into the spare set, run:
+To boot into the spare system, run:
 
 ```shell
 rugpi-ctrl system reboot --spare
@@ -135,10 +138,3 @@ Then, after rebooting, commit the rollback with:
 ```shell
 rugpi-ctrl system commit
 ```
-
-
-## Configuration Reference
-
-<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
-    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
-}}/>

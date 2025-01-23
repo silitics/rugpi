@@ -20,7 +20,8 @@ The bootstrapping process can include a variety of steps such as:
 - Generating unique device identifiers and security certificates.
 - Customizing configurations to suit device-specific requirements.
 
-When [configured to run before the init system](./state-management.md), Rugix Ctrl can also carry out bootstrapping steps. For instance, unless configured otherwise, it will grow the partition table and initialize the data partition where the persistent state lives. Rugix Ctrl's bootstrapping process is flexible and you can adapt it to your specific needs by adding bootstrapping hooks.
+When [configured to run before the init system](./state-management.mdx), Rugix Ctrl can also carry out bootstrapping steps. For instance, unless configured otherwise, it will grow the partition table and initialize the data partition where the persistent state lives. Rugix Ctrl's bootstrapping process is flexible and you can adapt it to your specific needs by adding [bootstrapping hooks](./hooks.md#bootstrapping-hooks).
+Note that the bootstrapping process runs very early during the boot process before the init system because properly booting the system, in particular, with state management, requires the existence of a data partition, which may first need to be created.
 
 :::info
 The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` configuration file. It requires a config partition to be configured and present. The config partition must contain a file `/.rugpi/bootstrap` to trigger the bootstrapping process. This file is deleted after the bootstrapping process to ensure that it does not run again.[^bootstrap-in-production]
@@ -86,26 +87,6 @@ type = "none"
 :::note
 Rugix Ctrl will only create new partitions that do not already exist and grow partitions that do already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
 :::
-
-
-## Bootstrapping Hooks
-
-The bootstrapping process runs very early during the boot process, before even the init system. This is because properly booting the system, in particular, with state management, requires the existence of a data partition, which may need to be created first. You can hook into the bootstrapping process at various stages. Please read the [general documentation about hooks](./hooks.md) first.
-
-The stages of `bootstrap` hooks are:
-
-- `prepare`: Runs after mounting the config partition and determining that the system should be bootstrapped.
-- `pre-layout`: Runs directly before applying the system partition layout.
-- `post-layout`: Runs directly after applying the system partition layout.
-
-
-When writing your custom hooks, you can assume the following environment:
-
-- `/` is mounted read-only to the respective root filesystem.
-- `/sys`, `/proc`, and `/dev` are mounted.
-- `/run` is mounted to a temporary, in-memory filesystem and will be passed through to the final system. If you need to communicate anything to processes after the bootstrapping process, place it in `/run`.
-
-In addition, the config partition is mounted read-only (usually at `/run/rugix/mounts/config`).
 
 
 ## Configuration Reference
