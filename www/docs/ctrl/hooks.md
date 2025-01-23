@@ -56,13 +56,14 @@ For committing to an update or rollback, the stages of `system-commit` hooks are
 
 ## State Management Hooks
 
-For state management, the stages of `state` hooks are:
+For factory resets, the stages of `state-reset` hooks are:
 
-- `pre-reset`: Runs directly before a factory reset.
-- `post-reset`: Runs directly after a factory reset.
+- `prepare`: Runs before initiating the reset and rebooting the system.
+- `pre-reset`: Runs directly before a factory reset during boot (reset can still be aborted).
+- `post-reset`: Runs directly after a factory reset during boot.
 
 As explained in the section on [State Management](./state-management.mdx), the state management functionality runs very early during the boot process, before even the init system.
-When writing `state` hooks, you can assume the following environment:
+For the stages running during boot, you can assume the following environment:
 
 - `/` is mounted read-only to the respective root filesystem.
 - `/sys`, `/proc`, and `/dev` are mounted.
@@ -79,4 +80,4 @@ For bootstrapping, the stages of `bootstrap` hooks are:
 - `pre-layout`: Runs directly before applying the system partition layout.
 - `post-layout`: Runs directly after applying the system partition layout.
 
-Regarding the environment, the same considerations as for [State Management Hooks](#state-management-hooks) apply (see above).
+All stages run during the boot process and the same considerations as for [State Management Hooks](#state-management-hooks) apply (see above).
