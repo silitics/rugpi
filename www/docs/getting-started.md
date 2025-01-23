@@ -5,13 +5,12 @@ sidebar_position: 1
 # Getting Started 🚀
 
 Rugix is a collection of tools designed to build reliable embedded Linux devices with over-the-air update capabilities.
-In this guide, we use two of these tools: _Rugix Bakery_, a flexible and user-friendly build system for bespoke Linux distributions, and _Rugix Ctrl_, a powerful tool for robust over-the-air system updates and system state management.
-Although these tools are designed to work seamlessly together, you can also use them independently for your own projects.
-But for now, let's keep things simple!
+For this guide, you will be using two of these tools: _Rugix Bakery_, a flexible and user-friendly build system for bespoke Linux distributions, and _Rugix Ctrl_, a powerful tool for robust over-the-air system updates and system state management.
 
 With Rugix, our mission is clear: **Simplify the development of embedded Linux devices.**
 This quickstart guide will walk you through the steps required to build a production-ready, customized variant of [Debian](https://www.debian.org) with over-the-air update support, which you can readily run on any EFI-compatible system or deploy on a Raspberry Pi.
-We aim for this guide to take at most one hour to complete, even if you have no prior experience with embedded Linux.
+You will also install an update to your system running in a VM or on a Raspberry Pi.
+End-to-end this guide should take less than 30 minutes to complete, even if you have no prior experience with embedded Linux.
 So, let's get started and unlock the potential of Rugix for your embedded projects!
 
 
@@ -144,10 +143,11 @@ When creating the Docker container for Rugix Bakery, the `run-bakery` shell scri
 That means that you can now connect to the running VM with:
 
 ```shell
-ssh -p 2222 root@127.0.0.1
+ssh -p 2222 -L 8080:localhost:80 root@127.0.0.1
 ```
 
-To get some information about the system, run `rugix-ctrl system info` via SSH.
+The option `-L 8080:localhost:80` will also forward port `8080` on your machine to the port `80` of the VM.
+Hence, you can now also view the static website installed into your system by opening http://127.0.0.1:8080 in your browser.
 
 
 ## Installing an Update
@@ -196,6 +196,6 @@ Congratulations on completing the Rugix quickstart guide! 🙌
 You have successfully set up Rugix Bakery, customized your Debian-based system, built images for different devices, and learned how to install over-the-air updates with Rugix Ctrl. 
 Rugix is designed to simplify the development of embedded Linux devices, making it easier for you to innovate and deploy reliable systems.
 
-While this guide has covered the basics, there's more to learn and explore. We encourage you to dive deeper into the [Rugix Bakery documentation](./bakery/) and [Rugix Ctrl documentation](./ctrl/) to discover additional functionalities and best practices.
+While this guide has covered the basics, there's more to learn and explore. We encourage you to dive deeper into both [Rugix Bakery's documentation](./bakery/) and [Rugix Ctrl's documentation](./ctrl/) to discover additional functionalities and best practices.
 
 Happy building! 🚀
