@@ -37,7 +37,7 @@ Delta updates allow for full system updates while minimizing the update size bas
 Rugix Ctrl is an update installer and does not include any remote delivery mechanism for updates.
 That is, it implements a mechanism for installing updates without prescribing the way in which updates find their way onto the device.
 We believe that this separation is crucial as it avoids vendor lock-in and gives you the flexibility to integrate updates in the way that makes sense for your device.
-To manage your devices and push updates to them, Rugix Ctrl is compatible with several [device management solutions](./advanced/device-management.md) and can be easily integrated into your application, e.g., by offering your users the ability to upload a firmware update in your own UI.
+To manage your devices and push updates to them, Rugix Ctrl is compatible with several [fleet management solutions](./advanced/fleet-management.md) and can be easily integrated into your application, e.g., by offering your users the ability to upload a firmware update in your own UI.
 
 Rugix Ctrl ships as a binary, `rugix-ctrl`, running on your device.
 This binary is used to query and manage the state of the system, to install updates, and to initiate rollbacks.

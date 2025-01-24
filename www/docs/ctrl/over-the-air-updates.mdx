@@ -57,7 +57,7 @@ As explained earlier, how exactly this happens is up to you as Rugix Ctrl does n
 Once the image or bundle is on the device, you can install it with:
 
 ```shell
-rugpi-ctrl update install <path to the image or bundle>
+rugix-ctrl update install <path to the image or bundle>
 ```
 
 This command will also automatically try rebooting into the new version after it has been installed.
@@ -69,7 +69,7 @@ When using the `--no-reboot` flag, a reboot to the inactive, _spare_ system[^spa
 [^spare-system]: This is the inactive system (A or B) to which we install updates.
 
 ```shell
-rugpi-ctrl system reboot --spare
+rugix-ctrl system reboot --spare
 ```
 
 Rugix Ctrl also has support for _streaming updates_, i.e., installing updates without intermediately storing them on the device.
@@ -78,7 +78,7 @@ You can use `-` as the input path to install an image streamed via stdin to Rugi
 For instance, to download and install an image on-the-fly run:
 
 ```shell
-curl <url to the image> | rugpi-ctrl update install -
+curl <url to the image> | rugix-ctrl update install -
 ```
 
 Rugix Ctrl will also transparently decompress `xz` compressed images and update bundles provided to it via stdin. For other compression formats, you can pipe the image or bundle through the respective decompression tool before feeding it into Rugix Ctrl.
@@ -87,7 +87,7 @@ In case the internet connection of the device is unstable, you may also want to 
 This can be achieved by running:
 
 ```shell
-wget -q -t 0 -O - <url to the image> | rugpi-ctrl update install -
+wget -q -t 0 -O - <url to the image> | rugix-ctrl update install -
 ```
 
 This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
@@ -104,17 +104,17 @@ Recall that Rugix Ctrl implements a two-stage update process where updates need 
 After rebooting into the new version and validating that everything is in working order, the update is made permanent with:
 
 ```shell
-rugpi-ctrl system commit
+rugix-ctrl system commit
 ```
 
 Note that this command always makes the currently booted system the default system.
 Hence, it must be run from within the updated version.
 To prevent breaking the system, it is impossible to make the inactive system the default.[^inactive-default]
 
-[^inactive-default]: At least with the `rugpi-ctrl` command line tool.
+[^inactive-default]: At least with the `rugix-ctrl` command line tool.
 
 When to commit an update is up to the concrete update workflow of your application.
-If you want to automatically commit the currently booted system during the boot process and are using Rugix Bakery, you can enable the recipe `core/rugpi-auto-commit`.
+If you want to automatically commit the currently booted system during the boot process and are using Rugix Bakery, you can enable the recipe `core/rugix-auto-commit`.
 This recipe will install a system service that commits the currently booted system whenever it runs.
 Note that this also means that it will commit an old version if booted into, for instance, when performing a rollback (see below).
 
@@ -130,11 +130,46 @@ A full rollback consists of first rebooting into the spare system (containing th
 To boot into the spare system, run:
 
 ```shell
-rugpi-ctrl system reboot --spare
+rugix-ctrl system reboot --spare
 ```
 
 Then, after rebooting, commit the rollback with:
 
 ```shell
-rugpi-ctrl system commit
+rugix-ctrl system commit
 ```
+
+:::info
+What we call a rollback here should not be confused with a failed update.
+A rollback always reverts a _previously committed_ update.
+This allows you to revert to the previous version even though you already committed to the update, for instance, if you notice some issues during regular operation and when you already committed to the update.
+:::
+
+## Signed Updates
+
+To prevent manipulated updates from being installed, Rugix Ctrl provides the option `--check-hash` which can be used to check the SHA256 hash of a (streamed) update.
+Rugix Ctrl does not implement its own signature mechanism yet.
+While we are working towards cryptographic verification of updates directly in Rugix Ctrl, so far, this is up to the delivery mechanism.
+Recall that Rugix Ctrl is only an update installer and does not prescribe how the updates get on the device.
+For now, we push the responsibility of verifying signatures to the delivery mechanism.
+For instance, you can use GPG or OpenSSL to sign an _update manifest_ that contains an URL and the SHA256 hash of the update.
+In a typical setup, the delivery mechanism would then first check the signature of the manifest and then install the update by feeding it via `wget` or `curl` (see above) into Rugix Ctrl, providing the hash via the `--check-hash` option.
+This ensures that Rugix Ctrl will check the hash and abort the update if the hash does not match.
+
+Here is an example with the `--check-hash` option:
+
+```shell
+rugix-ctrl update install --check-hash sha256:a9627e22da964b5b6ad7c1465a79bae4d11b71a064966b37596c057de106c1a9 <path to the image or bundle>
+```
+
+Note that this mechanism is very flexible and allows us to build on trusted tools in a simple way instead of implementing our own signature verification, which may introduce security vulnerabilities.
+You can also combine an update and the signed manifest in a `.tar` archive and process that in a streaming fashion as part of your update workflow.
+
+:::warning
+There is one downside to this approach: The hash can be checked only after the update has been written to disk.
+This means that manipulated data may have been written to the boot and system partition where the update is installed.
+You must be careful not to initiate a rollback into that system, thereby accidentally booting a manipulated system.
+When Rugix Ctrl finds that the hash does not match, it will partially overwrite those partitions, however, an attacker with physical access may prevent that by cutting power at the right time and may then somehow exploit your application to do a rollback.
+In the future, Rugix Ctrl will provide a mechanism based on a signed block list with per-block hashes.
+It will then verify the integrity of each block **before** writing it to disk, thereby ensuring that potentially manipulated data never finds their way onto the disk.
+:::
