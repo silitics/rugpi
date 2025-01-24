@@ -32,6 +32,8 @@ reportify.workspace = true
 rugpi-cli.workspace = true
 rugpi-common.workspace = true
 rugix-hooks.workspace = true
+rugix-fs.workspace = true
+byte-calc.workspace = true
 
 [lints]
 workspace = true

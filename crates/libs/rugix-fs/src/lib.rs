@@ -50,10 +50,21 @@ impl File {
     }
 
     /// Open a file for reading.
-    pub fn open(path: &Path) -> FsResult<Self> {
+    pub fn open_read(path: &Path) -> FsResult<Self> {
         check_canceled();
         let file = std::fs::OpenOptions::new()
             .read(true)
+            .open(path)
+            .whatever("unable to open file")?;
+        Ok(Self { file })
+    }
+
+    /// Open a file for reading and writing.
+    pub fn open_write(path: &Path) -> FsResult<Self> {
+        check_canceled();
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
             .open(path)
             .whatever("unable to open file")?;
         Ok(Self { file })
@@ -377,7 +388,7 @@ impl Copier {
     pub fn copy_file_contents(&mut self, src_file: &Path, dst_file: &Path) -> FsResult<()> {
         check_canceled();
         trace!("copy file contents from {src_file:?} to {dst_file:?}");
-        let mut src = File::open(src_file)?;
+        let mut src = File::open_read(src_file)?;
         let mut dst = File::create(dst_file)?;
         let metadata = src.read_metadata()?;
         self.copy_file_range(

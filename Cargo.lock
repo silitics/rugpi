@@ -2313,12 +2313,14 @@ dependencies = [
 name = "rugpi-ctrl"
 version = "0.1.0"
 dependencies = [
+ "byte-calc",
  "clap",
  "hex",
  "indexmap",
  "indoc",
  "nix",
  "reportify",
+ "rugix-fs",
  "rugix-hooks",
  "rugpi-cli",
  "rugpi-common",

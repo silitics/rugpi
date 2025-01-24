@@ -4,6 +4,8 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::Path;
 
+use tracing::error;
+
 use clap::{Parser, ValueEnum};
 use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugpi_common::disk::stream::ImgStream;
@@ -357,7 +359,31 @@ fn install_update_stream(
             break;
         }
     }
-    hashed_stream.verify()?;
+
+    if let Err(error) = hashed_stream.verify() {
+        error!("hash verification failed");
+        if let Err(error) =
+            rugix_fs::File::open_write(raw_boot_slot.device().path()).and_then(|mut device| {
+                device.write_zeros(
+                    byte_calc::NumBytes::new(0),
+                    byte_calc::NumBytes::mebibytes(1),
+                )
+            })
+        {
+            error!("error overwriting boot partition: {error:?}");
+        }
+        if let Err(error) =
+            rugix_fs::File::open_write(raw_system_slot.device().path()).and_then(|mut device| {
+                device.write_zeros(
+                    byte_calc::NumBytes::new(0),
+                    byte_calc::NumBytes::mebibytes(1),
+                )
+            })
+        {
+            error!("error overwriting system partition: {error:?}");
+        }
+        return Err(error);
+    }
 
     system
         .boot_flow()
