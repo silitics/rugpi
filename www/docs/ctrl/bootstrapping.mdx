@@ -38,6 +38,11 @@ While one may choose to already prepare the provisioning image and its partition
 The layout always affects the disk of the booted root filesystem. Unless configured otherwise, Rugix Ctrl will apply a default layout as part of the bootstrapping process. If that works for you, there is no need to read any further.
 :::
 
+:::warning
+Custom system layouts are experimental.
+**We may introduce breaking changes to the configuration format in minor version.**
+:::
+
 Rugix Ctrl supports MBR (DOS) partition tables and GPT partition tables. Here are two example layouts:
 
 ```toml title="/etc/rugix/bootstrapping.toml"
