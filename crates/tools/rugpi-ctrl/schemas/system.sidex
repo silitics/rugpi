@@ -1,7 +1,16 @@
+/// System configuration.
 #[json(rename_all = "kebab-case")]
 record SystemConfig {
+    /// Config partition configuration.
     config_partition?: PartitionConfig,
+    /// Data partition configuration.
     data_partition?: PartitionConfig,
+    /// System slots.
+    slots?: [string: SlotConfig],
+    /// System boot groups.
+    boot_groups?: [string: BootGroupConfig],
+    /// Boot flow configuration.
+    boot_flow?: BootFlowConfig,
 }
 
 /// Partition configuration.
@@ -13,4 +22,45 @@ record PartitionConfig {
     partition?: u32,
     /// Path where the partition is or should be mounted.
     path?: string,
+}
+
+/// System slot configuration.
+#[json(tag="type", rename_all="kebab-case")]
+variant SlotConfig {
+    /// Block device slot.
+    Block: BlockSlotConfig,
+}
+
+/// Block device slot configuration.
+record BlockSlotConfig {
+    /// Path to the block device.
+    device?: string,
+    /// Partition number of the block device.
+    partition?: u16,
+}
+
+/// Boot group configuration.
+record BootGroupConfig {
+    /// Slot aliases of the boot group.
+    slots: [string: string],
+}
+
+/// Boot flow configuration
+#[json(tag="type", rename_all="kebab-case")]
+variant BootFlowConfig {
+    /// Tryboot boot flow.
+    Tryboot,
+    /// U-Boot boot flow.
+    #[json(name="u-boot")]
+    UBoot,
+    /// Grub (EFI) boot flow.
+    GrubEfi,
+    /// Custom boot flow.
+    Custom: CustomBootFlowConfig,
+}
+
+/// Custom boot flow configuration.
+record CustomBootFlowConfig {
+    /// Path to the script implementing the boot flow.
+    path: string,
 }

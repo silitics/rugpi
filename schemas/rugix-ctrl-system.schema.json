@@ -2,13 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rugix_ctrl.system.SystemConfig",
   "type": "object",
-  "description": "",
+  "description": "System configuration.",
   "properties": {
     "config-partition": {
       "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
     },
     "data-partition": {
       "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/rugix_ctrl.system.SlotConfig"
+      }
+    },
+    "boot-groups": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/rugix_ctrl.system.BootGroupConfig"
+      }
+    },
+    "boot-flow": {
+      "$ref": "#/$defs/rugix_ctrl.system.BootFlowConfig"
     }
   },
   "required": [],
@@ -239,6 +254,104 @@
       "required": [],
       "unevaluatedProperties": false
     },
+    "rugix_ctrl.system.BlockSlotConfig": {
+      "$id": "rugix_ctrl.system.BlockSlotConfig",
+      "type": "object",
+      "description": "Block device slot configuration.",
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "partition": {}
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.system.BootFlowConfig": {
+      "$id": "rugix_ctrl.system.BootFlowConfig",
+      "description": "Boot flow configuration",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "tryboot"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "u-boot"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "grub-efi"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "custom"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "rugix_ctrl.system.BootGroupConfig": {
+      "$id": "rugix_ctrl.system.BootGroupConfig",
+      "type": "object",
+      "description": "Boot group configuration.",
+      "properties": {
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "slots"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.system.CustomBootFlowConfig": {
+      "$id": "rugix_ctrl.system.CustomBootFlowConfig",
+      "type": "object",
+      "description": "Custom boot flow configuration.",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "unevaluatedProperties": false
+    },
     "rugix_ctrl.system.PartitionConfig": {
       "$id": "rugix_ctrl.system.PartitionConfig",
       "type": "object",
@@ -260,6 +373,27 @@
       },
       "required": [],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.system.SlotConfig": {
+      "$id": "rugix_ctrl.system.SlotConfig",
+      "description": "System slot configuration.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "block"
+            },
+            "device": {
+              "type": "string"
+            },
+            "partition": {}
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
     }
   }
 }
