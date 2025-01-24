@@ -23,7 +23,8 @@ Throughout this documentation, _root device_ refers to the parent block device o
 
 :::warning
 A manual configuration is still experimental.
-**We may introduce breaking changes to the configuration format in minor version.**
+**We may introduce breaking changes to the configuration format in minor versions.**
+Note that this only means that you may have to migrate your configuration on a minor release, not that your system will become unstable or break out of the sudden (assuming that you test updates properly).
 :::
 
 
@@ -67,10 +68,12 @@ In that case, you are responsible for mounting them (if they are not disabled) a
 
 ## Slots and Boot Groups
 
-Rugix Ctrl's OTA update mechanism uses _slots_ to flexibly handle different OTA scenarios and requirements.
+Rugix Ctrl's OTA update mechanism uses _slots_ to flexibly handle different OTA scenarios and requirements.[^rauc]
 Typically, a _slot_ corresponds to a device partition where updates can be applied.
 Each slot has a name and a _type_.
 Currently, the only supported slot type is `block`, corresponding to a block device. The block device of a `block` slot can be specified either explicitly via the `device` setting or by a root device partition number via the `partition` setting.
+
+[^rauc]: This design has been inspired by [RAUC](https://rauc.io/).
 
 Example configuration for an A/B update setup with four slots:
 
@@ -123,11 +126,12 @@ Multiple boot flows may exist for the same bootloader, allowing Rugpi to adapt t
 
 Boot flows are configured via the `boot-flow` section, with the `type` setting indicating the boot flow type.
 
-Currently, Rugpi supports the following boot flows:
+Currently, Rugpi supports the following boot flow types:
 
 - `tryboot`: Uses [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting) (A/B setups only).
 - `u-boot`: Uses an [U-Boot](https://docs.u-boot.org/en/latest/) environment file to switch between partitions (A/B setups only).
 - `grub-efi`: Uses a [Grub](https://www.gnu.org/software/grub/) environment file to switch between partitions (A/B setups only).
+- `custom`: Flexible integration based on an external script.
 
 For further details on boot flows, we refer to the [Boot Flows](./boot-flows.md) section.
 

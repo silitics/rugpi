@@ -4,17 +4,16 @@ sidebar_position: 1
 
 # Filesystem Hierarchy
 
-Here is a quick reference for the filesystem hierarchy:
+Here is a quick reference of different directories used by Rugix Ctrl:
 
 - `/`: Root filesystem (read-write with an overlay).
-- `/boot`: Boot partition (read-only).
-- `/run/rugpi/mounts/config`: Config boot partition (usually read-only).
-- `/run/rugpi/mounts/system`: System partition (read-only).
-- `/run/rugpi/mounts/data`: Data partition (read-write).
-- `/run/rugpi/state`: System state (read-write bind mounted).
+- `/run/rugix/mounts/config`: Config partition (usually read-only).
+- `/run/rugix/mounts/system`: System partition (read-only).
+- `/run/rugix/mounts/data`: Data partition (read-write).
+- `/run/rugix/state`: System state (read-write bind mounted).
 
-The state directory `/run/rugpi/state` is bind mounted to the active state profile on the data partition.
-Currently, this is always `/run/rugpi/data/state/default`, however, this will change in the future once the state profile feature lands.
+The state directory `/run/rugix/state` is bind mounted to the active state profile on the data partition.
+Currently, this is always `/run/rugix/data/state/default`, however, this will change in the future once the state profile feature lands.
 
 🚧 **TODO**: The data partition should be better protected against accidental modifications outside of the state directory.
 
@@ -26,7 +25,7 @@ On an SD card (or other low-quality flash memory), we probably do not want to us
 
 ### Data Partition
 
-The data partition in `/run/rugpi/data` has the following hierarchy:
+The data partition in `/run/rugix/data` has the following hierarchy:
 
 - `overlay/work`: Overlay work directory.
 - `overlay/root`: Overlay root directory.
@@ -35,13 +34,10 @@ The data partition in `/run/rugpi/data` has the following hierarchy:
 
 ## State
 
-The state directory `/run/rugpi/state` has the following hierarchy:
+The state directory `/run/rugix/state` has the following hierarchy:
 
-- `overlay/a`: A system overlay state.
-- `overlay/b`: B system overlay state.
-- `persist`: Files and directories persisted with Rugpi Ctrl.
+- `overlay/<group name>`: System overlay for the respective boot group.
+- `persist`: Files and directories persisted with Rugix Ctrl.
 - `ssh`: Persistent SSH host keys.
 - `machine-id`: Persistent `/etc/machine-id`.
-- `app`: Persistent application data.
-
-To persist the data of your application, use Rugpi Ctrl or the `app` directory.
+- `app`: Persistent application data (unmanaged).
