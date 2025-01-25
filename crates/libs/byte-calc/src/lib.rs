@@ -846,6 +846,20 @@ impl ByteLen for [u8] {
     }
 }
 
+#[cfg(feature = "bytes")]
+impl ByteLen for bytes::Bytes {
+    fn byte_len(&self) -> NumBytes {
+        NumBytes::from_usize(self.len())
+    }
+}
+
+#[cfg(feature = "bytes")]
+impl ByteLen for bytes::BytesMut {
+    fn byte_len(&self) -> NumBytes {
+        NumBytes::from_usize(self.len())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

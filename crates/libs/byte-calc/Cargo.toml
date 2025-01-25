@@ -9,9 +9,11 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+bytes = { version = "1", optional = true}
 serde = { version = "1", optional = true }
 
 [features]
+bytes = ["dep:bytes"]
 serde = ["dep:serde"]
 
 [lints]
