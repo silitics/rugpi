@@ -30,9 +30,9 @@ pub fn main() {
         let offset = chunker
             .scan(buffer)
             .or_else(|| if buffer.is_empty() { Some(0) } else { None });
+        chunk_hasher.update(&buffer[..offset.unwrap_or(buffer.len())]);
         let consume = if let Some(offset) = offset {
             chunk_size += NumBytes::from_usize(offset);
-            chunk_hasher.update(&buffer[..offset]);
             let chunk_digest =
                 std::mem::replace(&mut chunk_hasher, args.algorithm.hasher()).finalize();
             println!("Offset: {chunk_offset:#}, Size: {chunk_size:#}, Hash: {chunk_digest}");
@@ -44,7 +44,6 @@ pub fn main() {
             offset
         } else {
             chunk_size += buffer.byte_len();
-            chunk_hasher.update(buffer);
             buffer.len()
         };
         reader.consume(consume);

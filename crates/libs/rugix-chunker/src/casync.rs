@@ -102,6 +102,7 @@ impl Default for CasyncChunkerOptions {
 }
 
 /// [`Chunker`] compatible with Casync.
+#[derive(Debug, Clone)]
 pub struct CasyncChunker {
     /// Current hash value.
     hash: u32,

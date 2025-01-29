@@ -97,8 +97,10 @@ WORKDIR /project
 
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
         cp /usr/share/rugpi/binaries/x86_64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
+        cp /usr/share/rugpi/binaries/x86_64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ] || [ "$TARGETPLATFORM" = "linux/arm64/v8" ]; then \
         cp /usr/share/rugpi/binaries/aarch64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
+        cp /usr/share/rugpi/binaries/aarch64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
     else  \
         echo "Unsupported platform ${TARGETPLATFORM}."; \
         exit 1; \

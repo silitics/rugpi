@@ -44,6 +44,7 @@ impl Chunker for NeverChunker {
 }
 
 /// [`Chunker`] for fixed size blocks.
+#[derive(Debug, Clone)]
 pub struct FixedSizeChunker {
     /// Block size.
     block_size: NumBytes,

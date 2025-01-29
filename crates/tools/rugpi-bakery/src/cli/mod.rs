@@ -23,6 +23,7 @@ pub fn run(args: args::Args) -> BakeryResult<()> {
         args::Command::Pull => cmds::run_pull::run(&args),
         args::Command::Init(cmd) => cmds::run_init::run(cmd),
         args::Command::Shell => cmds::run_shell::run(),
+        args::Command::Bundler(cmd) => cmds::run_bundler::run(cmd),
     }
 }
 

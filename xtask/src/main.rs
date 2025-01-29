@@ -42,7 +42,9 @@ pub fn build_binaries(target: &str) -> anyhow::Result<()> {
             "--target",
             target,
             "--bin",
-            "rugpi-*"
+            "rugpi-*",
+            "--bin",
+            "rugix-*",
         ]
         .with_stdout(Out::Inherit)
         .with_stderr(Out::Inherit)
@@ -62,7 +64,9 @@ pub fn build_binaries(target: &str) -> anyhow::Result<()> {
         let Ok(file_name) = entry.file_name().into_string() else {
             continue;
         };
-        if !file_name.starts_with("rugpi-") || file_name.ends_with(".d") {
+        if !(file_name.starts_with("rugpi-") || file_name.starts_with("rugix-"))
+            || file_name.ends_with(".d")
+        {
             continue;
         }
         std::fs::copy(entry.path(), binaries_dir.join(file_name))?;

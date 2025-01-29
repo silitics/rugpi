@@ -1,0 +1,17 @@
+[package]
+name = "rugix-bundler"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+clap.workspace = true
+hex.workspace = true
+rugix-bundle.workspace = true
+rugpi-cli.workspace = true
+
+[lints]
+workspace = true

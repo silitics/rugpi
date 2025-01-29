@@ -37,6 +37,8 @@ pub enum Command {
     Init(InitCommand),
     /// Spawn a shell in the Rugpi Bakery Docker container.
     Shell,
+    /// Run Rugix Bundler.
+    Bundler(BundlerCommand),
 }
 
 /// The `list` command.
@@ -93,4 +95,11 @@ pub enum InternalCommand {
 pub struct InitCommand {
     /// Template to use.
     pub template: Option<String>,
+}
+
+/// The `bundler` command.
+#[derive(Debug, Parser)]
+pub struct BundlerCommand {
+    #[clap(allow_hyphen_values(true))]
+    pub args: Vec<String>,
 }

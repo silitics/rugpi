@@ -1,0 +1,58 @@
+#[rust(type="rugix_hashes::HashAlgorithm")]
+opaque HashAlgorithm
+
+#[rust(type="byte_calc::NumBytes")]
+opaque NumBytes
+
+#[json(rename_all="kebab-case")]
+record BundleManifest {
+    hash_algorithm?: HashAlgorithm,
+    payloads: [Payload],
+}
+
+#[json(rename_all="kebab-case")]
+record Payload {
+    /// Slot where the payload should be installed.
+    slot?: string,
+    /// Filename of the payload.
+    filename: string,
+    block_encoding?: BlockEncoding,
+}
+
+#[json(rename_all="kebab-case")]
+record BlockEncoding{
+    /// Indicates whether to add a block index for the payload.
+    hash_algorithm?: HashAlgorithm,
+    chunker?: BlockChunker,
+    /// Enable or disable block deduplication.
+    deduplicate?: bool,
+    compression?: Compression,
+}
+
+#[json(tag="type", rename_all="kebab-case")]
+variant BlockChunker {
+    Fixed: FixedBlockChunker,
+    Casync: CasyncBlockChunker,
+}
+
+
+#[json(tag="type", rename_all="kebab-case")]
+variant Compression {
+    Xz: XzCompression,
+}
+
+record XzCompression {
+    level?: u8,
+}
+
+#[json(rename_all="kebab-case")]
+record FixedBlockChunker {
+    block_size?: NumBytes,
+}
+
+#[json(rename_all="kebab-case")]
+record CasyncBlockChunker {
+    min_block_size?: NumBytes,
+    avg_block_size?: NumBytes,
+    max_block_size?: NumBytes,
+}

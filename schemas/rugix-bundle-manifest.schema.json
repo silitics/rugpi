@@ -36,6 +36,26 @@
           "required": [
             "type"
           ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "casync"
+            },
+            "min-block-size": {
+              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+            },
+            "avg-block-size": {
+              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+            },
+            "max-block-size": {
+              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+            }
+          },
+          "required": [
+            "type"
+          ]
         }
       ]
     },
@@ -60,14 +80,41 @@
       "required": [],
       "unevaluatedProperties": false
     },
+    "rugix_bundle.manifest.CasyncBlockChunker": {
+      "$id": "rugix_bundle.manifest.CasyncBlockChunker",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "min-block-size": {
+          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+        },
+        "avg-block-size": {
+          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+        },
+        "max-block-size": {
+          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
     "rugix_bundle.manifest.Compression": {
       "$id": "rugix_bundle.manifest.Compression",
-      "enum": [
+      "description": "",
+      "oneOf": [
         {
-          "type": "xz"
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "xz"
+            },
+            "level": {}
+          },
+          "required": [
+            "type"
+          ]
         }
-      ],
-      "description": ""
+      ]
     },
     "rugix_bundle.manifest.FixedBlockChunker": {
       "$id": "rugix_bundle.manifest.FixedBlockChunker",
@@ -110,6 +157,16 @@
       "required": [
         "filename"
       ],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.XzCompression": {
+      "$id": "rugix_bundle.manifest.XzCompression",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "level": {}
+      },
+      "required": [],
       "unevaluatedProperties": false
     }
   }

@@ -1,0 +1,33 @@
+[package]
+name = "rugix-bundle"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+byte-calc.workspace = true
+console.workspace = true
+libc.workspace = true
+reportify.workspace = true
+rugix-hashes.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+sidex-serde.workspace = true
+sidex.workspace = true
+serde.workspace = true
+rugix-fs.workspace = true
+xz2.workspace = true
+hashbrown.workspace = true
+toml.workspace = true
+rugix-chunker.workspace = true
+rugix-compression.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+sidex-build-rs.workspace = true
+
+[lints]
+workspace = true
