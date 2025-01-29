@@ -415,6 +415,9 @@ impl PartialOrd<NumBytes> for NumBits {
 }
 
 impl NumBytes {
+    /// Zero bytes.
+    pub const ZERO: Self = Self::new(0);
+
     /// Construct [`NumBytes`] from the provided raw number of bytes.
     pub const fn from_usize(n: usize) -> Self {
         if usize::BITS > u64::BITS && n > (u64::MAX as usize) {
@@ -592,19 +595,21 @@ impl core::fmt::Display for NumBytes {
         // Convert the fractional part to base 10 (required for binary units). We carry
         // out the computation with 128-bit integers to prevent overflows. This will also
         // truncate the fractional part to the specified precision.
-        let mut fractional_value = ((fractional as u128) * (fractional_base as u128)
-            / (unit.num_bytes().raw as u128)) as u64;
-        if f.precision().is_some() {
-            f.write_char('.')?;
-            write!(f, "{fractional_value:0p$}", p = precision as usize)?;
-        } else if fractional_value != 0 {
-            f.write_char('.')?;
-            fractional_base /= 10;
-            while fractional_base > 0 && fractional_value > 0 {
-                let digit = fractional_value / fractional_base;
-                write!(f, "{digit}")?;
-                fractional_value %= fractional_base;
+        if !matches!(unit, ByteUnit::Byte) {
+            let mut fractional_value = ((fractional as u128) * (fractional_base as u128)
+                / (unit.num_bytes().raw as u128)) as u64;
+            if f.precision().is_some() {
+                f.write_char('.')?;
+                write!(f, "{fractional_value:0p$}", p = precision as usize)?;
+            } else if fractional_value != 0 {
+                f.write_char('.')?;
                 fractional_base /= 10;
+                while fractional_base > 0 && fractional_value > 0 {
+                    let digit = fractional_value / fractional_base;
+                    write!(f, "{digit}")?;
+                    fractional_value %= fractional_base;
+                    fractional_base /= 10;
+                }
             }
         }
         f.write_str(unit.as_str())
