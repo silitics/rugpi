@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rugix_bundle.manifest.BundleManifest",
+  "type": "object",
+  "description": "",
+  "properties": {
+    "hash-algorithm": {
+      "$ref": "#/$defs/rugix_bundle.manifest.HashAlgorithm"
+    },
+    "payloads": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rugix_bundle.manifest.Payload"
+      }
+    }
+  },
+  "required": [
+    "payloads"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "rugix_bundle.manifest.BlockChunker": {
+      "$id": "rugix_bundle.manifest.BlockChunker",
+      "description": "",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "fixed"
+            },
+            "block-size": {
+              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "rugix_bundle.manifest.BlockEncoding": {
+      "$id": "rugix_bundle.manifest.BlockEncoding",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "hash-algorithm": {
+          "$ref": "#/$defs/rugix_bundle.manifest.HashAlgorithm"
+        },
+        "chunker": {
+          "$ref": "#/$defs/rugix_bundle.manifest.BlockChunker"
+        },
+        "deduplicate": {
+          "type": "boolean"
+        },
+        "compression": {
+          "$ref": "#/$defs/rugix_bundle.manifest.Compression"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.Compression": {
+      "$id": "rugix_bundle.manifest.Compression",
+      "enum": [
+        {
+          "type": "xz"
+        }
+      ],
+      "description": ""
+    },
+    "rugix_bundle.manifest.FixedBlockChunker": {
+      "$id": "rugix_bundle.manifest.FixedBlockChunker",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "block-size": {
+          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.HashAlgorithm": {
+      "$id": "rugix_bundle.manifest.HashAlgorithm",
+      "description": ""
+    },
+    "rugix_bundle.manifest.NumBytes": {
+      "$id": "rugix_bundle.manifest.NumBytes",
+      "description": ""
+    },
+    "rugix_bundle.manifest.Payload": {
+      "$id": "rugix_bundle.manifest.Payload",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "slot": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "compression": {
+          "$ref": "#/$defs/rugix_bundle.manifest.Compression"
+        },
+        "block-encoding": {
+          "$ref": "#/$defs/rugix_bundle.manifest.BlockEncoding"
+        }
+      },
+      "required": [
+        "filename"
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}
