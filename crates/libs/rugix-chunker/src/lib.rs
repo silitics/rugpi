@@ -33,6 +33,16 @@ pub trait Chunker {
     }
 }
 
+/// [`Chunker`] that never chunks.
+#[derive(Debug, Clone, Copy)]
+pub struct NeverChunker;
+
+impl Chunker for NeverChunker {
+    fn scan(&mut self, _: &[u8]) -> Option<usize> {
+        None
+    }
+}
+
 /// [`Chunker`] for fixed size blocks.
 pub struct FixedSizeChunker {
     /// Block size.
