@@ -67,16 +67,14 @@ pub fn read_into_vec(
             }
         }
         AtomHead::Start { tag: start_tag } => loop {
-            loop {
-                let inner = expect_atom_head(source)?;
-                match inner {
-                    atom @ AtomHead::End { tag } if tag == start_tag => {
-                        write_atom_head(output, atom).unwrap();
-                        return Ok(());
-                    }
-                    atom => {
-                        read_into_vec(source, output, atom)?;
-                    }
+            let inner = expect_atom_head(source)?;
+            match inner {
+                atom @ AtomHead::End { tag } if tag == start_tag => {
+                    write_atom_head(output, atom).unwrap();
+                    break;
+                }
+                atom => {
+                    read_into_vec(source, output, atom)?;
                 }
             }
         },
