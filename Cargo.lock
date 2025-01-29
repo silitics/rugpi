@@ -2226,6 +2226,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rugix-chunker"
+version = "0.1.0"
+dependencies = [
+ "byte-calc",
+ "clap",
+ "rugix-hashes",
+]
+
+[[package]]
 name = "rugix-fs"
 version = "0.1.0"
 dependencies = [

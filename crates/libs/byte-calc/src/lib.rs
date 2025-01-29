@@ -165,6 +165,22 @@ macro_rules! define_types {
                 pub const fn new(raw: u64) -> Self {
                     Self { raw }
                 }
+
+                /// Saturating subtraction.
+                pub fn saturating_sub<V: Into<Self>>(self, rhs: V) -> Self {
+                    Self::new(self.raw.saturating_sub(rhs.into().raw))
+                }
+
+                /// Saturating addition.
+                pub fn saturating_add<V: Into<Self>>(self, rhs: V) -> Self {
+                    Self::new(self.raw.saturating_add(rhs.into().raw))
+                }
+            }
+
+            impl core::convert::From<u64> for $name {
+                fn from(value: u64) -> Self {
+                    Self::new(value)
+                }
             }
 
             impl core::ops::Add for $name {
@@ -462,6 +478,15 @@ impl NumBytes {
     /// Align the number of bytes to the next multiple of the block size rounding up.
     pub const fn align_blocks_ceil(self, block_size: NumBytes) -> NumBytes {
         self.to_blocks_ceil(block_size).to_bytes(block_size)
+    }
+
+    /// Convert the number of bytes to [`usize`] panicking on overflow.
+    pub const fn unwrap_usize(self) -> usize {
+        if usize::BITS >= u64::BITS || self.raw < usize::MAX as u64 {
+            self.raw as usize
+        } else {
+            panic!("unable to convert `NumBytes` to `usize`, number does not fit into `usize`")
+        }
     }
 
     /// Splits the number into a whole and a fractional part based on the provided unit.

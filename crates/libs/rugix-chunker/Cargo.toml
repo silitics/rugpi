@@ -1,0 +1,18 @@
+[package]
+name = "rugix-chunker"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+byte-calc.workspace = true
+
+[dev-dependencies]
+clap.workspace = true
+rugix-hashes.workspace = true
+
+[lints]
+workspace = true
