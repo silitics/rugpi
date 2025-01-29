@@ -1,0 +1,20 @@
+[package]
+name = "rugix-hashes"
+edition = "2021"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+hex.workspace = true
+serde = { workspace = true, optional = true }
+sha2.workspace = true
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
+[lints]
+workspace = true
