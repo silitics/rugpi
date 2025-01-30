@@ -1,5 +1,6 @@
 //! Provides the [`BlockIndex`] data structure.
 
+use std::borrow::Cow;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
@@ -11,6 +12,26 @@ use rugix_hashes::{HashAlgorithm, Hasher};
 
 use crate::manifest::BlockEncoding;
 use crate::BundleResult;
+
+pub struct RawBlockIndex<'hashes> {
+    hashes: Cow<'hashes, [u8]>,
+    hash_algorithm: HashAlgorithm,
+}
+
+impl<'hashes> RawBlockIndex<'hashes> {
+    pub fn new(hashes: &'hashes [u8], hash_algorithm: HashAlgorithm) -> Self {
+        Self {
+            hashes: Cow::Borrowed(hashes),
+            hash_algorithm,
+        }
+    }
+
+    pub fn block_hash(&self, block: BlockId) -> &[u8] {
+        let start = block.raw * self.hash_algorithm.hash_size();
+        let end = (block.raw + 1) * self.hash_algorithm.hash_size();
+        &self.hashes[start..end]
+    }
+}
 
 /// Build a block index for the provided payload file.
 pub fn compute_block_index(
@@ -43,7 +64,7 @@ pub fn compute_block_index(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockId {
     /// Raw block number.
-    raw: usize,
+    pub(crate) raw: usize,
 }
 
 /// Entry of a block in a [`BlockIndex`].

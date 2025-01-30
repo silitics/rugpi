@@ -4,7 +4,7 @@ use std::hash::BuildHasher;
 
 use hashbrown::{hash_table, DefaultHashBuilder, HashTable};
 
-use super::block_index::{BlockId, BlockIndex};
+use super::block_index::{BlockId, BlockIndex, RawBlockIndex};
 
 /// Block table.
 #[derive(Debug)]
@@ -31,6 +31,28 @@ impl BlockTable {
             table.insert(index, block);
         }
         table
+    }
+
+    pub fn get_raw(&self, index: &RawBlockIndex, hash: &[u8]) -> Option<BlockId> {
+        let block_hash = self.hasher.hash_one(hash);
+        self.table
+            .find(block_hash, |other| hash == index.block_hash(*other))
+            .cloned()
+    }
+
+    pub fn insert_raw(&mut self, index: &RawBlockIndex, block: BlockId) -> bool {
+        let block_hash = self.hasher.hash_one(index.block_hash(block));
+        match self.table.entry(
+            block_hash,
+            |other| index.block_hash(block) == index.block_hash(*other),
+            |other| self.hasher.hash_one(index.block_hash(*other)),
+        ) {
+            hash_table::Entry::Occupied(_) => false,
+            hash_table::Entry::Vacant(entry) => {
+                entry.insert(block);
+                true
+            }
+        }
     }
 
     /// Insert a block into the table.

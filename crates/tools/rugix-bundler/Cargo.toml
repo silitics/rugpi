@@ -10,7 +10,9 @@ homepage.workspace = true
 [dependencies]
 clap.workspace = true
 hex.workspace = true
+reportify.workspace = true
 rugix-bundle.workspace = true
+rugix-hashes.workspace = true
 rugpi-cli.workspace = true
 
 [lints]

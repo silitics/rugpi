@@ -164,7 +164,10 @@ impl ByteProcessor for XzDecoder {
         while !input.is_empty() {
             self.flush_buffer(output)?;
             let total_in = self.stream.total_in();
-            self.feed_stream(input, xz2::stream::Action::Run)?;
+            match self.feed_stream(input, xz2::stream::Action::Run)? {
+                xz2::stream::Status::StreamEnd => break,
+                _ => { /* do nothing */ }
+            }
             let written = self.stream.total_in() - total_in;
             input = &input[written as usize..];
         }

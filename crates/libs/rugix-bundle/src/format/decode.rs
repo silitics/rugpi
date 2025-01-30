@@ -1,10 +1,12 @@
 //! High-level data structure decoding API.
 
+use std::u64;
+
 use reportify::{bail, ErrorExt};
 
 use byte_calc::NumBytes;
 
-use crate::source::BundleSource;
+use crate::source::{BundleSource, ReaderSource, SkipRead};
 use crate::BundleResult;
 
 use super::stlv::{read_atom_head, AtomHead, Tag};
@@ -150,6 +152,12 @@ impl<S: BundleSource> Decoder<S> {
         self.remaining_bytes -= size;
         Ok(())
     }
+}
+
+pub fn decode_slice<T: Decode>(slice: &[u8]) -> BundleResult<T> {
+    let source = ReaderSource::<_, SkipRead>::new(slice);
+    let mut decoder = Decoder::new(source, 32, NumBytes::new(u64::MAX));
+    decoder.decode()
 }
 
 pub trait Decode: Sized {
