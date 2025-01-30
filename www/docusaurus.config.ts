@@ -132,9 +132,9 @@ const config: Config = {
               href: "https://github.com/silitics/rugpi",
             },
             {
-              label: "Discussions",
-              href: "https://github.com/silitics/rugpi/discussions",
-            },
+              label: "Discord",
+              href: "https://discord.gg/cZ8wP9jNsn",
+            }
           ],
         },
         {
