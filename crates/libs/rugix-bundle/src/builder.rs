@@ -19,9 +19,10 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
     .whatever("unable to parse bundle manifest")?;
     let hash_algorithm = manifest
         .hash_algorithm
-        .unwrap_or(rugix_hashes::HashAlgorithm::Sha512);
+        .unwrap_or(rugix_hashes::HashAlgorithm::Sha512_256);
     let mut bundle_header = format::BundleHeader {
-        manifest: serde_json::to_string(&manifest).expect("should not fail"),
+        manifest: Some(serde_json::to_string(&manifest).unwrap()),
+        hash_algorithm,
         payload_index: Vec::new(),
     };
     let mut prepared_payloads = Vec::new();
@@ -59,12 +60,9 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
     let mut bundle_file =
         BufWriter::new(std::fs::File::create(dst).whatever("unable to create bundle file")?);
     write_segment_start(&mut bundle_file, format::tags::BUNDLE).unwrap();
-    bundle_file
-        .write_all(&format::encode::to_vec(
-            &bundle_header,
-            format::tags::BUNDLE_HEADER,
-        ))
-        .unwrap();
+    let bundle_header = format::encode::to_vec(&bundle_header, format::tags::BUNDLE_HEADER);
+    let header_hash = hash_algorithm.hash(&bundle_header);
+    bundle_file.write_all(&bundle_header).unwrap();
     write_segment_start(&mut bundle_file, format::tags::PAYLOADS).unwrap();
     for prepared in prepared_payloads.into_iter() {
         write_segment_start(&mut bundle_file, format::tags::PAYLOAD).unwrap();
@@ -84,6 +82,7 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
     }
     write_segment_end(&mut bundle_file, format::tags::PAYLOADS).unwrap();
     write_segment_end(&mut bundle_file, format::tags::BUNDLE).unwrap();
+    println!("{header_hash}");
     Ok(())
 }
 

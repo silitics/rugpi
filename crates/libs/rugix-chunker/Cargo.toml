@@ -9,6 +9,7 @@ homepage.workspace = true
 
 [dependencies]
 byte-calc.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 clap.workspace = true

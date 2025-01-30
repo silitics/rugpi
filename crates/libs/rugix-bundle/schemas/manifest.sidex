@@ -1,6 +1,9 @@
 #[rust(type="rugix_hashes::HashAlgorithm")]
 opaque HashAlgorithm
 
+#[rust(type="rugix_chunker::ChunkerAlgorithm")]
+opaque ChunkerAlgorithm
+
 #[rust(type="byte_calc::NumBytes")]
 opaque NumBytes
 
@@ -21,20 +24,13 @@ record Payload {
 
 #[json(rename_all="kebab-case")]
 record BlockEncoding{
+    chunker: ChunkerAlgorithm,
     /// Indicates whether to add a block index for the payload.
     hash_algorithm?: HashAlgorithm,
-    chunker?: BlockChunker,
     /// Enable or disable block deduplication.
     deduplicate?: bool,
     compression?: Compression,
 }
-
-#[json(tag="type", rename_all="kebab-case")]
-variant BlockChunker {
-    Fixed: FixedBlockChunker,
-    Casync: CasyncBlockChunker,
-}
-
 
 #[json(tag="type", rename_all="kebab-case")]
 variant Compression {
@@ -43,16 +39,4 @@ variant Compression {
 
 record XzCompression {
     level?: u8,
-}
-
-#[json(rename_all="kebab-case")]
-record FixedBlockChunker {
-    block_size?: NumBytes,
-}
-
-#[json(rename_all="kebab-case")]
-record CasyncBlockChunker {
-    min_block_size?: NumBytes,
-    avg_block_size?: NumBytes,
-    max_block_size?: NumBytes,
 }

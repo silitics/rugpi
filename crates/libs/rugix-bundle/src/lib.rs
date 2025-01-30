@@ -10,7 +10,7 @@ use format::decode::Decoder;
 use format::stlv::{read_atom_head, write_atom_head, AtomHead, Tag};
 use format::BundleHeader;
 use reportify::{bail, whatever, Report, ResultExt};
-use rugix_hashes::{HashAlgorithm, HashDigest};
+use rugix_hashes::HashDigest;
 use source::{BundleSource, FileSource, ReaderSource, SkipRead};
 
 pub mod block_encoding;
@@ -39,11 +39,7 @@ pub fn bundle_hash(bundle: &Path) -> BundleResult<HashDigest> {
     let header_source = ReaderSource::<_, SkipRead>::new(header_bytes.as_slice());
     let mut decoder = Decoder::with_default_limits(header_source);
     let bundle_header = decoder.decode::<BundleHeader>()?;
-    let bundle_manifest = serde_json::from_str::<manifest::BundleManifest>(&bundle_header.manifest)
-        .whatever("unable to parse manifest")?;
-    let hash_algorithm = bundle_manifest
-        .hash_algorithm
-        .unwrap_or(HashAlgorithm::Sha512);
+    let hash_algorithm = bundle_header.hash_algorithm;
     Ok(hash_algorithm.hash(&header_bytes))
 }
 

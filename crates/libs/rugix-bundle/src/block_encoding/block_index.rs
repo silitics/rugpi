@@ -6,12 +6,11 @@ use std::path::Path;
 use byte_calc::{ByteLen, NumBytes};
 
 use reportify::ResultExt;
-use rugix_chunker::casync::{CasyncChunker, CasyncChunkerOptions};
-use rugix_chunker::{Chunker, FixedSizeChunker};
+use rugix_chunker::{AnyChunker, Chunker, ChunkerAlgorithm};
 use rugix_hashes::{HashAlgorithm, Hasher};
 
 use crate::manifest::BlockEncoding;
-use crate::{manifest, BundleResult};
+use crate::BundleResult;
 
 /// Build a block index for the provided payload file.
 pub fn compute_block_index(
@@ -22,12 +21,7 @@ pub fn compute_block_index(
         hash_algorithm: block_encoding
             .hash_algorithm
             .unwrap_or(rugix_hashes::HashAlgorithm::Sha512_256),
-        chunker: block_encoding
-            .chunker
-            .clone()
-            .unwrap_or(manifest::BlockChunker::Fixed(
-                manifest::FixedBlockChunker::new(),
-            )),
+        chunker: block_encoding.chunker.clone(),
     };
     let mut index_builder = BlockIndexBuilder::new(index_config.clone())?;
     let mut payload_file =
@@ -158,33 +152,7 @@ pub struct BlockIndexConfig {
     /// Hash algorithm to use.
     pub hash_algorithm: HashAlgorithm,
     /// Chunker configuration.
-    pub chunker: manifest::BlockChunker,
-}
-
-impl BlockIndexConfig {
-    /// Create a [`BlockChunker`] based on the configuration.
-    fn chunker(&self) -> BundleResult<BlockChunker> {
-        Ok(match &self.chunker {
-            manifest::BlockChunker::Fixed(config) => BlockChunker::Fixed(FixedSizeChunker::new(
-                config.block_size.unwrap_or(NumBytes::kibibytes(64)),
-            )),
-            manifest::BlockChunker::Casync(config) => {
-                let mut opts = CasyncChunkerOptions::avg(
-                    config.avg_block_size.unwrap_or(NumBytes::kibibytes(64)),
-                );
-                if let Some(min_block_size) = config.min_block_size {
-                    opts.min_chunk_size = min_block_size;
-                }
-                if let Some(max_block_size) = config.max_block_size {
-                    opts.max_chunk_size = max_block_size;
-                }
-                BlockChunker::Casync(
-                    CasyncChunker::new(opts)
-                        .whatever("invalid configuration of `casync` chunker")?,
-                )
-            }
-        })
-    }
+    pub chunker: ChunkerAlgorithm,
 }
 
 /// Block index builder.
@@ -193,7 +161,7 @@ pub struct BlockIndexBuilder {
     /// Hasher for the computing the hash of the pending block.
     hasher: Hasher,
     /// Chunker to determine the block boundaries.
-    chunker: BlockChunker,
+    chunker: AnyChunker,
     /// Block index being built.
     index: BlockIndex,
     /// Offset of the pending block in the byte stream.
@@ -207,7 +175,10 @@ impl BlockIndexBuilder {
     pub fn new(config: BlockIndexConfig) -> BundleResult<Self> {
         Ok(Self {
             hasher: config.hash_algorithm.hasher(),
-            chunker: config.chunker()?,
+            chunker: config
+                .chunker
+                .chunker()
+                .whatever("unable to create chunker")?,
             index: BlockIndex::new(config),
             pending_block_offset: NumBytes::ZERO,
             pending_block_size: NumBytes::ZERO,
@@ -249,24 +220,5 @@ impl BlockIndexBuilder {
         self.index.push(entry);
         self.pending_block_offset += self.pending_block_size;
         self.pending_block_size = NumBytes::ZERO;
-    }
-}
-
-/// Block chunker.
-#[derive(Debug)]
-enum BlockChunker {
-    /// Fixed size chunker.
-    Fixed(FixedSizeChunker),
-    /// Casync compatible chunker.
-    Casync(CasyncChunker),
-}
-
-impl Chunker for BlockChunker {
-    /// Scan the provided bytes for the next block boundary.
-    fn scan(&mut self, bytes: &[u8]) -> Option<usize> {
-        match self {
-            BlockChunker::Fixed(chunker) => chunker.scan(bytes),
-            BlockChunker::Casync(chunker) => chunker.scan(bytes),
-        }
     }
 }

@@ -5,7 +5,11 @@
 
 use std::io::{self, Write};
 
-use reportify::bail;
+use reportify::{bail, ResultExt};
+
+use rugix_chunker::ChunkerAlgorithm;
+use rugix_compression::CompressionFormat;
+use rugix_hashes::HashAlgorithm;
 
 use crate::source::BundleSource;
 use crate::BundleResult;
@@ -25,15 +29,16 @@ pub mod tags;
 define_struct! {
     /// Bundle header.
     pub struct BundleHeader {
-        /// Bundle manifest (JSON-encoded).
-        pub manifest[BUNDLE_MANIFEST]: String,
+        /// Optional bundle manifest (JSON-encoded).
+        pub manifest[BUNDLE_HEADER_MANIFEST]: Option<String>,
+        pub hash_algorithm[BUNDLE_HEADER_HASH_ALGORITHM]: HashAlgorithm,
         /// Payload index.
-        pub payload_index[PAYLOAD_ENTRY]: Vec<PayloadEntry>,
+        pub payload_index[BUNDLE_HEADER_PAYLOAD_INDEX]: Vec<PayloadEntry>,
     }
 }
 
 define_struct! {
-    /// Entry in the payload index.
+    /// Entry in the payload index of a bundle.
     pub struct PayloadEntry {
         /// Slot where the payload should be installed to.
         pub slot[PAYLOAD_ENTRY_SLOT]: Option<String>,
@@ -47,19 +52,30 @@ define_struct! {
 define_struct! {
     /// Header of a payload.
     pub struct PayloadHeader {
-        /// Block encoding data.
-        pub block_encoding[BLOCK_ENCODING]: Option<BlockEncoding>,
+        /// Block encoding.
+        pub block_encoding[PAYLOAD_HEADER_BLOCK_ENCODING]: Option<BlockEncoding>,
     }
 }
 
 define_struct! {
     /// Payload block encoding.
     pub struct BlockEncoding {
+        /// Chunker used for the encoding.
+        pub chunker[BLOCK_ENCODING_CHUNKER]: ChunkerAlgorithm,
+        /// Hash algorithm.
+        pub hash_algorithm[BLOCK_ENCODING_HASH_ALGORITHM]: HashAlgorithm,
+        /// Whether blocks have been deduplicated.
+        pub deduplicated[BLOCK_ENCODING_DEDUPLICATED]: bool,
+        pub compression[BLOCK_ENCODING_COMPRESSION]: Option<CompressionFormat>,
         /// Block index.
-        pub block_index[BLOCK_ENCODING_INDEX]: Bytes,
+        pub block_index[BLOCK_ENCODING_BLOCK_INDEX]: Bytes,
         /// Block sizes.
-        pub block_sizes[BLOCK_ENCODING_SIZES]: Option<Bytes>,
+        pub block_sizes[BLOCK_ENCODING_BLOCK_SIZES]: Option<Bytes>,
     }
+}
+
+define_struct! {
+    pub struct XzCompression {}
 }
 
 /// Encodable and decodable bytes.
@@ -83,5 +99,47 @@ impl Decode for Bytes {
         Ok(Self {
             raw: decoder.read_value()?,
         })
+    }
+}
+
+impl Encode for HashAlgorithm {
+    fn encode(&self, writer: &mut dyn Write, tag: Tag) -> io::Result<()> {
+        write_value(writer, tag, self.name().as_bytes())
+    }
+}
+
+impl Decode for HashAlgorithm {
+    fn decode<S: BundleSource>(decoder: &mut Decoder<S>, atom: AtomHead) -> BundleResult<Self> {
+        String::decode(decoder, atom)?
+            .parse()
+            .whatever("unknown hash algorithm")
+    }
+}
+
+impl Encode for ChunkerAlgorithm {
+    fn encode(&self, writer: &mut dyn Write, tag: Tag) -> io::Result<()> {
+        write_value(writer, tag, self.to_string().as_bytes())
+    }
+}
+
+impl Decode for ChunkerAlgorithm {
+    fn decode<S: BundleSource>(decoder: &mut Decoder<S>, atom: AtomHead) -> BundleResult<Self> {
+        String::decode(decoder, atom)?
+            .parse()
+            .whatever("unknown chunker algorithm")
+    }
+}
+
+impl Encode for CompressionFormat {
+    fn encode(&self, writer: &mut dyn Write, tag: Tag) -> io::Result<()> {
+        write_value(writer, tag, self.as_str().as_bytes())
+    }
+}
+
+impl Decode for CompressionFormat {
+    fn decode<S: BundleSource>(decoder: &mut Decoder<S>, atom: AtomHead) -> BundleResult<Self> {
+        String::decode(decoder, atom)?
+            .parse()
+            .whatever("unknown compression format")
     }
 }

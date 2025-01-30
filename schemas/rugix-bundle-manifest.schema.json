@@ -19,56 +19,16 @@
   ],
   "unevaluatedProperties": false,
   "$defs": {
-    "rugix_bundle.manifest.BlockChunker": {
-      "$id": "rugix_bundle.manifest.BlockChunker",
-      "description": "",
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "const": "fixed"
-            },
-            "block-size": {
-              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-            }
-          },
-          "required": [
-            "type"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "const": "casync"
-            },
-            "min-block-size": {
-              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-            },
-            "avg-block-size": {
-              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-            },
-            "max-block-size": {
-              "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-            }
-          },
-          "required": [
-            "type"
-          ]
-        }
-      ]
-    },
     "rugix_bundle.manifest.BlockEncoding": {
       "$id": "rugix_bundle.manifest.BlockEncoding",
       "type": "object",
       "description": "",
       "properties": {
+        "chunker": {
+          "$ref": "#/$defs/rugix_bundle.manifest.ChunkerAlgorithm"
+        },
         "hash-algorithm": {
           "$ref": "#/$defs/rugix_bundle.manifest.HashAlgorithm"
-        },
-        "chunker": {
-          "$ref": "#/$defs/rugix_bundle.manifest.BlockChunker"
         },
         "deduplicate": {
           "type": "boolean"
@@ -77,26 +37,14 @@
           "$ref": "#/$defs/rugix_bundle.manifest.Compression"
         }
       },
-      "required": [],
+      "required": [
+        "chunker"
+      ],
       "unevaluatedProperties": false
     },
-    "rugix_bundle.manifest.CasyncBlockChunker": {
-      "$id": "rugix_bundle.manifest.CasyncBlockChunker",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "min-block-size": {
-          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-        },
-        "avg-block-size": {
-          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-        },
-        "max-block-size": {
-          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
+    "rugix_bundle.manifest.ChunkerAlgorithm": {
+      "$id": "rugix_bundle.manifest.ChunkerAlgorithm",
+      "description": ""
     },
     "rugix_bundle.manifest.Compression": {
       "$id": "rugix_bundle.manifest.Compression",
@@ -116,18 +64,6 @@
         }
       ]
     },
-    "rugix_bundle.manifest.FixedBlockChunker": {
-      "$id": "rugix_bundle.manifest.FixedBlockChunker",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "block-size": {
-          "$ref": "#/$defs/rugix_bundle.manifest.NumBytes"
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
-    },
     "rugix_bundle.manifest.HashAlgorithm": {
       "$id": "rugix_bundle.manifest.HashAlgorithm",
       "description": ""
@@ -146,9 +82,6 @@
         },
         "filename": {
           "type": "string"
-        },
-        "compression": {
-          "$ref": "#/$defs/rugix_bundle.manifest.Compression"
         },
         "block-encoding": {
           "$ref": "#/$defs/rugix_bundle.manifest.BlockEncoding"

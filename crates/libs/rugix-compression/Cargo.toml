@@ -8,6 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+serde.workspace = true
 xz2.workspace = true
 
 [lints]

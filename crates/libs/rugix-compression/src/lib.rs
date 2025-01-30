@@ -1,6 +1,43 @@
 //! Functionality for streaming compression.
 
+use std::error::Error;
 use std::io::Write;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CompressionFormat {
+    Xz,
+}
+
+impl CompressionFormat {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CompressionFormat::Xz => "xz",
+        }
+    }
+}
+
+impl std::str::FromStr for CompressionFormat {
+    type Err = InvalidCompressionFormatError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "xz" => Ok(Self::Xz),
+            _ => Err(InvalidCompressionFormatError {}),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct InvalidCompressionFormatError {}
+
+impl std::fmt::Display for InvalidCompressionFormatError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("compression format is not valid")
+    }
+}
+
+impl Error for InvalidCompressionFormatError {}
 
 pub trait ByteProcessor {
     type Output;

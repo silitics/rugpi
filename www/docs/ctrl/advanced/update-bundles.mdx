@@ -43,17 +43,16 @@ When the update bundle is installed, the payload file is _unpacked_ and then _in
 
 Note that Rugix Ctrl implements streaming updates, i.e., the unpacking step will not reconstruct the entire payload file but instead stream it to the installation step in pieces as the update bundle is read.
 
-## Packing and Unpacking
+## Bundle Creation
 
 To pack and unpack bundles, you can use Rugix Bundler (`rugix-bundler`).
 You can download pre-built binaries from [the Releases page of Rugix's Git repository](https://github.com/silitics/rugix/releases/).
 If you are using Rugix Bakery, you can also use `./run-bakery bundler`.
 
-Rugix Bundler offers a subcommand for unpacking and packing a bundle, respectively:
+Rugix Bundler offers a subcommand for creating a bundle from a bundle directory, respectively:
 
 ```shell
-rugix-bundler unpack <bundle path.rugixb> <bundle directory>
-rugix-bundler pack <bundle directory> <bundle path.rugixb>
+rugix-bundler bundle <bundle directory> <bundle path.rugixb>
 ```
 
 The _bundle directory_ is a directory with the following structure:

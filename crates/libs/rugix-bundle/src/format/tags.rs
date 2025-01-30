@@ -132,13 +132,15 @@ macro_rules! define_tags {
 define_tags! {
     /// Bundle root segment.
     BUNDLE = 0x6b50741c,
+
     /// Bundle header segment.
     BUNDLE_HEADER = 0x49af6433,
+    BUNDLE_HEADER_MANIFEST = 0x161aa242,
     /// Bundle manifest.
-    BUNDLE_MANIFEST = 0x5cb80dd6,
-
+    BUNDLE_HEADER_HASH_ALGORITHM = 0x5cb80dd6,
     /// Entry in the payload index.
-    PAYLOAD_ENTRY = 0x13737992,
+    BUNDLE_HEADER_PAYLOAD_INDEX = 0x13737992,
+
     /// Slot where the payload should be installed to.
     PAYLOAD_ENTRY_SLOT = 0x45ca7e7e,
     /// Hash of the payload's header.
@@ -157,9 +159,17 @@ define_tags! {
     PAYLOAD_DATA = 0x42fd641a,
 
     /// Payload block encoding.
-    BLOCK_ENCODING = 0x40ed9314,
+    PAYLOAD_HEADER_BLOCK_ENCODING = 0x40ed9314,
+
+    COMPRESSION_XZ = 0x747df11b,
+
+    BLOCK_ENCODING_HASH_ALGORITHM = 0x7f1f994b,
+    BLOCK_ENCODING_DEDUPLICATED = 0x05902926,
+    BLOCK_ENCODING_CHUNKER = 0x55872cf8,
+    BLOCK_ENCODING_COMPRESSION = 0x783217c6,
+
     /// Block index.
-    BLOCK_ENCODING_INDEX = 0x76b3d7a0,
+    BLOCK_ENCODING_BLOCK_INDEX = 0x76b3d7a0,
     /// Block sizes.
-    BLOCK_ENCODING_SIZES = 0x27e5d3f2,
+    BLOCK_ENCODING_BLOCK_SIZES = 0x27e5d3f2,
 }

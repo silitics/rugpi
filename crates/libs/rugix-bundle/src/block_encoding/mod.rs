@@ -92,13 +92,19 @@ pub fn encode_payload_file(
             }
         }
     }
-    let is_fixed_size_chunker = match &block_index.config().chunker {
-        manifest::BlockChunker::Fixed(..) => true,
-        manifest::BlockChunker::Casync(..) => false,
-    };
+    let is_fixed_size_chunker = block_index.config().chunker.is_fixed();
     let is_compressed = block_encoding.compression.is_some();
     let include_sizes = !is_fixed_size_chunker || is_compressed;
     Ok(format::BlockEncoding {
+        hash_algorithm: block_index.config().hash_algorithm,
+        deduplicated: deduplicate,
+        compression: block_encoding
+            .compression
+            .as_ref()
+            .map(|compression| match compression {
+                manifest::Compression::Xz(_) => rugix_compression::CompressionFormat::Xz,
+            }),
+        chunker: block_index.config().chunker.clone(),
         block_index: Bytes {
             raw: compress_bytes(block_encoding, &block_index.into_hashes_vec()),
         },

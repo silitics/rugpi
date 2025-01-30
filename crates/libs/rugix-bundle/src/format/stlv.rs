@@ -415,7 +415,7 @@ pub fn pretty_print(
                     source.skip(length - MAX_LENGTH)?;
                 }
                 eprintln!(
-                    "{:indent$}{} [{:.2}] = {}",
+                    "{:indent$}{} [{:.2}] = \"{}\"",
                     "",
                     style(DisplayTag { resolver, tag }).for_stderr().green(),
                     style(length).for_stderr().blue(),

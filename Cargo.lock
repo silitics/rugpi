@@ -2235,12 +2235,14 @@ dependencies = [
  "byte-calc",
  "clap",
  "rugix-hashes",
+ "serde",
 ]
 
 [[package]]
 name = "rugix-compression"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "xz2",
 ]
 
