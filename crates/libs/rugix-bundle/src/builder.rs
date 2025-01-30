@@ -68,7 +68,7 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
     write_segment_start(&mut bundle_file, format::tags::PAYLOADS).unwrap();
     for prepared in prepared_payloads.into_iter() {
         write_segment_start(&mut bundle_file, format::tags::PAYLOAD).unwrap();
-        bundle_file.write(&prepared.payload_header).unwrap();
+        bundle_file.write_all(&prepared.payload_header).unwrap();
         let data_size = std::fs::metadata(&prepared.payload_data).unwrap().len();
         write_atom_head(
             &mut bundle_file,
