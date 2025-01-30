@@ -12,6 +12,12 @@ import ConfigSchema from "@site/schemas/rugix-bundle-manifest.schema.json";
 
 Updates are delivered to devices in the form of _update bundles_.
 
+Rugix update bundles are based on a format specifically engineered for **efficient and secure** over-the-air updates.
+The format provides **build-in support for cryptographic integrity checks, compression, and adaptive delta updates**.
+
+
+## Introduction
+
 An update bundle is a single file that may contain multiple update _payloads_.
 Typically, for each payload, the update bundle specifies a slot (see [System Configuration: Slots and Boot Groups](./system-configuration.mdx#slots-and-boot-groups)) to which the payload should be installed.
 
@@ -22,40 +28,41 @@ Before we continue, let's define a few terms:
 - *Payload Data*: Actual data of a payload stored in an update bundle.
 
 For instance, if a slot corresponds to a block device, then the slot data *and* payload file may be a filesystem image.
-However, if a slot corresponds to a directory, then the slot data is the contents of this directory and the payload file may be a `.tar` archive of the directory's contents.
+However, if a slot corresponds to a directory, then the slot data is the contents of this directory and the payload file may be a Tar archive of the directory's contents.
 Now, the payload data is derived from the payload file.
 For instance, the payload file may be compressed before being stored in an update bundle.
 While the payload file must be reconstructible from the update bundle alone, e.g., by decompressing the payload data stored in the bundle, the slot data may or may not be reconstructible from the bundle alone.
 
-These considerations give rise to the following pipeline:
+These considerations give rise to the following transformations:
 
 ```mermaid
 flowchart LR
-    slot_data[Slot Data] -- preprocess --> payload_file[Payload File]
+    root(( ))
+    root -- preprocessing --> payload_file[Payload File]
     payload_file -- pack --> update_bundle[Update Bundle]
-    payload_file -- install --> slot_data
     update_bundle -- unpack --> payload_file
+    payload_file -- install --> slot_data[Slot Data]
 ```
 
-The data that should end up in the slot after an update is first _preprocessed_ to obtain a payload file, e.g., by creating a `.tar` archive from a directory.
+The data that should end up in the slot after an update is first _preprocessed_ to obtain a payload file, e.g., by creating a Tar archive from a directory.
 This payload file is then _packed_ into an update bundle.
-When the update bundle is installed, the payload file is _unpacked_ and then _installed_ to the slot specified in the update bundle, e.g., by extracting the formerly created `.tar` archive.
+When the update bundle is installed, the payload file is _unpacked_ and then _installed_ to the slot specified in the update bundle, e.g., by extracting the formerly created Tar archive.
 
-Note that Rugix Ctrl implements streaming updates, i.e., the unpacking step will not reconstruct the entire payload file but instead stream it to the installation step in pieces as the update bundle is read.
+Note that Rugix Ctrl implements streaming updates, i.e., the unpacking step will not reconstruct the entire payload file but instead stream it to the installation step in pieces as the update bundle is read, e.g., over the network.
 
 ## Bundle Creation
 
-To pack and unpack bundles, you can use Rugix Bundler (`rugix-bundler`).
+To work with bundles, you can use Rugix Bundler (`rugix-bundler`).
 You can download pre-built binaries from [the Releases page of Rugix's Git repository](https://github.com/silitics/rugix/releases/).
 If you are using Rugix Bakery, you can also use `./run-bakery bundler`.
 
-Rugix Bundler offers a subcommand for creating a bundle from a bundle directory, respectively:
+Rugix Bundler offers a subcommand for creating a bundle from a _bundle directory_:
 
 ```shell
 rugix-bundler bundle <bundle directory> <bundle path.rugixb>
 ```
 
-The _bundle directory_ is a directory with the following structure:
+A bundle directory is a directory with the following structure:
 
 - `rugix-bundle.toml`: Rugix bundle manifest.
 - `payloads/`: Directory containing the payload files.
@@ -69,25 +76,25 @@ Here is an example of a bundle manifest:
 ```toml
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bundle-manifest.schema.json
 
-hash-algorithm = "sha512"
+hash-algorithm = "sha512-256"
 
 [[payloads]]
 slot = "boot"
 filename = "boot.vfat"
 [payloads.block-encoding]
-hash-algorithm = "sha256"
-chunker = { type = "fixed", block-size = "32KiB" }
-deduplication = false
-compression = { type = "xz" }
+hash-algorithm = "sha512-256"
+chunker = "casync-64"
+compression = { type = "xz", level = 9 }
+deduplication = true
 
 [[payloads]]
 slot = "system"
 filename = "system.ext4"
 [payloads.block-encoding]
-hash-algorithm = "sha256"
-chunker = { type = "fixed", block-size = "32KiB" }
-deduplication = false
-compression = { type = "xz" }
+hash-algorithm = "sha512-256"
+chunker = "casync-64"
+compression = { type = "xz", level = 9 }
+deduplication = true
 ```
 
 The bundle contains two payloads, a filesystem for a boot partition (`boot` slot) and a filesystem for a system partition (`system` slot).
@@ -109,18 +116,18 @@ That way, by providing the hash of the root, Rugix Ctrl can verify different par
 ## Delta Updates
 
 :::warning
-**Delta updates are not yet implemented.** The following describes how we will implement them.
+**Delta updates are not yet implemented.** This section describes what we plan to implement.
 :::
 
 ### Adaptive Delta Updates
 
-Adaptive delta updates are easy to implement and work with any HTTP server supporting range queries.
+Adaptive delta updates with any HTTP server supporting range queries, making them particularly easy to implement.
 For adaptive delta updates, the payload file is split into multiple blocks (see [Block Encoding](#block-encoding)).
 The bundle then contains an index of the blocks of the payload file that can be used to fetch only the blocks that do not already exist locally on a device.
 
 Adaptive delta updates have the following advantages:
 
-- Easy to implement.
+- Easy to implement, only an HTTP server supporting range queries is required.
 - Only a single update bundle is required to update from any version.
 - A block index may be required anyway (see security considerations below).
 
@@ -138,7 +145,8 @@ Even with static delta updates you likely want a block index (with a large fixed
 
 The example given above specifies a _block encoding_ for each payload.
 A block encoding will add a _block index_ for the respective payload to the bundle.
-To this end, the payload file will first be divided into blocks (the examples above use a fixed block size of `32KiB`).
+To this end, the payload file will first be divided into blocks.
+In the examples above, we use the same algorithm as [Casync](https://github.com/systemd/casync) to divide the payload file.
 The block index is then a sequence of the hashes of these blocks:
 
 ```
@@ -175,7 +183,7 @@ Note that block deduplication requires two assumptions:
 First, the payload file must be written directly to the slot without any post processing.
 Second, we need random access on the slot.
 For these reasons, block deduplication is incompatible with payloads that have have a postprocessing step.
-For instance, for directory slots, the payload file is a `.tar` archive that is extracted on-the-fly to the respective directory.
+For instance, for directory slots, the payload file is a Tar archive that is extracted on-the-fly to the respective directory.
 In this case, the extraction of the archive is a postprocessing step.
 The same applies to static deltas where the payload file is fed through a delta compression tool (like `xdelta`) whose output is then written to the respective slot.
 
