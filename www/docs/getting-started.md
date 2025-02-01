@@ -115,7 +115,9 @@ Let's say that you would like to build an image for Raspberry Pi 4, you can do t
 This command will build an image `build/systems/customized-pi4/system.img` that you can directly write to an SD card, e.g., with [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 You can then put this SD card into a Raspberry Pi 4 and boot into the system that you just built.
 When visiting the IP address of the Raspberry Pi in your local network in a web browser, you should see the static website with the changes you made.
+If you don't know the IP address, try [`http://rugix-template.local`](http://rugix-template.local).
 In addition, you should be able to connect to the Raspberry Pi via SSH as the `root` user.
+For Raspberry Pi 5, use `customized-pi5` instead of `customized-pi4`.
 
 The system declarations `customized-efi-arm64` and `customized-efi-amd64` can be used to build images for EFI-compatible 64-bit ARM and x86 devices, respectively, which you can directly write to an NVMe or USB drive and then boot from.
 
@@ -133,7 +135,7 @@ A typical use case would be to define a base layer with your application and the
 ## Running a VM
 
 While you could use the EFI-compatible images to manually create VMs, there is an easier way built directly into Rugix Bakery.
-For instance, to run a VM based on the `customized-arm64` image, run the following command:[^new-vm]
+For instance, to run a VM based on the `customized-efi-arm64` system, run the following command:[^new-vm]
 
 [^new-vm]: Running this command will always create a fresh VM. In particular, this means that the SSH host keys of the system do change every time. When connecting via SSH you may first need to remove the old keys from `known_hosts`.
 
@@ -141,16 +143,18 @@ For instance, to run a VM based on the `customized-arm64` image, run the followi
 ./run-bakery run customized-efi-arm64
 ```
 
-You will then see the VM booting on the command line.
+If an image for `customized-efi-arm64` has not been built previously, this command will first build an appropriate image, reusing any layers which have already been built previously.
+Afterwards, it will start the VM, which you should then see booting.
+
 When creating the Docker container for Rugix Bakery, the `run-bakery` shell script also sets up port forwarding for SSH.
-That means that you can now connect to the running VM with:
+That means that you can now connect to the running VM directly from your terminal with:
 
 ```shell
 ssh -p 2222 -L 8080:localhost:80 root@127.0.0.1
 ```
 
 The option `-L 8080:localhost:80` will also forward port `8080` on your machine to the port `80` of the VM.
-Hence, you can now also view the static website installed into your system by opening http://127.0.0.1:8080 in your browser.
+Hence, you can now view the static website installed into your system by opening http://127.0.0.1:8080 in your browser.
 
 
 ## Installing an Update
