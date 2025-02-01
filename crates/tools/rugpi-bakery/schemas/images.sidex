@@ -1,7 +1,6 @@
 //! Image configuration.
 
 import foreign::NumBytes
-import projects::Architecture
 import systems::Architecture
 import systems::Target
 

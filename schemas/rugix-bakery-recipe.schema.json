@@ -122,7 +122,7 @@
           "type": "string"
         },
         "architecture": {
-          "$ref": "#/$defs/rugix_bakery.projects.Architecture"
+          "$ref": "#/$defs/rugix_bakery.systems.Architecture"
         },
         "target": {
           "$ref": "#/$defs/rugix_bakery.systems.Target"
@@ -238,17 +238,6 @@
       },
       "required": [],
       "unevaluatedProperties": false
-    },
-    "rugix_bakery.projects.Architecture": {
-      "$id": "rugix_bakery.projects.Architecture",
-      "enum": [
-        "amd64",
-        "arm64",
-        "armv7",
-        "armhf",
-        "arm"
-      ],
-      "description": "Architecture."
     },
     "rugix_bakery.projects.ProjectConfig": {
       "$id": "rugix_bakery.projects.ProjectConfig",
@@ -406,6 +395,17 @@
         }
       ]
     },
+    "rugix_bakery.systems.Architecture": {
+      "$id": "rugix_bakery.systems.Architecture",
+      "enum": [
+        "amd64",
+        "arm64",
+        "armv7",
+        "armhf",
+        "arm"
+      ],
+      "description": "Architecture."
+    },
     "rugix_bakery.systems.SystemConfig": {
       "$id": "rugix_bakery.systems.SystemConfig",
       "type": "object",
@@ -415,16 +415,13 @@
           "type": "string"
         },
         "architecture": {
-          "$ref": "#/$defs/rugix_bakery.projects.Architecture"
+          "$ref": "#/$defs/rugix_bakery.systems.Architecture"
         },
         "target": {
           "$ref": "#/$defs/rugix_bakery.systems.Target"
         },
-        "images": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.systems.SystemImageConfig"
-          }
+        "image": {
+          "$ref": "#/$defs/rugix_bakery.systems.SystemImageConfig"
         }
       },
       "required": [

@@ -1,7 +1,6 @@
 //! System configuration.
 
 import foreign::NumBytes
-import projects::Architecture
 import images::ImageLayout
 
 record SystemConfig {
@@ -11,8 +10,8 @@ record SystemConfig {
     architecture: Architecture,
     /// Rugix Bakery target.
     target?: Target,
-    /// System images.
-    images?: [string: SystemImageConfig],
+    /// System image configuration.
+    image?: SystemImageConfig,
 }
 
 /// Architecture.
