@@ -10,7 +10,6 @@ use reportify::{Report, ResultExt};
 
 use crate::boot::uboot::UBootEnv;
 
-pub mod artifact;
 pub mod boot;
 pub mod ctrl_config;
 pub mod devices;

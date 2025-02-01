@@ -2305,17 +2305,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rugpi-artifact"
-version = "0.1.0"
-dependencies = [
- "clap",
- "reportify",
- "rugpi-common",
- "serde_json",
- "sha2",
-]
-
-[[package]]
 name = "rugpi-bakery"
 version = "0.1.0"
 dependencies = [
