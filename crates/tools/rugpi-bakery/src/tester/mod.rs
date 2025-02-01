@@ -43,7 +43,11 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
         block_on(async {
             let vm = qemu::start(
                 image_config.architecture,
-                &system_out.join("system.img").to_string_lossy(),
+                &system_out
+                    .join("system.img")
+                    .canonicalize()
+                    .whatever("unable to canonical image path")?
+                    .to_string_lossy(),
                 &system,
             )
             .await?;

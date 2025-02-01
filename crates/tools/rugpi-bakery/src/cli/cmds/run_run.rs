@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use reportify::ResultExt;
 use rugix_tasks::block_on;
+use tempfile::TempDir;
 use tracing::info;
 
 use crate::cli::{args, load_project};
@@ -20,6 +21,15 @@ pub fn run(args: &args::Args, cmd: &args::RunCommand) -> BakeryResult<()> {
     oven::bake_system(&project, &cmd.system, &output).whatever("error baking image")?;
 
     let image_path = output.join("system.img");
+
+    let tempdir = TempDir::new().whatever("unable to create temporary directory")?;
+
+    let temp_img = tempdir.path().join("system.img");
+
+    // We copy the image such that new builds do not corrupt the VM.
+    std::fs::copy(&image_path, &temp_img).whatever("unable to copy image")?;
+
+    let image_path = temp_img;
 
     let image_config = project.config().resolve_system_config(&cmd.system)?;
     let system = SystemConfig {

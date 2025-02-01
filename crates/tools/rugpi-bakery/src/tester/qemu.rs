@@ -282,7 +282,7 @@ pub async fn start(
         "-F",
         "raw",
         "-o",
-        "backing_file=../{image_file}",
+        "backing_file={image_file}",
         ".rugpi/vm-image.img",
         config
             .disk_size
