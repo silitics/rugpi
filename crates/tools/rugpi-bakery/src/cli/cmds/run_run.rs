@@ -17,7 +17,7 @@ use crate::{oven, BakeryResult};
 pub fn run(args: &args::Args, cmd: &args::RunCommand) -> BakeryResult<()> {
     let project = load_project(args)?;
 
-    let output = Path::new("build/systems").join(&cmd.system);
+    let output = Path::new(".rugpi/systems").join(&cmd.system);
     oven::bake_system(&project, &cmd.system, &output).whatever("error baking image")?;
 
     let image_path = output.join("system.img");

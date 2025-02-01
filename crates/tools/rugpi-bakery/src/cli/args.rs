@@ -53,7 +53,7 @@ pub enum ListCommand {
 #[derive(Debug, Parser)]
 pub enum BakeCommand {
     /// Bake a system
-    System {
+    Image {
         /// The name of the system to bake.
         system: String,
         /// The output path for the resulting files.

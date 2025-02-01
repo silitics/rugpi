@@ -109,10 +109,10 @@ An image is a binary blob that can be flashed onto a device or used with a VM.
 Let's say that you would like to build an image for Raspberry Pi 4, you can do that by running:
 
 ```shell
-./run-bakery bake system customized-pi4
+./run-bakery bake image customized-pi4
 ```
 
-This command will build an image `build/systems/customized-pi4/system.img` that you can directly write to an SD card, e.g., with [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+This command will build an image `build/images/customized-pi4.img` that you can directly write to an SD card, e.g., with [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 You can then put this SD card into a Raspberry Pi 4 and boot into the system that you just built.
 When visiting the IP address of the Raspberry Pi in your local network in a web browser, you should see the static website with the changes you made.
 If you don't know the IP address, try [`http://rugix-template.local`](http://rugix-template.local).

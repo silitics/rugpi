@@ -29,7 +29,7 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
         .into_owned();
 
     for system in &test_config.systems {
-        let system_out = Path::new("build/systems").join(&system.system);
+        let system_out = Path::new(".rugpi/systems").join(&system.system);
         oven::bake_system(&project, &system.system, &system_out).whatever("error baking system")?;
 
         let test_status = rugpi_cli::add_status(TestCliStatus {
@@ -46,7 +46,7 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
                 &system_out
                     .join("system.img")
                     .canonicalize()
-                    .whatever("unable to canonical image path")?
+                    .whatever("unable to canonicalize image path")?
                     .to_string_lossy(),
                 &system,
             )
