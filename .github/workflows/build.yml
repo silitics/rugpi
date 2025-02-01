@@ -14,7 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: "ghcr.io/silitics/rugpi-bakery"
+  IMAGE_NAME: "ghcr.io/silitics/rugix-bakery"
 
 jobs:
   build_binaries:
@@ -101,7 +101,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix=git-
           labels: |
-            org.opencontainers.image.title=Rugpi Bakery
+            org.opencontainers.image.title=Rugix Bakery
             org.opencontainers.image.vendor=Silitics GmbH
   
   build_bakery_images:
@@ -214,7 +214,7 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$METADATA_JSON") \
-            --annotation "index:org.opencontainers.image.title=Rugpi Bakery" \
+            --annotation "index:org.opencontainers.image.title=Rugix Bakery" \
             --annotation "index:org.opencontainers.image.vendor=Silitics GmbH" \
             $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
       - name: Inspect Image
