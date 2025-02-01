@@ -13,7 +13,7 @@ use rugpi_common::disk::mbr::mbr_types;
 use rugpi_common::disk::{
     parse_size, DiskId, NumBlocks, Partition, PartitionTable, PartitionTableType,
 };
-use rugpi_common::fsutils::{allocate_file, copy_sparse};
+use rugpi_common::fsutils::allocate_file;
 use rugpi_common::utils::ascii_numbers;
 use rugpi_common::utils::units::NumBytes;
 use rugpi_common::{grub_patch_env, rpi_patch_boot, rpi_patch_config};
