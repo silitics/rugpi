@@ -5,7 +5,7 @@
     Rugix
 </h1>
 <h4 align="center">
-    Rugix is a suite of open-source tools to build <em>reliable</em> embedded Linux devices
+    A suite of open-source tools to build <em>reliable</em> embedded Linux devices
     <br>with <em>efficient and secure</em> over-the-air update capabilities.
 </h4>
 <p align="center">
