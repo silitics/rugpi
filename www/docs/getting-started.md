@@ -181,13 +181,18 @@ The hash will have the following form:
 sha512-256:<hex string>
 ```
 
+Note that this hash is **not** a hash over the entire bundle.
+Instead, it is only used to verify a bundle header, which contains further hashes for other parts of the bundle.
+This allows Rugix Ctrl to verify parts of the bundle individually and ensure that manipulated data is never ever written anywhere.
+For the cryptography nerds, the hash is the root of a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
+
 After building the bundle, you can transfer it via `scp` to the earlier started VM:
 
 ```shell
 scp -P 2222 build/bundles/customized-efi-arm64.rugixb root@127.0.0.1:/root
 ```
 
-When the upload is complete, the bundle can be installed as an update with the following command:
+When the upload is complete, the bundle can be installed via SSH as an update with the following command:
 
 ```shell
 rugpi-ctrl update install --verify-bundle <hash> /root/customized-efi-arm64.rugixb
@@ -218,7 +223,7 @@ You have successfully set up Rugix Bakery, customized your Debian-based system, 
 Rugix is designed to simplify the development of embedded Linux devices, making it easier for you to innovate and deploy reliable systems.
 
 While this guide has covered the basics, there's more to learn and explore.
-We encourage you to dive deeper into both [Rugix Bakery's documentation](./bakery/) and [Rugix Ctrl's documentation](./ctrl/) to discover additional functionalities and best practices.
+We encourage you to dive deeper into both [Rugix Bakery's](./bakery/) and [Rugix Ctrl's documentation](./ctrl/) to discover additional functionalities and best practices.
 In particular, you should read the section on [State Management](./ctrl/state-management.mdx) to understand why any changes that you make to a running system may be lost after a reboot.[^state-management]
 
 [^state-management]: This may be surprising at first, but we consider it a feature that with Rugix the systems you build will typically be immutable and you have to be explicit about the state of the system you want to persist through updates and reboots.
