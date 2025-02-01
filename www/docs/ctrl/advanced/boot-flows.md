@@ -136,12 +136,12 @@ This boot flow assumes the following image and system layout:
 ```
 GPT =============================== Image
      1: config    FAT32  256M
-     2: boot-a    EXT4   128M  (*)
-     3: boot-b    EXT4   128M
-     5: system-a               (*)
+     2: boot-a    EXT4   256M  (*)
+     3: boot-b    EXT4   256M
+     4: system-a               (*)
     =============================== System
-     6: system-b
-     7: data      EXT4   ....
+     5: system-b
+     6: data      EXT4   ....
 ```
 
 ### Custom
