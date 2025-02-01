@@ -1,4 +1,5 @@
 use std::fs::{self, File};
+use std::io::Seek;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
@@ -170,14 +171,12 @@ pub fn make_system(config: &SystemConfig, frozen: &FrozenLayer, out: &Path) -> B
                         .write(true)
                         .open(&image_file)
                         .whatever("unable to open image file")?;
-                    copy_sparse(
-                        &mut src,
-                        &mut dst,
-                        0,
+                    dst.seek(std::io::SeekFrom::Start(
                         table.blocks_to_bytes(image_partition.start).into_raw(),
-                        table.blocks_to_bytes(image_partition.size).into_raw(),
-                    )
-                    .whatever("error copying filesystem into image")?;
+                    ))
+                    .whatever("unable to seek in image file")?;
+                    std::io::copy(&mut src, &mut dst)
+                        .whatever("error copying filesystem into image")?;
                 }
                 Filesystem::Fat32 => {
                     let size = table.blocks_to_bytes(image_partition.size);
@@ -207,14 +206,12 @@ pub fn make_system(config: &SystemConfig, frozen: &FrozenLayer, out: &Path) -> B
                         .write(true)
                         .open(&image_file)
                         .whatever("unable to open image file")?;
-                    copy_sparse(
-                        &mut src,
-                        &mut dst,
-                        0,
+                    dst.seek(std::io::SeekFrom::Start(
                         table.blocks_to_bytes(image_partition.start).into_raw(),
-                        table.blocks_to_bytes(image_partition.size).into_raw(),
-                    )
-                    .whatever("error copying filesystem into image")?;
+                    ))
+                    .whatever("unable to seek in image file")?;
+                    std::io::copy(&mut src, &mut dst)
+                        .whatever("error copying filesystem into image")?;
                 }
             }
         }
