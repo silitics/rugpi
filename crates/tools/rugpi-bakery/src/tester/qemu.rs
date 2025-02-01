@@ -338,7 +338,7 @@ pub async fn start(
         .stderr(Stdio::piped())
         .stdin(Stdio::null());
     let mut child = command.spawn().whatever("unable to spawn Qemu")?;
-    if let Some(stdout) = Some("build/vm-stdout.log") {
+    if let Some(stdout) = Some(".rugpi/vm-stdout.log") {
         let mut stdout_log = fs::File::create(stdout)
             .await
             .whatever("unable to create stdout log file")?;
@@ -365,7 +365,7 @@ pub async fn start(
             // io::copy(&mut stdout, &mut stdout_log).await
         });
     }
-    if let Some(stderr) = Some("build/vm-stderr.log") {
+    if let Some(stderr) = Some(".rugpi/vm-stderr.log") {
         let mut stderr_log = fs::File::create(stderr)
             .await
             .whatever("unable to create stderr log file")?;
