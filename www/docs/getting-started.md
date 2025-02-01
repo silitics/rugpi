@@ -186,7 +186,7 @@ Instead, it is only used to verify a bundle header, which contains further hashe
 This allows Rugix Ctrl to verify parts of the bundle individually and ensure that manipulated data is never written anywhere, even when streaming updates.[^streaming-updates]
 For the cryptography nerds, the hash is the root of a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
 
-[^streaming-updates]: Rugix Ctrl supports streaming updates directly into their final location on a device without intermediate storage. To do so in a secure way requires us to check the integrity of individual “block” before writing them. If we would compute a hash over the entire update instead, we would only be able to detect manipulations after processing the entire update.
+[^streaming-updates]: Rugix Ctrl supports streaming updates directly into their final location on a device without intermediate storage. To do so in a secure way requires us to check the integrity of individual “blocks” before writing them. If we would compute a hash over the entire update instead, we would only be able to detect manipulations after processing the entire update.
 
 After building the bundle, you can transfer it via `scp` to the earlier started VM:
 
