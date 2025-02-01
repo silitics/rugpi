@@ -524,7 +524,7 @@
       "type": "object",
       "description": "System configuration for testing.",
       "properties": {
-        "disk-image": {
+        "system": {
           "type": "string"
         },
         "disk-size": {
@@ -535,7 +535,7 @@
         }
       },
       "required": [
-        "disk-image"
+        "system"
       ],
       "unevaluatedProperties": false
     },

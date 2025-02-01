@@ -1,35 +1,21 @@
 [repositories]
 rugpi-extra = { git = "https://github.com/silitics/rugpi-extra.git", branch = "v0.7" }
 
-[images.customized-amd64]
+[systems.customized-efi-amd64]
 layer = "customized-efi"
 architecture = "amd64"
 target = "generic-grub-efi"
 
-# This image has a larger size and can be directly used with QEMU.
-[images.customized-amd64-vm]
-layer = "customized-efi"
-architecture = "amd64"
-target = "generic-grub-efi"
-size = "16G"
-
-[images.customized-arm64]
+[systems.customized-efi-arm64]
 layer = "customized-efi"
 architecture = "arm64"
 target = "generic-grub-efi"
-
-# This image has a larger size and can be directly used with QEMU.
-[images.customized-arm64-vm]
-layer = "customized-efi"
-architecture = "arm64"
-target = "generic-grub-efi"
-size = "16G"
 
 # Compatible with:
 # - Raspberry Pi 5
 # - Raspberry Pi 4 (with recent firmware)
 # - Raspberry Pi CM4 (with recent firmware)
-[images.customized-pi5]
+[systems.customized-pi5]
 layer = "customized-pi"
 architecture = "arm64"
 target = "rpi-tryboot"
@@ -39,7 +25,7 @@ target = "rpi-tryboot"
 # Compatible with:
 # - Raspberry Pi 4
 # - Raspberry Pi CM4
-[images.customized-pi4]
+[systems.customized-pi4]
 layer = "customized-pi4"
 architecture = "arm64"
 target = "rpi-tryboot"

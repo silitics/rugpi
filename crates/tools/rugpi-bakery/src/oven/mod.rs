@@ -3,6 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use layer::FrozenLayer;
 use reportify::{bail, whatever, ResultExt};
 use rugpi_common::loop_dev::LoopDevice;
 use rugpi_common::mount::Mounted;
@@ -18,19 +19,20 @@ use crate::utils::caching::{download, Hasher};
 use crate::BakeryResult;
 
 pub mod customize;
-pub mod image;
 pub mod layer;
+pub mod system;
 pub mod targets;
 
-pub fn bake_image(project: &ProjectRef, image: &str, output: &Path) -> BakeryResult<()> {
-    let image_config = project
+pub fn bake_system(project: &ProjectRef, system: &str, output: &Path) -> BakeryResult<()> {
+    let system_config = project
         .config()
-        .get_image_config(image)
-        .ok_or_else(|| whatever!("unable to find image {image}"))?;
-    info!("baking image `{image}`");
-    let layer_bakery = LayerBakery::new(project, image_config.architecture);
-    let baked_layer = layer_bakery.bake_root(&image_config.layer)?;
-    image::make_image(image_config, &baked_layer, output)
+        .get_system_config(system)
+        .ok_or_else(|| whatever!("unable to find image {system}"))?;
+    info!("baking image `{system}`");
+    let layer_bakery = LayerBakery::new(project, system_config.architecture);
+    let baked_layer = layer_bakery.bake_root(&system_config.layer)?;
+    let frozen = FrozenLayer::new(system_config.layer.clone(), baked_layer);
+    system::make_system(system_config, &frozen, output)
 }
 
 pub struct LayerBakery<'p> {

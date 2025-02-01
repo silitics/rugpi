@@ -4,7 +4,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::{fmt, fs};
 
-use images::{Filesystem, ImageConfig, PartitionTableType};
+use images::{Filesystem, PartitionTableType};
 use projects::ProjectConfig;
 use rugix_tasks::check_canceled;
 use serde::Deserialize;
@@ -14,7 +14,7 @@ use reportify::{whatever, ResultExt};
 use crate::BakeryResult;
 
 use self::recipes::ParameterValue;
-use self::systems::Architecture;
+use self::systems::{Architecture, SystemConfig};
 
 sidex::include_bundle! {
     #[doc(hidden)]
@@ -79,13 +79,13 @@ impl fmt::Display for ParameterValue {
 
 impl ProjectConfig {
     /// Retrieve the configuration of the image with the provided name.
-    pub fn get_image_config(&self, name: &str) -> Option<&ImageConfig> {
-        self.images.as_ref().and_then(|images| images.get(name))
+    pub fn get_system_config(&self, name: &str) -> Option<&SystemConfig> {
+        self.systems.as_ref().and_then(|systems| systems.get(name))
     }
 
     /// Resolve the name of an image.
-    pub fn resolve_image_config(&self, name: &str) -> BakeryResult<&ImageConfig> {
-        self.get_image_config(name)
+    pub fn resolve_system_config(&self, name: &str) -> BakeryResult<&SystemConfig> {
+        self.get_system_config(name)
             .ok_or_else(|| whatever!("unable to to find image {name:?}"))
     }
 }

@@ -29,15 +29,8 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
         .into_owned();
 
     for system in &test_config.systems {
-        let output = Path::new("build/images")
-            .join(&system.disk_image)
-            .with_extension("img");
-        {
-            let output = output.clone();
-            let project = project.clone();
-            let disk_image = system.disk_image.clone();
-            oven::bake_image(&project, &disk_image, &output).whatever("error baking image")?;
-        }
+        let system_out = Path::new("build/systems").join(&system.system);
+        oven::bake_system(&project, &system.system, &system_out).whatever("error baking system")?;
 
         let test_status = rugpi_cli::add_status(TestCliStatus {
             total_steps: test_config.steps.len() as u64,
@@ -45,12 +38,12 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
             heading: format!("Test {test_name:?}"),
         });
 
-        let image_config = project.config().resolve_image_config(&system.disk_image)?;
+        let image_config = project.config().resolve_system_config(&system.system)?;
 
         block_on(async {
             let vm = qemu::start(
                 image_config.architecture,
-                &output.to_string_lossy(),
+                &system_out.join("system.img").to_string_lossy(),
                 &system,
             )
             .await?;

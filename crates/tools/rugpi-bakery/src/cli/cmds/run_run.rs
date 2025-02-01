@@ -16,18 +16,14 @@ use crate::{oven, BakeryResult};
 pub fn run(args: &args::Args, cmd: &args::RunCommand) -> BakeryResult<()> {
     let project = load_project(args)?;
 
-    let output = Path::new("build/images")
-        .join(&cmd.image)
-        .with_extension("img");
-    {
-        let output = output.clone();
-        let project = project.clone();
-        oven::bake_image(&project, &cmd.image, &output).whatever("error baking image")?;
-    }
+    let output = Path::new("build/images").join(&cmd.system);
+    oven::bake_system(&project, &cmd.system, &output).whatever("error baking image")?;
 
-    let image_config = project.config().resolve_image_config(&cmd.image)?;
+    let image_path = output.join("system.img");
+
+    let image_config = project.config().resolve_system_config(&cmd.system)?;
     let system = SystemConfig {
-        disk_image: cmd.image.clone(),
+        system: cmd.system.clone(),
         disk_size: None,
         ssh: None,
     };
@@ -35,7 +31,7 @@ pub fn run(args: &args::Args, cmd: &args::RunCommand) -> BakeryResult<()> {
     block_on(async {
         let _vm = qemu::start(
             image_config.architecture,
-            &output.to_string_lossy(),
+            &image_path.to_string_lossy(),
             &system,
         )
         .await?;

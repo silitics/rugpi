@@ -1,5 +1,5 @@
 [[systems]]
-disk-image = "customized-arm64"
+system  = "customized-arm64"
 ssh = { private-key = "./files/id_rsa" }
 
 [[steps]]

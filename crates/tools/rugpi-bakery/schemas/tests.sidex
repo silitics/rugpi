@@ -14,7 +14,7 @@ record TestConfig {
 #[json(rename_all = "kebab-case")]
 record SystemConfig {
     /// Image to use.
-    disk_image: string,
+    system: string,
     /// Size of the disk.
     disk_size?: NumBytes,
     /// SSH configuration.

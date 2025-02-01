@@ -52,7 +52,7 @@ pub enum ListCommand {
 #[derive(Debug, Parser)]
 pub enum BakeCommand {
     /// Bake an image.
-    Image {
+    System {
         /// The name of the image to bake.
         image: String,
         /// The output path of the resulting image.
@@ -77,7 +77,7 @@ pub struct TestCommand {
 /// The `run` command.
 #[derive(Debug, Parser)]
 pub struct RunCommand {
-    pub image: String,
+    pub system: String,
 }
 
 /// The `bake` command.

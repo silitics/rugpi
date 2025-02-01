@@ -4,11 +4,10 @@ use reportify::{bail, ResultExt};
 
 use rugpi_common::boot::grub::grub_write_defaults;
 
-use crate::config::images::ImageConfig;
-use crate::config::systems::Architecture;
+use crate::config::systems::{Architecture, SystemConfig};
 use crate::BakeryResult;
 
-pub fn initialize_grub<'cx>(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {
+pub fn initialize_grub<'cx>(config: &SystemConfig, config_dir: &Path) -> BakeryResult<()> {
     rugix_fs::create_dir_recursive(&config_dir.join("EFI/BOOT")).ok();
     rugix_fs::create_dir_recursive(&config_dir.join("rugpi")).ok();
     let mut copier = rugix_fs::Copier::new();
