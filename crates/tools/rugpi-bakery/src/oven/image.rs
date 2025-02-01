@@ -60,7 +60,7 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResul
     let boot_dir = bundle_dir.join("roots/boot");
     fs::create_dir_all(&boot_dir).whatever("unable to create boot directory")?;
 
-    // Initialize config and boot partitions based the selected on boot flow.
+    // Initialize config partition.
     info!("Initialize boot flow.");
     if let Some(target) = &config.target {
         match target {
@@ -75,15 +75,6 @@ pub fn make_image(config: &ImageConfig, src: &Path, image: &Path) -> BakeryResul
             }
             Target::Unknown => { /* nothing to do */ }
         }
-    }
-    // Always copy second stage boot scripts independently of the boot flow.
-    if config.target.is_some() {
-        info!("Copy second stage boot scripts.");
-        copy_recursive(
-            "/usr/share/rugpi/boot/u-boot/bin/second.scr",
-            boot_dir.join("second.scr"),
-        )
-        .whatever("unable to copy second stage uboot script")?;
     }
 
     // At this point, everything is initialized and we can compute the partition table.
