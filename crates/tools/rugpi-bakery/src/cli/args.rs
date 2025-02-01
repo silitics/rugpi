@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use crate::config::systems::Architecture;
+use crate::oven::BundleOpts;
 
 /// Command line arguments.
 #[derive(Debug, Parser)]
@@ -51,11 +52,11 @@ pub enum ListCommand {
 /// The `bake` command.
 #[derive(Debug, Parser)]
 pub enum BakeCommand {
-    /// Bake an image.
+    /// Bake a system
     System {
-        /// The name of the image to bake.
-        image: String,
-        /// The output path of the resulting image.
+        /// The name of the system to bake.
+        system: String,
+        /// The output path for the resulting files.
         output: Option<PathBuf>,
     },
     /// Bake a layer.
@@ -65,6 +66,14 @@ pub enum BakeCommand {
         arch: Architecture,
         /// The name of the layer to bake.
         layer: String,
+    },
+    /// Bake a bundle.
+    Bundle {
+        system: String,
+        output: Option<PathBuf>,
+        /// Disable compression of the bundle.
+        #[clap(flatten)]
+        opts: BundleOpts,
     },
 }
 

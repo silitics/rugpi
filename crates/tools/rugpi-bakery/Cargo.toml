@@ -40,6 +40,7 @@ rugix-tasks.workspace = true
 rugix-fs.workspace = true
 rugpi-cli.workspace = true
 rugpi-common.workspace = true
+rugix-bundle.workspace = true
 
 [lints]
 workspace = true

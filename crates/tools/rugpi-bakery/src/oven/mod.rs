@@ -3,8 +3,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use clap::Args;
 use layer::FrozenLayer;
 use reportify::{bail, whatever, ResultExt};
+use rugix_bundle::manifest::{self, BundleManifest, ChunkerAlgorithm};
 use rugpi_common::loop_dev::LoopDevice;
 use rugpi_common::mount::Mounted;
 use tempfile::tempdir;
@@ -12,7 +14,7 @@ use tracing::info;
 use url::Url;
 use xscript::{run, Run};
 
-use crate::config::systems::Architecture;
+use crate::config::systems::{Architecture, Target};
 use crate::project::library::LayerIdx;
 use crate::project::ProjectRef;
 use crate::utils::caching::{download, Hasher};
@@ -165,4 +167,105 @@ fn extract(project: &ProjectRef, image_url: &str, layer_path: &Path) -> BakeryRe
     run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])
         .whatever("unable to create layer tar file")?;
     Ok(())
+}
+
+/// Bundle options.
+#[derive(Args, Clone, Debug)]
+pub struct BundleOpts {
+    /// Disable compression of the bundle.
+    #[clap(long)]
+    without_compression: bool,
+}
+
+pub fn bake_bundle(
+    project: &ProjectRef,
+    system: &str,
+    system_path: &Path,
+    output: &Path,
+    opts: &BundleOpts,
+) -> BakeryResult<()> {
+    let bundle_dir = tempdir().whatever("unable to create temporary directory")?;
+    let bundle_dir = bundle_dir.path();
+    let system_config = project.config().resolve_system_config(system)?;
+    let config = match system_config.target.clone().unwrap_or(Target::Unknown) {
+        Target::GenericGrubEfi => efi_bundle_config(opts),
+        Target::RpiTryboot => rpi_bundle_config(opts),
+        Target::RpiUboot => rpi_bundle_config(opts),
+        Target::Unknown => bail!("cannot bake bundles for unknown targets"),
+    };
+    std::fs::write(
+        bundle_dir.join("rugix-bundle.toml"),
+        toml::to_string(&config).unwrap(),
+    )
+    .whatever("unable to write bundle config")?;
+    std::os::unix::fs::symlink(
+        system_path
+            .join("filesystems")
+            .canonicalize()
+            .whatever("unable to canonicalize filesystems directory")?,
+        bundle_dir.join("payloads"),
+    )
+    .whatever("unable to symlink filesystems")?;
+    info!("Creating bundle, this may take a while...");
+    if let Some(parent) = output.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    rugix_bundle::builder::pack(bundle_dir, output).whatever("unable to create bundle")?;
+    Ok(())
+}
+
+fn rpi_bundle_config(opts: &BundleOpts) -> BundleManifest {
+    let compression = if opts.without_compression {
+        None
+    } else {
+        Some(manifest::Compression::Xz(manifest::XzCompression::new()))
+    };
+    manifest::BundleManifest::new(vec![
+        manifest::Payload::new("partition-2.img".to_owned())
+            .with_slot(Some("boot".to_owned()))
+            .with_block_encoding(Some(
+                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                    avg_block_size_kib: 64,
+                })
+                .with_deduplicate(Some(true))
+                .with_compression(compression.clone()),
+            )),
+        manifest::Payload::new("partition-5.img".to_owned())
+            .with_slot(Some("boot".to_owned()))
+            .with_block_encoding(Some(
+                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                    avg_block_size_kib: 64,
+                })
+                .with_deduplicate(Some(true))
+                .with_compression(compression.clone()),
+            )),
+    ])
+}
+
+fn efi_bundle_config(opts: &BundleOpts) -> BundleManifest {
+    let compression = if opts.without_compression {
+        None
+    } else {
+        Some(manifest::Compression::Xz(manifest::XzCompression::new()))
+    };
+    manifest::BundleManifest::new(vec![
+        manifest::Payload::new("partition-2.img".to_owned())
+            .with_slot(Some("boot".to_owned()))
+            .with_block_encoding(Some(
+                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                    avg_block_size_kib: 64,
+                })
+                .with_deduplicate(Some(true))
+                .with_compression(compression.clone()),
+            )),
+        manifest::Payload::new("partition-4.img".to_owned())
+            .with_slot(Some("boot".to_owned()))
+            .with_block_encoding(Some(
+                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                    avg_block_size_kib: 64,
+                })
+                .with_deduplicate(Some(true))
+                .with_compression(compression.clone()),
+            )),
+    ])
 }

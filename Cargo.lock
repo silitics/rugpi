@@ -2318,6 +2318,7 @@ dependencies = [
  "nix",
  "reportify",
  "reqwest",
+ "rugix-bundle",
  "rugix-fs",
  "rugix-tasks",
  "rugpi-cli",
