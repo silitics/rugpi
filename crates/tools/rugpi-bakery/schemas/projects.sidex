@@ -3,6 +3,7 @@
 import foreign::NumBytes
 import images::ImageConfig
 import repositories::SourceConfig
+import systems::SystemConfig
 
 /// Project configuration.
 record ProjectConfig {
@@ -10,21 +11,6 @@ record ProjectConfig {
     repositories?: [string: SourceConfig],
     /// Images declarations.
     images?: [string: ImageConfig],
-}
-
-/// Architecture.
-#[json(rename_all = "lowercase")]
-#[json(tagged=externally)]
-#[rust(derive(Copy, PartialEq, Eq, Hash))]
-variant Architecture {
-    /// 64-bit x86.
-    Amd64,
-    /// 64-bit ARMv8.
-    Arm64,
-    /// 32-bit ARMv7.
-    Armv7,
-    /// 32-bit ARMv6 (Hard-Float).
-    Armhf,
-    /// 32-bit ARMv6.
-    Arm,
+    /// System declarations.
+    systems?: [string: SystemConfig],
 }

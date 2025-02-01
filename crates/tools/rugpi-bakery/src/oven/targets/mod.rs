@@ -3,7 +3,8 @@ use byte_calc::NumBytes;
 use rugpi_common::disk::gpt::gpt_types;
 use rugpi_common::disk::mbr::mbr_types;
 
-use crate::config::images::{Filesystem, ImageLayout, ImagePartition, PartitionTableType, Target};
+use crate::config::images::{Filesystem, ImageLayout, ImagePartition, PartitionTableType};
+use crate::config::systems::Target;
 
 pub mod generic_grub_efi;
 pub mod rpi_tryboot;

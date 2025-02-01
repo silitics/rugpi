@@ -2,6 +2,8 @@
 
 import foreign::NumBytes
 import projects::Architecture
+import systems::Architecture
+import systems::Target
 
 /// Image configuration.
 record ImageConfig {
@@ -56,19 +58,6 @@ variant Filesystem {
     Ext4,
     /// Fat32 filesystem.
     Fat32,
-}
-
-/// Target.
-#[json(tagged=externally, rename_all = "kebab-case")]
-variant Target {
-    /// Generic target for EFI-compatible systems.
-    GenericGrubEfi,
-    /// Raspberry Pi-specific target using the `tryboot` mechanism.
-    RpiTryboot,
-    /// Raspberry Pi-specific target using U-Boot.
-    RpiUboot,
-    /// Target for unsupported devices.
-    Unknown,
 }
 
 /// Partition type.

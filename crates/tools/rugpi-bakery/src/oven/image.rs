@@ -20,7 +20,8 @@ use rugpi_common::utils::ascii_numbers;
 use rugpi_common::utils::units::NumBytes;
 use rugpi_common::{grub_patch_env, rpi_patch_boot, rpi_patch_config};
 
-use crate::config::images::{Filesystem, ImageConfig, ImageLayout, Target};
+use crate::config::images::{Filesystem, ImageConfig, ImageLayout};
+use crate::config::systems::Target;
 use crate::oven::targets;
 use crate::oven::targets::generic_grub_efi::initialize_grub;
 use crate::oven::targets::rpi_tryboot::initialize_tryboot;
