@@ -13,8 +13,8 @@ use reportify::{whatever, ResultExt};
 
 use crate::BakeryResult;
 
-use self::projects::Architecture;
 use self::recipes::ParameterValue;
+use self::systems::Architecture;
 
 sidex::include_bundle! {
     #[doc(hidden)]

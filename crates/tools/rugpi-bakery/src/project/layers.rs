@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::config::layers::LayerConfig;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::utils::caching::ModificationTime;
 
 use super::repositories::RepositoryIdx;

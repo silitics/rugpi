@@ -9,7 +9,7 @@ use std::sync::Arc;
 use reportify::{whatever, ResultExt};
 
 use crate::config::load_config;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::utils::caching::mtime;
 use crate::utils::idx_vec::{new_idx_type, IdxVec};
 use crate::BakeryResult;

@@ -11,7 +11,7 @@ use tracing::info;
 use url::Url;
 use xscript::{run, Run};
 
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::project::library::LayerIdx;
 use crate::project::ProjectRef;
 use crate::utils::caching::{download, Hasher};

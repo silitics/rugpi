@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 
 /// Command line arguments.
 #[derive(Debug, Parser)]

@@ -5,7 +5,7 @@ use reportify::{bail, ResultExt};
 use rugpi_common::boot::grub::grub_write_defaults;
 
 use crate::config::images::ImageConfig;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::BakeryResult;
 
 pub fn initialize_grub<'cx>(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {

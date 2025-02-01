@@ -23,7 +23,7 @@ use tokio::{fs, time};
 use tracing::{debug, error};
 
 use crate::cli::status::CliLog;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::config::tests::SystemConfig;
 use crate::BakeryResult;
 

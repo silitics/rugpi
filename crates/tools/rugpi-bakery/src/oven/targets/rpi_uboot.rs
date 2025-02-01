@@ -6,7 +6,7 @@ use rugpi_common::boot::uboot::UBootEnv;
 use rugpi_common::fsutils::copy_recursive;
 
 use crate::config::images::ImageConfig;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::BakeryResult;
 
 pub fn initialize_uboot(config: &ImageConfig, config_dir: &Path) -> BakeryResult<()> {

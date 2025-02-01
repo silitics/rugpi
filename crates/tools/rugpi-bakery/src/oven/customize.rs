@@ -18,7 +18,7 @@ use xscript::{cmd, run, vars, Cmd, ParentEnv, Run};
 
 use crate::cli::status::CliLog;
 use crate::config::layers::LayerConfig;
-use crate::config::projects::Architecture;
+use crate::config::systems::Architecture;
 use crate::oven::layer::LayerContext;
 use crate::project::layers::Layer;
 use crate::project::library::Library;
