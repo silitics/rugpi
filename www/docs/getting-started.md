@@ -29,7 +29,7 @@ The script runs an ephemeral Docker container with Rugix Bakery and sets everyth
 To start a fresh project, create an empty directory and then run:
 
 ```shell
-curl -O https://raw.githubusercontent.com/silitics/rugix/v0.8.0/bakery/run-bakery && chmod +x ./run-bakery
+curl -O https://raw.githubusercontent.com/silitics/rugix/v0.8/bakery/run-bakery && chmod +x ./run-bakery
 ```
 
 This command will download the `run-bakery` shell script from Rugix's GitHub repository and make it executable.
