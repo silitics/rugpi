@@ -46,7 +46,7 @@ jobs:
       - name: Create Artifact
         run: |
           cd target/${{ matrix.target }}/release
-          tar -cf ../../../${{ matrix.target }}.tar rugpi-*[!d]
+          tar -cf ../../../${{ matrix.target }}.tar rugpi-*[!d] rugix-*[!d]
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
