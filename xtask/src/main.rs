@@ -82,7 +82,7 @@ pub fn build_image() -> anyhow::Result<()> {
             "docker",
             "build",
             "-t",
-            "ghcr.io/silitics/rugpi-bakery:dev",
+            "ghcr.io/silitics/rugix-bakery:dev",
             "-f",
             "bakery/Dockerfile",
             "."
