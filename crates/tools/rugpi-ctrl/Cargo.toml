@@ -34,6 +34,8 @@ rugpi-common.workspace = true
 rugix-hooks.workspace = true
 rugix-fs.workspace = true
 byte-calc.workspace = true
+rugix-bundle.workspace = true
+rugix-hashes.workspace = true
 
 [lints]
 workspace = true

@@ -20,6 +20,12 @@ pub mod manifest;
 pub mod reader;
 pub mod source;
 
+/// Start sequence of an update bundle.
+pub const BUNDLE_MAGIC: &[u8] = &[
+    0x6b, 0x50, 0x74, 0x1c, 0x40, // Start bundle.
+    0x49, 0xaf, 0x64, 0x33, 0x40, // Start bundle header.
+];
+
 reportify::new_whatever_type! {
     /// Error reading or writing a bundle.
     BundleError

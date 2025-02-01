@@ -4,12 +4,15 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::Path;
 
+use rugix_bundle::source::{ReaderSource, SkipRead};
+use rugix_bundle::BUNDLE_MAGIC;
+use rugix_hashes::HashDigest;
 use tracing::error;
 
 use clap::{Parser, ValueEnum};
 use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugpi_common::disk::stream::ImgStream;
-use rugpi_common::maybe_compressed::MaybeCompressed;
+use rugpi_common::maybe_compressed::{MaybeCompressed, PeekReader};
 use rugpi_common::stream_hasher::StreamHasher;
 use rugpi_common::system::boot_groups::{BootGroup, BootGroupIdx};
 use rugpi_common::system::info::SystemInfo;
@@ -76,6 +79,7 @@ pub fn main() -> SystemResult<()> {
                     reboot: reboot_type,
                     keep_overlay,
                     check_hash,
+                    verify_bundle,
                     stream,
                     boot_entry,
                 } => {
@@ -137,7 +141,14 @@ pub fn main() -> SystemResult<()> {
                     "}
                     }
 
-                    install_update_stream(&system, image, check_hash, entry_idx, entry)?;
+                    install_update_stream(
+                        &system,
+                        image,
+                        check_hash,
+                        verify_bundle,
+                        entry_idx,
+                        entry,
+                    )?;
 
                     let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
                         UpdateRebootType::No
@@ -275,9 +286,41 @@ fn install_update_stream(
     system: &System,
     image: &String,
     check_hash: Option<ImageHash>,
+    verify_bundle: &Option<HashDigest>,
     entry_idx: BootGroupIdx,
     entry: &BootGroup,
 ) -> SystemResult<()> {
+    let reader: &mut dyn io::Read = if image == "-" {
+        &mut io::stdin()
+    } else {
+        &mut File::open(image).whatever("error opening image")?
+    };
+    let reader = match check_hash.clone() {
+        Some(ImageHash::Sha256(expected)) => MaybeStreamHasher::Sha256 {
+            hasher: StreamHasher::new(reader),
+            expected,
+        },
+        None => MaybeStreamHasher::NoHash { reader },
+    };
+    let mut update_stream = PeekReader::new(reader);
+
+    let magic = update_stream
+        .peek(BUNDLE_MAGIC.len())
+        .whatever("error reading bundle magic")?;
+
+    if magic == BUNDLE_MAGIC {
+        if check_hash.is_some() {
+            bail!("--check-hash is not supported for update bundles, use --verify-bundle");
+        }
+        return install_update_bundle(system, update_stream, verify_bundle, entry_idx, entry);
+    }
+    if verify_bundle.is_some() {
+        bail!("--verify-bundle is not supported on images, use --check-hash");
+    }
+
+    let update_stream =
+        MaybeCompressed::new(update_stream).whatever("error decompressing stream")?;
+
     system
         .boot_flow()
         .pre_install(system, entry_idx)
@@ -289,22 +332,8 @@ fn install_update_stream(
     let SlotKind::Block(raw_boot_slot) = system.slots()[boot_slot].kind();
     let SlotKind::Block(raw_system_slot) = system.slots()[system_slot].kind();
 
-    let reader: &mut dyn io::Read = if image == "-" {
-        &mut io::stdin()
-    } else {
-        &mut File::open(image).whatever("error opening image")?
-    };
-    let reader = match check_hash {
-        Some(ImageHash::Sha256(expected)) => MaybeStreamHasher::Sha256 {
-            hasher: StreamHasher::new(reader),
-            expected,
-        },
-        None => MaybeStreamHasher::NoHash { reader },
-    };
-    println!("Copying partitions...");
     let mut img_stream =
-        ImgStream::new(MaybeCompressed::new(reader).whatever("error decompressing image")?)
-            .whatever("error reading image partitions")?;
+        ImgStream::new(update_stream).whatever("error reading image partitions")?;
     let mut partition_idx = 0;
     while let Some(mut partition) = img_stream
         .next_partition()
@@ -346,7 +375,7 @@ fn install_update_stream(
         partition_idx += 1;
     }
 
-    let mut hashed_stream = img_stream.into_inner().into_inner();
+    let mut hashed_stream = img_stream.into_inner().into_inner().into_inner();
     // Make sure that the entire stream has been consumed. Otherwise, the hash
     // may not be match the file.
     loop {
@@ -383,6 +412,64 @@ fn install_update_stream(
             error!("error overwriting system partition: {error:?}");
         }
         return Err(error);
+    }
+
+    system
+        .boot_flow()
+        .post_install(system, entry_idx)
+        .whatever("error running post-install step")?;
+    Ok(())
+}
+
+fn install_update_bundle<R: Read>(
+    system: &System,
+    bundle: R,
+    verify_bundle: &Option<HashDigest>,
+    entry_idx: BootGroupIdx,
+    entry: &BootGroup,
+) -> SystemResult<()> {
+    system
+        .boot_flow()
+        .pre_install(system, entry_idx)
+        .whatever("error executing pre-install step")?;
+    let bundle_source = ReaderSource::<_, SkipRead>::from_unbuffered(bundle);
+    let mut bundle_reader =
+        rugix_bundle::reader::BundleReader::start(bundle_source, verify_bundle.clone())
+            .whatever("unable to read bundle")?;
+    let slots = bundle_reader
+        .header()
+        .payload_index
+        .iter()
+        .map(|payload| {
+            payload
+                .slot
+                .as_deref()
+                .and_then(|slot| entry.get_slot(slot))
+        })
+        .collect::<Vec<_>>();
+
+    let mut payload_idx = 0;
+    while let Some(payload) = bundle_reader
+        .next_payload()
+        .whatever("unable to read payload")?
+    {
+        let Some(slot) = slots[payload_idx] else {
+            payload.skip().whatever("unable to skip payload")?;
+            payload_idx += 1;
+            continue;
+        };
+        let slot = &system.slots()[slot];
+        eprintln!("Installing payload {payload_idx} to slot {}.", slot.name());
+        let SlotKind::Block(slot) = slot.kind();
+        let target = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(slot.device())
+            .whatever("unable to open payload target")?;
+        payload
+            .decode_into(target)
+            .whatever("unable to decode payload")?;
+        payload_idx += 1;
     }
 
     system
@@ -446,6 +533,9 @@ pub enum UpdateCommand {
         /// Check whether the (streamed) image matches the given hash.
         #[clap(long)]
         check_hash: Option<String>,
+        /// Verify a bundle.
+        #[clap(long)]
+        verify_bundle: Option<HashDigest>,
         /// Prevent Rugpi from rebooting the system.
         #[clap(long)]
         no_reboot: bool,

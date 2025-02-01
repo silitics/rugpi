@@ -159,6 +159,13 @@ impl Vm {
         let mut stderr_splitter = LineSplitter::default();
         let mut stdout_splitter = LineSplitter::default();
 
+        let mut output_log = tokio::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(".rugpi/test.log")
+            .await
+            .whatever("unable to create test log file")?;
+
         loop {
             tokio::select! {
                 _ = (&mut eof_rx), if !eof_sent => {
@@ -174,21 +181,13 @@ impl Vm {
                             for line in stderr_splitter.continue_splitting(data) {
                                 ctx.status.push_log_line(line);
                             }
-                            // stderr
-                            //     .write_all(data)
-                            //     .await
-                            //     .whatever("unable to write SSH stderr to terminal")?;
-                            // stderr.flush().await.whatever("unable to flush stderr")?;
+                            output_log.write_all(data).await.whatever("unable to write SSH stderr to log")?;
                         }
                         ChannelMsg::Data { ref data } => {
                             for line in stdout_splitter.continue_splitting(data) {
                                 ctx.status.push_log_line(line);
                             }
-                            // stdout
-                            //     .write_all(data)
-                            //     .await
-                            //     .whatever("unable to write SSH stdout to terminal")?;
-                            // stdout.flush().await.whatever("unable to flush stdout")?;
+                            output_log.write_all(data).await.whatever("unable to write SSH stdout to log")?;
                         }
                         ChannelMsg::ExitStatus { exit_status } => {
                             code = Some(exit_status);

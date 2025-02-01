@@ -1,0 +1,39 @@
+[[systems]]
+system  = "customized-arm64"
+ssh = { private-key = "./files/id_rsa" }
+
+[[steps]]
+action = "run"
+description = "check system state prior to update"
+script = """
+#!/bin/bash
+rugpi-system-assert ".defaultBootGroup" "a"
+rugpi-system-assert ".activeBootGroup" "a"
+"""
+
+[[steps]]
+action = "run"
+description = "install a system update"
+stdin-file = "./build/bundles/customized-arm64.rugixb"
+# Rebooting may cause the SSH client to disconnect while executing the script.
+may-disconnect = true
+script = """
+#!/bin/bash
+rugpi-ctrl update install -
+"""
+
+[[steps]]
+action = "wait"
+duration = 10
+
+[[steps]]
+action = "run"
+description = "check whether the update has been installed"
+script = """
+#!/bin/bash
+rugpi-system-assert ".defaultBootGroup" "a"
+rugpi-system-assert ".activeBootGroup" "b"
+rugpi-ctrl system commit
+rugpi-system-assert ".defaultBootGroup" "b"
+rugpi-system-assert ".activeBootGroup" "b"
+"""

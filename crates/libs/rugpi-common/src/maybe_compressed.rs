@@ -51,7 +51,7 @@ enum MaybeCompressedInner<R: Read> {
 const DEFAULT_PEEK_BUFFER_SIZE: usize = 8192;
 
 /// A reader from which bytes can be peeked.
-struct PeekReader<R> {
+pub struct PeekReader<R> {
     /// The underlying reader.
     pub reader: R,
     /// The peek buffer.
@@ -81,6 +81,10 @@ impl<R: Read> PeekReader<R> {
             peeked: 0,
             consumed: 0,
         }
+    }
+
+    pub fn into_inner(self) -> R {
+        self.reader
     }
 
     /// The free space in the peek buffer.
