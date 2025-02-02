@@ -15,12 +15,26 @@ record BundleManifest {
 
 #[json(rename_all="kebab-case")]
 record Payload {
-    /// Slot where the payload should be installed.
-    slot?: string,
-    /// Filename of the payload.
+    /// Payload configuration.
+    config: PayloadConfig,
+    /// Filename of the payload file.
     filename: string,
+    /// Block encoding.
     block_encoding?: BlockEncoding,
 }
+
+#[json(tag="type", rename_all="kebab-case")]
+variant PayloadConfig {
+    Slot: SlotPayloadConfig,
+    Script: ScriptPayloadConfig,
+}
+
+record SlotPayloadConfig {
+    /// Slot where the payload should be installed.
+    slot: string,
+}
+
+record ScriptPayloadConfig {}
 
 #[json(rename_all="kebab-case")]
 record BlockEncoding{

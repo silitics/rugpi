@@ -41,11 +41,25 @@ define_struct! {
     /// Entry in the payload index of a bundle.
     pub struct PayloadEntry {
         /// Slot where the payload should be installed to.
-        pub slot[PAYLOAD_ENTRY_SLOT]: Option<String>,
+        pub type_slot[PAYLOAD_ENTRY_TYPE_SLOT]: Option<SlotPayloadType>,
+        pub type_script[PAYLOAD_ENTRY_TYPE_SCRIPT]: Option<ScriptPayloadType>,
         /// Hash of the payload header.
         pub header_hash[PAYLOAD_ENTRY_HEADER_HASH]: Bytes,
         /// Hash of the payload file.
         pub file_hash[PAYLOAD_ENTRY_FILE_HASH]: Bytes,
+    }
+}
+
+define_struct! {
+    /// Header of a payload.
+    pub struct SlotPayloadType {
+        pub slot[PAYLOAD_TYPE_SLOT_SLOT]: String,
+    }
+}
+
+define_struct! {
+    /// Header of a payload.
+    pub struct ScriptPayloadType {
     }
 }
 

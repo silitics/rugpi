@@ -142,11 +142,14 @@ define_tags! {
     BUNDLE_HEADER_PAYLOAD_INDEX = 0x13737992,
 
     /// Slot where the payload should be installed to.
-    PAYLOAD_ENTRY_SLOT = 0x45ca7e7e,
+    PAYLOAD_ENTRY_TYPE_SLOT = 0x45ca7e7e,
+    PAYLOAD_ENTRY_TYPE_SCRIPT = 0x3adf32f5,
     /// Hash of the payload's header.
     PAYLOAD_ENTRY_HEADER_HASH = 0x5f6a60b1,
     /// Hash of the payload's file.
     PAYLOAD_ENTRY_FILE_HASH = 0x0c8d1fd0,
+
+    PAYLOAD_TYPE_SLOT_SLOT = 0x1b231de7,
 
     /// Payloads segment of the bundle.
     PAYLOADS = 0x1f38fba,

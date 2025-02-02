@@ -8,7 +8,7 @@ use rugix_hashes::HashDigest;
 use crate::block_encoding::encode_payload_file;
 use crate::format::stlv::{write_atom_head, write_segment_end, write_segment_start};
 use crate::format::{self, Bytes, PayloadEntry, PayloadHeader};
-use crate::manifest::{BundleManifest, HashAlgorithm};
+use crate::manifest::{self, BundleManifest, HashAlgorithm};
 use crate::BundleResult;
 
 pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
@@ -44,7 +44,18 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
         }
         let payload_header = format::encode::to_vec(&payload_header, format::tags::PAYLOAD_HEADER);
         bundle_header.payload_index.push(PayloadEntry {
-            slot: payload.slot.clone(),
+            type_slot: if let manifest::PayloadConfig::Slot(slot_config) = &payload.config {
+                Some(format::SlotPayloadType {
+                    slot: slot_config.slot.clone(),
+                })
+            } else {
+                None
+            },
+            type_script: if let manifest::PayloadConfig::Script(_) = &payload.config {
+                Some(format::ScriptPayloadType {})
+            } else {
+                None
+            },
             header_hash: Bytes {
                 raw: hash_algorithm.hash(&payload_header).raw().to_vec(),
             },

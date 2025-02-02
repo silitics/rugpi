@@ -221,24 +221,32 @@ fn rpi_bundle_config(opts: &BundleOpts) -> BundleManifest {
         Some(manifest::Compression::Xz(manifest::XzCompression::new()))
     };
     manifest::BundleManifest::new(vec![
-        manifest::Payload::new("partition-2.img".to_owned())
-            .with_slot(Some("boot".to_owned()))
-            .with_block_encoding(Some(
-                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
-                    avg_block_size_kib: 64,
-                })
-                .with_deduplicate(Some(true))
-                .with_compression(compression.clone()),
-            )),
-        manifest::Payload::new("partition-5.img".to_owned())
-            .with_slot(Some("system".to_owned()))
-            .with_block_encoding(Some(
-                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
-                    avg_block_size_kib: 64,
-                })
-                .with_deduplicate(Some(true))
-                .with_compression(compression.clone()),
-            )),
+        manifest::Payload::new(
+            manifest::PayloadConfig::Slot(manifest::SlotPayloadConfig {
+                slot: "boot".to_owned(),
+            }),
+            "partition-2.img".to_owned(),
+        )
+        .with_block_encoding(Some(
+            manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                avg_block_size_kib: 64,
+            })
+            .with_deduplicate(Some(true))
+            .with_compression(compression.clone()),
+        )),
+        manifest::Payload::new(
+            manifest::PayloadConfig::Slot(manifest::SlotPayloadConfig {
+                slot: "system".to_owned(),
+            }),
+            "partition-5.img".to_owned(),
+        )
+        .with_block_encoding(Some(
+            manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                avg_block_size_kib: 64,
+            })
+            .with_deduplicate(Some(true))
+            .with_compression(compression.clone()),
+        )),
     ])
 }
 
@@ -249,23 +257,31 @@ fn efi_bundle_config(opts: &BundleOpts) -> BundleManifest {
         Some(manifest::Compression::Xz(manifest::XzCompression::new()))
     };
     manifest::BundleManifest::new(vec![
-        manifest::Payload::new("partition-2.img".to_owned())
-            .with_slot(Some("boot".to_owned()))
-            .with_block_encoding(Some(
-                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
-                    avg_block_size_kib: 64,
-                })
-                .with_deduplicate(Some(true))
-                .with_compression(compression.clone()),
-            )),
-        manifest::Payload::new("partition-4.img".to_owned())
-            .with_slot(Some("system".to_owned()))
-            .with_block_encoding(Some(
-                manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
-                    avg_block_size_kib: 64,
-                })
-                .with_deduplicate(Some(true))
-                .with_compression(compression.clone()),
-            )),
+        manifest::Payload::new(
+            manifest::PayloadConfig::Slot(manifest::SlotPayloadConfig {
+                slot: "boot".to_owned(),
+            }),
+            "partition-2.img".to_owned(),
+        )
+        .with_block_encoding(Some(
+            manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                avg_block_size_kib: 64,
+            })
+            .with_deduplicate(Some(true))
+            .with_compression(compression.clone()),
+        )),
+        manifest::Payload::new(
+            manifest::PayloadConfig::Slot(manifest::SlotPayloadConfig {
+                slot: "system".to_owned(),
+            }),
+            "partition-4.img".to_owned(),
+        )
+        .with_block_encoding(Some(
+            manifest::BlockEncoding::new(ChunkerAlgorithm::Casync {
+                avg_block_size_kib: 64,
+            })
+            .with_deduplicate(Some(true))
+            .with_compression(compression.clone()),
+        )),
     ])
 }

@@ -77,8 +77,8 @@
       "type": "object",
       "description": "",
       "properties": {
-        "slot": {
-          "type": "string"
+        "config": {
+          "$ref": "#/$defs/rugix_bundle.manifest.PayloadConfig"
         },
         "filename": {
           "type": "string"
@@ -88,8 +88,60 @@
         }
       },
       "required": [
+        "config",
         "filename"
       ],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.PayloadConfig": {
+      "$id": "rugix_bundle.manifest.PayloadConfig",
+      "description": "",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "slot"
+            },
+            "slot": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "script"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "rugix_bundle.manifest.ScriptPayloadConfig": {
+      "$id": "rugix_bundle.manifest.ScriptPayloadConfig",
+      "type": "object",
+      "description": "",
+      "properties": {},
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.SlotPayloadConfig": {
+      "$id": "rugix_bundle.manifest.SlotPayloadConfig",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "slot": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "unevaluatedProperties": false
     },
     "rugix_bundle.manifest.XzCompression": {

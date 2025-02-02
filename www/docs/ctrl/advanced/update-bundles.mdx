@@ -79,8 +79,10 @@ Here is an example of a bundle manifest:
 hash-algorithm = "sha512-256"
 
 [[payloads]]
-slot = "boot"
 filename = "boot.vfat"
+[payloads.config]
+type = "slot"
+slot = "boot"
 [payloads.block-encoding]
 hash-algorithm = "sha512-256"
 chunker = "casync-64"
@@ -88,8 +90,10 @@ compression = { type = "xz", level = 9 }
 deduplication = true
 
 [[payloads]]
-slot = "system"
 filename = "system.ext4"
+[payloads.config]
+type = "slot"
+slot = "system"
 [payloads.block-encoding]
 hash-algorithm = "sha512-256"
 chunker = "casync-64"
@@ -111,6 +115,20 @@ Note that this is not a hash over the entire bundle but just the bundle's header
 The header of the bundle, in turn, contains hashes of the payload headers as well as of the payloads themselves.
 Combined these hashes form a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
 That way, by providing the hash of the root, Rugix Ctrl can verify different parts of the bundle individually as they are read.
+
+
+## Payload Config
+
+A payload can have different types, configured in the `config` section.
+
+#### `type = "slot"`
+
+Payload is going to be installed to the specified slot.
+
+#### `type = "script"`
+
+Payload is an _update script_.
+Update scripts are written to a temporary directory and then executed.
 
 
 ## Delta Updates

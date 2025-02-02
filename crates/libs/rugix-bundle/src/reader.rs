@@ -90,6 +90,14 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
         self.idx
     }
 
+    pub fn header(&self) -> &format::PayloadHeader {
+        &self.header
+    }
+
+    pub fn entry(&self) -> &format::PayloadEntry {
+        &self.reader.header().payload_index[self.idx]
+    }
+
     pub fn skip(self) -> BundleResult<()> {
         self.reader.source.skip(self.remaining_data)?;
         let _ = expect_end(&mut self.reader.source, tags::PAYLOAD)?;

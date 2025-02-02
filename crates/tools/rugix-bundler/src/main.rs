@@ -113,11 +113,25 @@ fn main() -> BundleResult<()> {
             let reader = BundleReader::start(source, inspect_cmd.verify_bundle)?;
             println!("Payloads:");
             for (idx, entry) in reader.header().payload_index.iter().enumerate() {
-                println!(
-                    "  {idx}: slot={:?} file={}",
-                    entry.slot.as_deref().unwrap_or("<no slot>"),
-                    HashDigest::new_unchecked(reader.header().hash_algorithm, &entry.file_hash.raw)
-                );
+                if let Some(slot_type) = &entry.type_slot {
+                    println!(
+                        "  {idx}: slot={:?} file={}",
+                        slot_type.slot,
+                        HashDigest::new_unchecked(
+                            reader.header().hash_algorithm,
+                            &entry.file_hash.raw
+                        )
+                    );
+                }
+                if let Some(_) = &entry.type_script {
+                    println!(
+                        "  {idx}: <script> file={}",
+                        HashDigest::new_unchecked(
+                            reader.header().hash_algorithm,
+                            &entry.file_hash.raw
+                        )
+                    );
+                }
             }
         }
     }

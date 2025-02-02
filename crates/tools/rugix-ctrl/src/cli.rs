@@ -7,6 +7,7 @@ use std::path::Path;
 use rugix_bundle::source::{ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::HashDigest;
+use tempfile::TempDir;
 use tracing::error;
 
 use clap::{Parser, ValueEnum};
@@ -18,6 +19,7 @@ use rugix_common::system::boot_groups::{BootGroup, BootGroupIdx};
 use rugix_common::system::info::SystemInfo;
 use rugix_common::system::slots::SlotKind;
 use rugix_common::system::{System, SystemResult};
+use xscript::{run, Run};
 
 use crate::overlay::overlay_dir;
 use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
@@ -436,40 +438,53 @@ fn install_update_bundle<R: Read>(
     let mut bundle_reader =
         rugix_bundle::reader::BundleReader::start(bundle_source, verify_bundle.clone())
             .whatever("unable to read bundle")?;
-    let slots = bundle_reader
-        .header()
-        .payload_index
-        .iter()
-        .map(|payload| {
-            payload
-                .slot
-                .as_deref()
-                .and_then(|slot| entry.get_slot(slot))
-        })
-        .collect::<Vec<_>>();
 
-    let mut payload_idx = 0;
-    while let Some(payload) = bundle_reader
+    'outer: while let Some(payload) = bundle_reader
         .next_payload()
         .whatever("unable to read payload")?
     {
-        let Some(slot) = slots[payload_idx] else {
-            payload.skip().whatever("unable to skip payload")?;
-            payload_idx += 1;
-            continue;
-        };
-        let slot = &system.slots()[slot];
-        eprintln!("Installing payload {payload_idx} to slot {}.", slot.name());
-        let SlotKind::Block(slot) = slot.kind();
-        let target = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(slot.device())
-            .whatever("unable to open payload target")?;
-        payload
-            .decode_into(target)
-            .whatever("unable to decode payload")?;
-        payload_idx += 1;
+        let payload_entry = payload.entry();
+        loop {
+            if let Some(slot_type) = &payload_entry.type_slot {
+                let Some(slot) = entry.get_slot(&slot_type.slot) else {
+                    break;
+                };
+                let slot = &system.slots()[slot];
+                eprintln!(
+                    "Installing bundle payload {} to slot {}",
+                    payload.idx(),
+                    slot.name()
+                );
+                let SlotKind::Block(slot) = slot.kind();
+                let target = std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(slot.device())
+                    .whatever("unable to open payload target")?;
+                payload
+                    .decode_into(target)
+                    .whatever("unable to decode payload")?;
+            } else if let Some(_) = &payload_entry.type_script {
+                eprintln!("Executing update script (payload {})", payload.idx(),);
+                let temp_dir = TempDir::new().whatever("unable to create temporary directory")?;
+                let script_file = temp_dir.path().join("update-script");
+                let target = std::fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open(&script_file)
+                    .whatever("unable to open payload target")?;
+                payload
+                    .decode_into(target)
+                    .whatever("unable to decode payload")?;
+                run!(["chmod", "755", &script_file])
+                    .whatever("unable to set executable permissions")?;
+                run!([script_file]).whatever("unable to execute update script")?;
+            } else {
+                break;
+            }
+            continue 'outer;
+        }
+        payload.skip().whatever("unable to skip payload")?;
     }
 
     system
