@@ -36,6 +36,7 @@ rugix-common.workspace = true
 rugix-fs.workspace = true
 rugix-hashes.workspace = true
 rugix-hooks.workspace = true
+hashbrown.workspace = true
 
 [lints]
 workspace = true

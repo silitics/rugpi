@@ -2342,6 +2342,7 @@ version = "0.1.0"
 dependencies = [
  "byte-calc",
  "clap",
+ "hashbrown 0.15.2",
  "hex",
  "indexmap",
  "indoc",

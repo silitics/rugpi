@@ -5,6 +5,7 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use rugix_bundle::manifest::ChunkerAlgorithm;
+use rugix_bundle::reader::block_provider::StoredBlockProvider;
 use rugix_bundle::source::{ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
@@ -23,7 +24,7 @@ use rugix_common::system::{System, SystemResult};
 use xscript::{run, Run};
 
 use crate::overlay::overlay_dir;
-use crate::slot_db;
+use crate::slot_db::{self, BlockProvider};
 use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
 
 fn create_rugix_state_directory() -> SystemResult<()> {
@@ -498,6 +499,27 @@ fn install_update_bundle<R: Read>(
                     payload.idx(),
                     slot.name()
                 );
+                slot_db::erase(slot.name())?;
+                let mut block_provider = None;
+                if let Some(block_encoding) = &payload.header().block_encoding {
+                    let mut provider = BlockProvider::new(
+                        block_encoding.chunker.clone(),
+                        block_encoding.hash_algorithm,
+                    );
+                    for (_, slot) in system.slots().iter() {
+                        match slot.kind() {
+                            SlotKind::Block(block_slot) => {
+                                // Since we erased all the indices of the target slot, it
+                                // is fine to also add the target slot here.
+                                provider.add_slot(
+                                    slot.name(),
+                                    block_slot.device().path().to_path_buf(),
+                                )?;
+                            }
+                        }
+                    }
+                    block_provider = Some(provider);
+                }
                 let SlotKind::Block(slot) = slot.kind();
                 let target = std::fs::OpenOptions::new()
                     .read(true)
@@ -505,7 +527,12 @@ fn install_update_bundle<R: Read>(
                     .open(slot.device())
                     .whatever("unable to open payload target")?;
                 payload
-                    .decode_into(target)
+                    .decode_into(
+                        target,
+                        block_provider
+                            .as_ref()
+                            .map(|p| p as &dyn StoredBlockProvider),
+                    )
                     .whatever("unable to decode payload")?;
                 continue;
             }
@@ -519,7 +546,7 @@ fn install_update_bundle<R: Read>(
                 .open(&script_file)
                 .whatever("unable to open payload target")?;
             payload
-                .decode_into(target)
+                .decode_into(target, None)
                 .whatever("unable to decode payload")?;
             run!(["chmod", "755", &script_file])
                 .whatever("unable to set executable permissions")?;

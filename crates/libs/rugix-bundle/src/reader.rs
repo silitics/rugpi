@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 
+use block_provider::StoredBlockProvider;
 use byte_calc::{ByteLen, NumBytes};
 use reportify::{bail, whatever, ResultExt};
 use rugix_compression::{ByteProcessor, CompressionFormat};
@@ -13,6 +14,8 @@ use crate::format::stlv::{read_atom_head, write_atom_head, AtomHead, Tag};
 use crate::format::{self, tags};
 use crate::source::BundleSource;
 use crate::{BundleResult, BUNDLE_HEADER_SIZE_LIMIT, PAYLOAD_HEADER_SIZE_LIMIT};
+
+pub mod block_provider;
 
 pub struct BundleReader<S> {
     source: S,
@@ -111,7 +114,11 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
         Ok(read)
     }
 
-    pub fn decode_into<T: PayloadTarget>(mut self, mut target: T) -> BundleResult<()> {
+    pub fn decode_into<T: PayloadTarget>(
+        mut self,
+        mut target: T,
+        provider: Option<&dyn StoredBlockProvider>,
+    ) -> BundleResult<()> {
         let mut buffer = vec![0; 8192];
         let mut payload_hasher = self.reader.header.hash_algorithm.hasher();
         if let Some(block_encoding) = self.header.block_encoding {
@@ -164,11 +171,26 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
                         .unwrap() as u64)
                         .min(self.remaining_data.raw);
                     next_size_idx += 1;
-                    buffer.resize(block_size.try_into().unwrap(), 0);
-                    self.reader.source.read_exact(&mut buffer)?;
-                    self.remaining_data -= buffer.byte_len();
-                    if let Some(format) = block_encoding.compression {
-                        buffer = uncompress_bytes(format, &buffer);
+                    if let Some(stored_block) = provider.and_then(|p| p.query(block_hash)) {
+                        // We already have the block, let's skip it.
+                        self.reader.source.skip(block_size.into())?;
+                        self.remaining_data -= block_size;
+                        buffer.resize(stored_block.size.unwrap_usize(), 0);
+                        let mut source_file = std::fs::File::open(&stored_block.file)
+                            .whatever("unable to open file")?;
+                        source_file
+                            .seek(std::io::SeekFrom::Start(stored_block.offset.raw))
+                            .whatever("unable to seek")?;
+                        source_file
+                            .read_exact(&mut buffer)
+                            .whatever("unable to read block")?;
+                    } else {
+                        buffer.resize(block_size.try_into().unwrap(), 0);
+                        self.reader.source.read_exact(&mut buffer)?;
+                        self.remaining_data -= buffer.byte_len();
+                        if let Some(format) = block_encoding.compression {
+                            buffer = uncompress_bytes(format, &buffer);
+                        }
                     }
                 } else {
                     // The block has been deduplicated, read from target.
