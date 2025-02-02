@@ -125,6 +125,10 @@ impl StoredBlockProvider for BlockProvider {
                 size: self.dimensions[*block].1,
             })
     }
+
+    fn has_stored_blocks(&self) -> bool {
+        !self.hashes.is_empty()
+    }
 }
 
 pub fn erase(slot_name: &str) -> SystemResult<()> {

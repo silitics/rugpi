@@ -6,6 +6,8 @@ use byte_calc::NumBytes;
 pub trait StoredBlockProvider {
     /// Query the provider for a block with the given hash.
     fn query(&self, hash: &[u8]) -> Option<StoredBlock<'_>>;
+
+    fn has_stored_blocks(&self) -> bool;
 }
 
 /// Stored block.

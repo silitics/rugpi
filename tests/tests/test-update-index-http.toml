@@ -1,0 +1,53 @@
+[[systems]]
+system  = "customized-arm64"
+ssh = { private-key = "./files/id_rsa" }
+
+[[steps]]
+action = "run"
+description = "adding an index to the `system-a` slot"
+script = """
+#!/bin/bash
+rugix-ctrl slots add-index system-a casync-64 sha512-256
+if [ ! -e /run/rugix/mounts/data/rugix/slots/system-a/casync-64_sha512-256.rugix-block-index ]; then
+    echo "Block index has not been created."
+    exit 1
+fi
+"""
+
+[[steps]]
+action = "run"
+description = "check system state prior to update"
+script = """
+#!/bin/bash
+rugix-system-assert ".defaultBootGroup" "a"
+rugix-system-assert ".activeBootGroup" "a"
+"""
+
+[[steps]]
+action = "run"
+description = "install a system update"
+stdin-file = "./build/customized-arm64/system.rugixb"
+# Rebooting may cause the SSH client to disconnect while executing the script.
+may-disconnect = true
+script = """
+#!/bin/bash
+cp /dev/stdin /var/www/html/system.rugixb
+chmod 777 /var/www/html/system.rugixb
+rugix-ctrl update install http://localhost/system.rugixb
+"""
+
+[[steps]]
+action = "wait"
+duration = 10
+
+[[steps]]
+action = "run"
+description = "check whether the update has been installed"
+script = """
+#!/bin/bash
+rugix-system-assert ".defaultBootGroup" "a"
+rugix-system-assert ".activeBootGroup" "b"
+rugix-ctrl system commit
+rugix-system-assert ".defaultBootGroup" "b"
+rugix-system-assert ".activeBootGroup" "b"
+"""

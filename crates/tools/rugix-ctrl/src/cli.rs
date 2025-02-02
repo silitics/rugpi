@@ -6,7 +6,7 @@ use std::path::Path;
 
 use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::reader::block_provider::StoredBlockProvider;
-use rugix_bundle::source::{ReaderSource, SkipRead};
+use rugix_bundle::source::{BundleSource, ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
 use tempfile::TempDir;
@@ -23,6 +23,7 @@ use rugix_common::system::slots::SlotKind;
 use rugix_common::system::{System, SystemResult};
 use xscript::{run, Run};
 
+use crate::http_source::HttpSource;
 use crate::overlay::overlay_dir;
 use crate::slot_db::{self, BlockProvider};
 use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
@@ -329,6 +330,20 @@ fn install_update_stream(
     entry: &BootGroup,
     without_boot_flow: bool,
 ) -> SystemResult<()> {
+    if image.starts_with("http") {
+        if check_hash.is_some() {
+            bail!("--check-hash is not supported for update bundles, use --verify-bundle");
+        }
+        let bundle_source = HttpSource::new(image)?;
+        return install_update_bundle(
+            system,
+            bundle_source,
+            verify_bundle,
+            entry_idx,
+            entry,
+            without_boot_flow,
+        );
+    }
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
     } else {
@@ -351,9 +366,10 @@ fn install_update_stream(
         if check_hash.is_some() {
             bail!("--check-hash is not supported for update bundles, use --verify-bundle");
         }
+        let bundle_source = ReaderSource::<_, SkipRead>::from_unbuffered(update_stream);
         return install_update_bundle(
             system,
-            update_stream,
+            bundle_source,
             verify_bundle,
             entry_idx,
             entry,
@@ -467,9 +483,9 @@ fn install_update_stream(
     Ok(())
 }
 
-fn install_update_bundle<R: Read>(
+fn install_update_bundle<R: BundleSource>(
     system: &System,
-    bundle: R,
+    bundle_source: R,
     verify_bundle: &Option<HashDigest>,
     entry_idx: BootGroupIdx,
     entry: &BootGroup,
@@ -481,7 +497,7 @@ fn install_update_bundle<R: Read>(
             .pre_install(system, entry_idx)
             .whatever("error executing pre-install step")?;
     }
-    let bundle_source = ReaderSource::<_, SkipRead>::from_unbuffered(bundle);
+
     let mut bundle_reader =
         rugix_bundle::reader::BundleReader::start(bundle_source, verify_bundle.clone())
             .whatever("unable to read bundle")?;

@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod config;
+pub mod http_source;
 pub mod init;
 pub mod overlay;
 pub mod slot_db;

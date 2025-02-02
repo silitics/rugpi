@@ -13,6 +13,7 @@ recipes = [
     "setup-network",
     "rugix-system-assert",
     "simple-sbom",
+    "hello-world",
 ]
 
 [parameters."core/set-hostname"]
