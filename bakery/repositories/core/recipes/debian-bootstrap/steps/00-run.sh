@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-case "${RUGPI_ARCH}" in
+case "${RUGIX_ARCH}" in
     "amd64")
         DEBIAN_ARCH="amd64"
         ;;
@@ -16,7 +16,7 @@ case "${RUGPI_ARCH}" in
         DEBIAN_ARCH="armel"
         ;;
     *)
-        echo "Unsupported architecture '${RUGPI_ARCH}'."
+        echo "Unsupported architecture '${RUGIX_ARCH}'."
         exit 1
 esac
 
@@ -29,5 +29,5 @@ mmdebstrap \
     --skip=check/qemu \
     --architectures="${DEBIAN_ARCH}" \
     "${RECIPE_PARAM_SUITE}" \
-    "${RUGPI_ROOT_DIR}" \
+    "${RUGIX_ROOT_DIR}" \
     ${MIRROR}

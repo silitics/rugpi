@@ -11,8 +11,8 @@ resolver = "2"
 authors = ["Silitics GmbH <info@silitics.com>"]
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/silitics/rugpi/"
-homepage = "https://oss.silitics.com/rugpi/"
+repository = "https://github.com/silitics/rugix/"
+homepage = "https://rugix.org/"
 
 [workspace.dependencies]
 # Third-party crates.
@@ -55,8 +55,8 @@ rugix-fs = { path = "crates/libs/rugix-fs" }
 rugix-hashes = { path = "crates/libs/rugix-hashes" }
 rugix-hooks = { path = "crates/libs/rugix-hooks" }
 rugix-tasks = { path = "crates/libs/rugix-tasks" }
-rugpi-cli = { path = "crates/libs/rugpi-cli" }
-rugpi-common = { path = "crates/libs/rugpi-common" }
+rugix-cli = { path = "crates/libs/rugix-cli" }
+rugix-common = { path = "crates/libs/rugix-common" }
 
 [workspace.lints.clippy]
 needless_borrows_for_generic_args = "allow"

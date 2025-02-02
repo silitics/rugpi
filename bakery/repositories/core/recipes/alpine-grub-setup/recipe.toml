@@ -1,2 +1,2 @@
 description = "setup Alpine for `generic-grub-*` targets"
-dependencies = ["rugpi-ctrl"]
+dependencies = ["rugix-ctrl"]

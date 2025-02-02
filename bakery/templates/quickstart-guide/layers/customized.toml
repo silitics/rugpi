@@ -10,7 +10,7 @@ recipes = [
     # Setup the network.
     "setup-network",
     # Enable discovery of the system in the local network.
-    "rugpi-extra/avahi",
+    "rugix-extra/avahi",
     # Install a static website.
     "hello-world",
 ]

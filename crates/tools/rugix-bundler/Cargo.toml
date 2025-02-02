@@ -13,7 +13,7 @@ hex.workspace = true
 reportify.workspace = true
 rugix-bundle.workspace = true
 rugix-hashes.workspace = true
-rugpi-cli.workspace = true
+rugix-cli.workspace = true
 
 [lints]
 workspace = true

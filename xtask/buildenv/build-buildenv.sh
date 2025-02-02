@@ -8,4 +8,4 @@ source lock.env
 
 $DOCKER build \
     --build-arg "RUST_VERSION=${RUST_VERSION}" \
-    -t rugpi_buildenv -f Dockerfile.buildenv .
+    -t rugix_buildenv -f Dockerfile.buildenv .

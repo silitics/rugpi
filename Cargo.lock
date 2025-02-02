@@ -2195,6 +2195,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "rugix-admin"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "indoc",
+ "rugix-common",
+ "tokio",
+ "xscript 0.4.0",
+]
+
+[[package]]
+name = "rugix-bakery"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "byte-calc",
+ "clap",
+ "colored",
+ "hex",
+ "indicatif",
+ "indoc",
+ "nix",
+ "reportify",
+ "reqwest",
+ "rugix-bundle",
+ "rugix-cli",
+ "rugix-common",
+ "rugix-fs",
+ "rugix-tasks",
+ "russh",
+ "russh-sftp",
+ "serde",
+ "sha1",
+ "sidex",
+ "sidex-build-rs",
+ "sidex-serde",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "toml 0.8.19",
+ "tracing",
+ "url",
+ "uuid",
+ "xscript 0.4.0",
+]
+
+[[package]]
 name = "rugix-bundle"
 version = "0.1.0"
 dependencies = [
@@ -2226,8 +2274,8 @@ dependencies = [
  "hex",
  "reportify",
  "rugix-bundle",
+ "rugix-cli",
  "rugix-hashes",
- "rugpi-cli",
 ]
 
 [[package]]
@@ -2241,11 +2289,81 @@ dependencies = [
 ]
 
 [[package]]
+name = "rugix-cli"
+version = "0.1.0"
+dependencies = [
+ "console",
+ "ctrlc",
+ "flume",
+ "rugix-tasks",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "rugix-common"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "clap",
+ "console",
+ "crc32fast",
+ "digest",
+ "hex",
+ "indexmap",
+ "indoc",
+ "nix",
+ "rand",
+ "reportify",
+ "serde",
+ "serde_json",
+ "sha1",
+ "tempfile",
+ "thiserror 1.0.69",
+ "toml 0.8.19",
+ "tracing",
+ "uuid",
+ "xscript 0.4.0",
+ "xz2",
+]
+
+[[package]]
 name = "rugix-compression"
 version = "0.1.0"
 dependencies = [
  "serde",
  "xz2",
+]
+
+[[package]]
+name = "rugix-ctrl"
+version = "0.1.0"
+dependencies = [
+ "byte-calc",
+ "clap",
+ "hex",
+ "indexmap",
+ "indoc",
+ "nix",
+ "reportify",
+ "rugix-bundle",
+ "rugix-cli",
+ "rugix-common",
+ "rugix-fs",
+ "rugix-hashes",
+ "rugix-hooks",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sidex",
+ "sidex-build-rs",
+ "sidex-serde",
+ "tempfile",
+ "toml 0.7.8",
+ "tracing",
+ "uuid",
+ "xscript 0.4.0",
 ]
 
 [[package]]
@@ -2293,130 +2411,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "rugpi-admin"
-version = "0.1.0"
-dependencies = [
- "axum",
- "clap",
- "indoc",
- "rugpi-common",
- "tokio",
- "xscript 0.4.0",
-]
-
-[[package]]
-name = "rugpi-bakery"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "byte-calc",
- "clap",
- "colored",
- "hex",
- "indicatif",
- "indoc",
- "nix",
- "reportify",
- "reqwest",
- "rugix-bundle",
- "rugix-fs",
- "rugix-tasks",
- "rugpi-cli",
- "rugpi-common",
- "russh",
- "russh-sftp",
- "serde",
- "sha1",
- "sidex",
- "sidex-build-rs",
- "sidex-serde",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "toml 0.8.19",
- "tracing",
- "url",
- "uuid",
- "xscript 0.4.0",
-]
-
-[[package]]
-name = "rugpi-cli"
-version = "0.1.0"
-dependencies = [
- "console",
- "ctrlc",
- "flume",
- "rugix-tasks",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "rugpi-common"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "clap",
- "console",
- "crc32fast",
- "digest",
- "hex",
- "indexmap",
- "indoc",
- "nix",
- "rand",
- "reportify",
- "serde",
- "serde_json",
- "sha1",
- "tempfile",
- "thiserror 1.0.69",
- "toml 0.8.19",
- "tracing",
- "uuid",
- "xscript 0.4.0",
- "xz2",
-]
-
-[[package]]
-name = "rugpi-ctrl"
-version = "0.1.0"
-dependencies = [
- "byte-calc",
- "clap",
- "hex",
- "indexmap",
- "indoc",
- "nix",
- "reportify",
- "rugix-bundle",
- "rugix-fs",
- "rugix-hashes",
- "rugix-hooks",
- "rugpi-cli",
- "rugpi-common",
- "serde",
- "serde_json",
- "sha2",
- "sidex",
- "sidex-build-rs",
- "sidex-serde",
- "tempfile",
- "toml 0.7.8",
- "tracing",
- "uuid",
- "xscript 0.4.0",
-]
-
-[[package]]
-name = "rugpi-util"
+name = "rugix-util"
 version = "0.1.0"
 dependencies = [
  "clap",
  "reportify",
- "rugpi-common",
+ "rugix-common",
  "serde",
  "serde_json",
  "xscript 0.4.0",

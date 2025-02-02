@@ -2,12 +2,12 @@
 
 set -euo pipefail
 
-CONFIG_DIR="${RUGPI_BUNDLE_DIR}/roots/config"
+CONFIG_DIR="${RUGIX_BUNDLE_DIR}/roots/config"
 
-RPI_EEPROM_DIGEST="/usr/share/rugpi/rpi-eeprom/rpi-eeprom-digest"
+RPI_EEPROM_DIGEST="/usr/share/rugix/rpi-eeprom/rpi-eeprom-digest"
 
-PI4_FIRMWARE="/usr/share/rugpi/rpi-eeprom/firmware-2711"
-PI5_FIRMWARE="/usr/share/rugpi/rpi-eeprom/firmware-2712"
+PI4_FIRMWARE="/usr/share/rugix/rpi-eeprom/firmware-2711"
+PI5_FIRMWARE="/usr/share/rugix/rpi-eeprom/firmware-2712"
 
 mkdir -p "${CONFIG_DIR}"
 

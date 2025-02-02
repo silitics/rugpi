@@ -28,7 +28,7 @@ RUN apt-get -y update \
     && wget -O /etc/zsh/zshrc https://git.grml.org/f/grml-etc-core/etc/zsh/zshrc \
     && touch /root/.zshrc
 
-# Tools required to run build Yocto images with Rugpi.
+# Tools required to run build Yocto images with Rugix.
 RUN apt-get -y update \
     && apt-get -y install \
         build-essential \
@@ -65,15 +65,15 @@ USER build
 RUN touch ~/.zshrc
 USER root
 
-RUN mkdir -p /usr/share/rugpi \
-    && cd /usr/share/rugpi \
+RUN mkdir -p /usr/share/rugix \
+    && cd /usr/share/rugix \
     && wget -O rpi-eeprom-master.zip https://github.com/raspberrypi/rpi-eeprom/archive/refs/heads/master.zip \
     && unzip rpi-eeprom-master.zip \
     && mv rpi-eeprom-master rpi-eeprom \
     && rm -f rpi-eeprom-master.zip
 
-RUN mkdir -p /usr/share/rugpi/pi \
-    && cd /usr/share/rugpi/pi \
+RUN mkdir -p /usr/share/rugix/pi \
+    && cd /usr/share/rugix/pi \
     && wget -O rpi-firmware.zip https://github.com/raspberrypi/firmware/archive/refs/heads/stable.zip \
     && unzip rpi-firmware.zip \
     && mv firmware-stable/boot firmware \
@@ -87,23 +87,23 @@ RUN locale-gen en_US.UTF-8 \
 
 ENV LANGUAGE=en_US.UTF-8 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-COPY boot /usr/share/rugpi/boot
-COPY bakery/repositories /usr/share/rugpi/repositories
-COPY bakery/templates /usr/share/rugpi/templates
+COPY boot /usr/share/rugix/boot
+COPY bakery/repositories /usr/share/rugix/repositories
+COPY bakery/templates /usr/share/rugix/templates
 
-COPY build/binaries /usr/share/rugpi/binaries
+COPY build/binaries /usr/share/rugix/binaries
 
 WORKDIR /project
 
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-        cp /usr/share/rugpi/binaries/x86_64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
-        cp /usr/share/rugpi/binaries/x86_64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
+        cp /usr/share/rugix/binaries/x86_64-unknown-linux-musl/rugix-bakery /usr/local/bin; \
+        cp /usr/share/rugix/binaries/x86_64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ] || [ "$TARGETPLATFORM" = "linux/arm64/v8" ]; then \
-        cp /usr/share/rugpi/binaries/aarch64-unknown-linux-musl/rugpi-bakery /usr/local/bin; \
-        cp /usr/share/rugpi/binaries/aarch64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
+        cp /usr/share/rugix/binaries/aarch64-unknown-linux-musl/rugix-bakery /usr/local/bin; \
+        cp /usr/share/rugix/binaries/aarch64-unknown-linux-musl/rugix-bundler /usr/local/bin; \
     else  \
         echo "Unsupported platform ${TARGETPLATFORM}."; \
         exit 1; \
     fi
 
-ENTRYPOINT ["/usr/local/bin/rugpi-bakery"]
+ENTRYPOINT ["/usr/local/bin/rugix-bakery"]

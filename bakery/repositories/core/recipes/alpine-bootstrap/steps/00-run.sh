@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-case ${RUGPI_ARCH} in
+case ${RUGIX_ARCH} in
     "amd64")
         ALPINE_ARCH="x86_64"
         ;;
@@ -16,11 +16,11 @@ case ${RUGPI_ARCH} in
         ALPINE_ARCH="armhf"
         ;;
     *)
-        echo "Unsupported architecture '${RUGPI_ARCH}'."
+        echo "Unsupported architecture '${RUGIX_ARCH}'."
         exit 1
 esac
 
-mkdir -p "${RUGPI_ROOT_DIR}"
+mkdir -p "${RUGIX_ROOT_DIR}"
 
 wget -O- "https://dl-cdn.alpinelinux.org/alpine/v${RECIPE_PARAM_VERSION}/releases/${ALPINE_ARCH}/alpine-minirootfs-${RECIPE_PARAM_VERSION}.0-${ALPINE_ARCH}.tar.gz" \
-    | tar -xzvf - -C "${RUGPI_ROOT_DIR}"
+    | tar -xzvf - -C "${RUGIX_ROOT_DIR}"

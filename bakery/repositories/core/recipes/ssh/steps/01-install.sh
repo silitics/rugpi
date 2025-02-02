@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-install -D -m 744 "${RECIPE_DIR}/files/hydrate-ssh-host-keys.sh" -t /usr/lib/rugpi/scripts/
+install -D -m 744 "${RECIPE_DIR}/files/hydrate-ssh-host-keys.sh" -t /usr/lib/rugix/scripts/
 
 if command -v systemctl; then
     systemctl enable ssh

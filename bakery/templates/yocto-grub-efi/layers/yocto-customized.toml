@@ -2,5 +2,5 @@ parent = "yocto-base"
 
 recipes = [
     "grub-setup",
-    "core/rugpi-ctrl",
+    "core/rugix-ctrl",
 ]

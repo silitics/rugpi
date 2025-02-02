@@ -1,4 +1,4 @@
-FROM rugpi_buildenv_anchor
+FROM rugix_buildenv_anchor
 
 RUN apt-get update -y \
     && apt-get install -y \

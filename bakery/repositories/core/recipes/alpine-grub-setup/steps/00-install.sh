@@ -4,14 +4,14 @@ set -eu
 
 apk update
 
-BOOT_DIR="${RUGPI_BUNDLE_DIR}/roots/boot"
+BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot"
 
 mkdir -p "${BOOT_DIR}"
 
 echo "Installing and configuring 'mkinitfs'..."
 apk add mkinitfs util-linux
 
-cp "${RECIPE_DIR}/files/mkinitfs/features.d/rugpi.files" "/etc/mkinitfs/features.d/rugpi.files"
+cp "${RECIPE_DIR}/files/mkinitfs/features.d/rugix.files" "/etc/mkinitfs/features.d/rugix.files"
 cp "${RECIPE_DIR}/files/mkinitfs/mkinitfs.conf" "/etc/mkinitfs/mkinitfs.conf"
 
 echo "Installing kernel..."

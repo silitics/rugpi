@@ -17,11 +17,11 @@ import ConfigSchema from "@site/schemas/rugix-ctrl-state.schema.json";
 Export all state and later import it.
 
 ```shell
-rugpi-ctrl state export <file name>.tar.xz
+rugix-ctrl state export <file name>.tar.xz
 ```
 
 ```shell
-rugpi-ctrl state import <file name>.tar.xz
+rugix-ctrl state import <file name>.tar.xz
 ```
 
 ## (Planned) State Profiles
@@ -31,15 +31,15 @@ rugpi-ctrl state import <file name>.tar.xz
 Sometimes it can be beneficial to support multiple _profiles_ with different state.
 
 ```shell
-rugpi-ctrl state list
+rugix-ctrl state list
 ```
 
 ```shell
-rugpi-ctrl state create <profile name>
+rugix-ctrl state create <profile name>
 ```
 
 ```shell
-rugpi-ctrl state switch <profile name>
+rugix-ctrl state switch <profile name>
 ```
 
 ## (Planned) Hardware Reset Button
@@ -47,6 +47,6 @@ rugpi-ctrl state switch <profile name>
 **🚧 This feature is planned but has not been implemented yet! 🚧**
 
 Should a device hang in a boot loop or otherwise malfunction because of corrupted state, a hardware reset button may be a convenient way for users to reset a system in the field, without requiring an expensive service technician to come out or sending the device to a repair center.
-For this purpose, Rugpi Ctrl can be configured to check whether a reset button connected to one of the GPIO pins of the Raspberry Pi is pressed.
+For this purpose, Rugix Ctrl can be configured to check whether a reset button connected to one of the GPIO pins of the Raspberry Pi is pressed.
 If this is the case and the button is hold for a specific amount of time, a factory reset can be automatically performed with the option to preserve the corrupted state for later (remote) recovery.
 Likewise, another button could be programmed to initiate a reboot to the spare system (see [Over-the-Air Updates](./over-the-air-updates)), increasing the resiliency even further.

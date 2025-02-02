@@ -24,7 +24,7 @@ python3 -m pip install kas
 mkdir -p "${KAS_WORK_DIR}"
 mkdir -p "${KAS_BUILD_DIR}"
 
-case "${RUGPI_ARCH}" in
+case "${RUGIX_ARCH}" in
     "amd64")
         KAS_CONFIG="${RECIPE_DIR}/files/kas-config-amd64.yaml"
         ;;
@@ -32,7 +32,7 @@ case "${RUGPI_ARCH}" in
         KAS_CONFIG="${RECIPE_DIR}/files/kas-config-arm64.yaml"
         ;;
     *)
-        echo "Unsupported architecture '${RUGPI_ARCH}'."
+        echo "Unsupported architecture '${RUGIX_ARCH}'."
         exit 1
 esac
 

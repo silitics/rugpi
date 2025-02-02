@@ -4,7 +4,7 @@ Before=ssh.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/rugpi/scripts/hydrate-ssh-host-keys.sh
+ExecStart=/usr/lib/rugix/scripts/hydrate-ssh-host-keys.sh
 
 [Install]
 WantedBy=multi-user.target

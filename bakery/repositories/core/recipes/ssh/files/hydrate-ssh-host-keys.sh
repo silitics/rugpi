@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-SSH_STATE_DIR=${SSH_STATE_DIR:-"/run/rugpi/state/ssh"}
+SSH_STATE_DIR=${SSH_STATE_DIR:-"/run/rugix/state/ssh"}
 
 if [ ! -f "${SSH_STATE_DIR}"/ssh_host_rsa_key ]; then
     # Copied from `raspberrypi-sys-mods`.

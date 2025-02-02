@@ -8,7 +8,7 @@ recipes = [
 ]
 
 [parameters."core/set-hostname"]
-hostname = "rugpi-tests"
+hostname = "rugix-tests"
 
 [parameters."core/pkg-cleanup"]
 autoremove = true

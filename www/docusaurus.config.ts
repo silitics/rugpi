@@ -2,7 +2,7 @@ import type { Config } from "@docusaurus/types"
 import type * as Preset from "@docusaurus/preset-classic"
 
 const config: Config = {
-  title: "Rugpi",
+  title: "Rugix",
   tagline:
     "An open-source platform empowering you to build innovative products based on Raspberry Pi.",
   url: "https://oss.silitics.com/",
@@ -57,7 +57,7 @@ const config: Config = {
     // announcementBar: {
     //   // id: "release",
     //   content: `
-    //       We are excited to announce the release of Rugpi version 0.7! 🎉
+    //       We are excited to announce the release of Rugix version 0.7! 🎉
     //       Read the <a href="/rugpi/blog/releases/0.7">release blog post</a>.
     //     `,
     //   backgroundColor: "#bdddfb",
@@ -66,9 +66,9 @@ const config: Config = {
     //   isCloseable: false,
     // },
     navbar: {
-      title: "Rugpi",
+      title: "Rugix",
       logo: {
-        alt: "Rugpi Logo",
+        alt: "Rugix Logo",
         src: "img/logo.svg",
       },
       items: [
@@ -79,7 +79,7 @@ const config: Config = {
         },
         {
           to: "/why",
-          label: "Why Rugpi?",
+          label: "Why Rugix?",
           position: "left",
         },
         {

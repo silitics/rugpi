@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BOOT_DIR="${RUGPI_BUNDLE_DIR}/roots/boot/"
+BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot/"
 
 install -m 644 "${RECIPE_DIR}/files/raspberrypi.list" "/etc/apt/sources.list.d/"
 sed -i "s/RELEASE/bookworm/g" "/etc/apt/sources.list.d/raspberrypi.list"

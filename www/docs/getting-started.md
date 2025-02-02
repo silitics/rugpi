@@ -197,7 +197,7 @@ scp -P 2222 build/bundles/customized-efi-arm64.rugixb root@127.0.0.1:/root
 When the upload is complete, the bundle can be installed via SSH as an update with the following command:
 
 ```shell
-rugpi-ctrl update install --verify-bundle <hash> /root/customized-efi-arm64.rugixb
+rugix-ctrl update install --verify-bundle <hash> /root/customized-efi-arm64.rugixb
 ```
 
 Here, `<hash>` is the bundle hash produced by the earlier `bake` command.

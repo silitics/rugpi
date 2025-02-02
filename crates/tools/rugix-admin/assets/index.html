@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+        <title>Rugix Admin</title>
+
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Fira+Sans&display=swap');
+
+            html, body {
+                background: #1b1b1d;
+                color: #FFFFFF;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-family: 'Fira Sans', sans-serif;
+            }
+
+            a, a:visited {
+                color: rgb(93,171,245);
+            }
+
+            .flex {
+                display: flex;
+            }
+            .flex-col {
+                flex-direction: column;
+            }
+            .flex-row {
+                flex-direction: row;
+            }
+            .items-center {
+                align-items: center;
+            }
+            .justify-center {
+                justify-content: center;
+            }
+            .space-x-2 > * + * {
+                margin-left: 0.5rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="flex items-center">
+            <div class="flex" style="height: 3.5em; margin-right: 1em">
+                <svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+                    <g>
+                        <clipPath id="_clip1">
+                            <path d="M1024,189.975C1024,85.125 938.875,0 834.025,0L189.975,0C85.125,0 0,85.125 0,189.975L0,834.025C0,938.875 85.125,1024 189.975,1024L834.025,1024C938.875,1024 1024,938.875 1024,834.025L1024,189.975Z"/>
+                        </clipPath>
+                        <g clip-path="url(#_clip1)">
+                            <g transform="matrix(1,0,0,0.577879,0,632)">
+                                <rect x="0" y="0" width="1024" height="678.343" style="fill:rgb(93,171,245);"/>
+                            </g>
+                            <g transform="matrix(1,0,0,0.98183,0,0)">
+                                <rect x="0" y="0" width="1024" height="678.343" style="fill:rgb(93,171,245);"/>
+                            </g>
+                            <g transform="matrix(3.46098,0,0,3.46098,-450.141,-1059.58)">
+                                <path d="M216.809,450.768C221.062,450.768 224.769,450.237 227.93,449.174C231.092,448.111 233.694,446.642 235.736,444.767C237.779,442.893 239.303,440.669 240.311,438.095C241.318,435.521 241.821,432.695 241.821,429.617C241.821,423.462 239.793,418.734 235.736,415.433C231.679,412.131 225.482,410.481 217.145,410.481L202.709,410.481L202.709,450.768L216.809,450.768ZM274.891,514.39L254.495,514.39C250.634,514.39 247.836,512.879 246.102,509.857L220.586,470.996C219.635,469.541 218.586,468.506 217.439,467.891C216.292,467.275 214.599,466.967 212.361,466.967L202.709,466.967L202.709,514.39L180.131,514.39L180.131,393.023L217.145,393.023C225.37,393.023 232.435,393.876 238.338,395.583C244.241,397.289 249.082,399.681 252.858,402.759C256.635,405.836 259.419,409.515 261.21,413.796C263,418.077 263.896,422.791 263.896,427.939C263.896,432.023 263.294,435.884 262.091,439.521C260.888,443.159 259.153,446.46 256.887,449.426C254.621,452.391 251.823,454.993 248.494,457.231C245.165,459.469 241.374,461.232 237.121,462.519C238.576,463.358 239.919,464.352 241.15,465.499C242.381,466.646 243.5,468.003 244.507,469.569L274.891,514.39Z" style="fill-rule:nonzero;"/>
+                                <path d="M375.862,438.346C375.862,440.137 375.316,441.648 374.225,442.879C373.134,444.11 371.526,444.725 369.399,444.725L358.74,444.725L358.74,450.013C358.74,457.567 358.838,464.058 359.034,469.485C359.229,474.913 359.523,479.473 359.915,483.167C360.306,486.86 360.81,489.811 361.426,492.021C362.041,494.232 362.755,495.924 363.566,497.099C364.377,498.274 365.287,499.044 366.294,499.408C367.301,499.771 368.42,499.953 369.651,499.953L373.428,499.953L373.428,508.179C373.428,509.298 373.092,510.277 372.421,511.116C371.749,511.955 370.826,512.669 369.651,513.256C368.476,513.844 367.119,514.292 365.58,514.599C364.041,514.907 362.405,515.061 360.67,515.061C353.228,515.061 347.745,512.571 344.219,507.591C340.694,502.611 338.932,495.309 338.932,485.685C338.932,483.167 339.057,480.537 339.309,477.795C339.561,475.053 339.869,472.045 340.233,468.772C340.596,465.499 340.96,461.904 341.324,457.987C341.687,454.07 341.981,449.649 342.205,444.725L315.682,444.725C315.458,454.35 315.025,462.785 314.381,470.031C313.738,477.277 312.884,483.502 311.821,488.706C310.758,493.91 309.485,498.218 308.002,501.632C306.52,505.045 304.855,507.759 303.008,509.773C301.162,511.788 299.119,513.186 296.881,513.97C294.643,514.753 292.209,515.145 289.579,515.145C288.74,515.145 287.83,515.075 286.851,514.935C285.872,514.795 284.963,514.557 284.123,514.222C283.284,513.886 282.585,513.466 282.025,512.963C281.466,512.459 281.186,511.872 281.186,511.2L281.186,497.351L282.948,497.351C284.739,497.351 286.446,496.414 288.068,494.539C289.691,492.665 291.16,489.643 292.475,485.475C293.79,481.306 294.895,475.878 295.79,469.192C296.685,462.505 297.301,454.35 297.637,444.725L280.263,444.725L280.263,435.996C280.263,435.213 280.43,434.388 280.766,433.52C281.102,432.653 281.605,431.856 282.277,431.128C282.948,430.401 283.774,429.799 284.753,429.324C285.732,428.848 286.837,428.61 288.068,428.61L375.862,428.61L375.862,438.346Z" style="fill-rule:nonzero;"/>
+                            </g>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <h1>Rugix Admin</h1>
+        </div>
+        <p>Hot: HOT_PARTITIONS | Default: DEFAULT_PARTITIONS</p>
+        <h2>Actions</h2>
+        <div class="flex items-center flex-row space-x-2">
+            <form method="POST" enctype="multipart/form-data">
+                <button type="submit" name="action" value="reset">Factory Reset</button>
+            </form>
+            <form method="POST" enctype="multipart/form-data">
+                <button type="submit" name="action" value="commit">Commit</button>
+            </form>
+            <form method="POST" enctype="multipart/form-data">
+                <button type="submit" name="action" value="reboot">Reboot</button>
+            </form>
+            <form method="POST" enctype="multipart/form-data">
+                <button type="submit" name="action" value="reboot-spare">Reboot Spare</button>
+            </form>
+        </div>
+        <h2>Update</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="image">
+            <button type="submit" name="action" value="update">Install</button>
+        </form>
+        <p style="margin-top: 2em">
+            Made with ❤️ by <a href="https://www.silitics.com">Silitics</a>.
+        </p>
+    </body>
+</html>

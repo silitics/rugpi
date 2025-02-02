@@ -4,12 +4,12 @@ set -euo pipefail
 
 apt-get update -y
 
-BOOT_DIR="${RUGPI_BUNDLE_DIR}/roots/boot"
+BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot"
 
 mkdir -p "${BOOT_DIR}"
 
 echo "Installing kernel..."
-case "${RUGPI_ARCH}" in
+case "${RUGIX_ARCH}" in
     "amd64")
         apt-get install -y \
             linux-image-amd64 \
@@ -21,7 +21,7 @@ case "${RUGPI_ARCH}" in
             linux-headers-arm64
         ;;
     *)
-        echo "Unsupported architecture '${RUGPI_ARCH}'."
+        echo "Unsupported architecture '${RUGIX_ARCH}'."
         exit 1
 esac
 

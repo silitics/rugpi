@@ -122,11 +122,11 @@ Without that parameter and if there are only two boot groups, Rugix Ctrl will au
 ## Boot Flow
 
 Bootloader integrations are referred to as _boot flows_.
-Multiple boot flows may exist for the same bootloader, allowing Rugpi to adapt to different environments and serve as a drop-in replacement for other OTA solutions.
+Multiple boot flows may exist for the same bootloader, allowing Rugix to adapt to different environments and serve as a drop-in replacement for other OTA solutions.
 
 Boot flows are configured via the `boot-flow` section, with the `type` setting indicating the boot flow type.
 
-Currently, Rugpi supports the following boot flow types:
+Currently, Rugix supports the following boot flow types:
 
 - `tryboot`: Uses [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting) (A/B setups only).
 - `u-boot`: Uses an [U-Boot](https://docs.u-boot.org/en/latest/) environment file to switch between partitions (A/B setups only).

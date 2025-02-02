@@ -1,5 +1,5 @@
 description = "setup Debian for `generic-grub-*` targets"
-dependencies = ["rugpi-ctrl"]
+dependencies = ["rugix-ctrl"]
 
 [parameters]
 with_firmware = { default = "true" }

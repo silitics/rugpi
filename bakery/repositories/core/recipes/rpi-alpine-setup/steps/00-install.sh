@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BOOT_DIR="${RUGPI_BUNDLE_DIR}/roots/boot/"
+BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot/"
 
 apk add linux-rpi
 

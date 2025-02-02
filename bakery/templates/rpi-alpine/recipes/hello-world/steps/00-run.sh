@@ -1,3 +1,3 @@
 #!/bin/bash
 
-ls -l "${RUGPI_ROOT_DIR}" >&2
+ls -l "${RUGIX_ROOT_DIR}" >&2

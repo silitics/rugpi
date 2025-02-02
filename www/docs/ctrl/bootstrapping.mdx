@@ -24,7 +24,7 @@ When [configured to run before the init system](./state-management.mdx), Rugix C
 Note that the bootstrapping process runs very early during the boot process before the init system because properly booting the system, in particular, with state management, requires the existence of a data partition, which may first need to be created.
 
 :::info
-The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` configuration file. It requires a config partition to be configured and present. The config partition must contain a file `/.rugpi/bootstrap` to trigger the bootstrapping process. This file is deleted after the bootstrapping process to ensure that it does not run again.[^bootstrap-in-production]
+The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` configuration file. It requires a config partition to be configured and present. The config partition must contain a file `/.rugix/bootstrap` to trigger the bootstrapping process. This file is deleted after the bootstrapping process to ensure that it does not run again.[^bootstrap-in-production]
 :::
 
 [^bootstrap-in-production]: Note that a malicious actor may be able to create this file on a production device and then trigger the bootstrapping process, even if secure boot and other security measures are in place. This may pose a security risk. In those cases, it is recommended to use a user-defined `prepare` bootstrapping hook that will check whether the device should be bootstrapped using some other source, such as one-time-programmable memory, and abort the process based on the outcome of that check.

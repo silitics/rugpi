@@ -31,7 +31,7 @@ A common use case would be to load a `.env` file with secret environment variabl
 # Rebuild the layer if the environment changes.
 echo ".env" >> "${LAYER_REBUILD_IF_CHANGED}"
 # Include the environment, if it exists.
-if [ -f "$RUGPI_PROJECT_DIR/.env" ]; then
-    . "$RUGPI_PROJECT_DIR/.env"
+if [ -f "$RUGIX_PROJECT_DIR/.env" ]; then
+    . "$RUGIX_PROJECT_DIR/.env"
 fi
 ```

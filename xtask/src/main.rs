@@ -42,7 +42,7 @@ pub fn build_binaries(target: &str) -> anyhow::Result<()> {
             "--target",
             target,
             "--bin",
-            "rugpi-*",
+            "rugix-*",
             "--bin",
             "rugix-*",
         ]
@@ -64,7 +64,7 @@ pub fn build_binaries(target: &str) -> anyhow::Result<()> {
         let Ok(file_name) = entry.file_name().into_string() else {
             continue;
         };
-        if !(file_name.starts_with("rugpi-") || file_name.starts_with("rugix-"))
+        if !(file_name.starts_with("rugix-") || file_name.starts_with("rugix-"))
             || file_name.ends_with(".d")
         {
             continue;

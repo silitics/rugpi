@@ -7,8 +7,8 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-export RUGPI_BAKERY_IMAGE=$1
-export RUGPI_DEV=true
+export RUGIX_BAKERY_IMAGE=$1
+export RUGIX_DEV=true
 
 ./scripts/build-images.sh
 
@@ -16,5 +16,5 @@ docker run --rm --privileged \
     -v "$(pwd)":/project \
     -v /dev:/dev \
     --entrypoint /bin/bash \
-    "${RUGPI_BAKERY_IMAGE}" \
+    "${RUGIX_BAKERY_IMAGE}" \
     /project/scripts/check-images.sh
