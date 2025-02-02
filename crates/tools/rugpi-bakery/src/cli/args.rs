@@ -46,7 +46,7 @@ pub enum Command {
 #[derive(Debug, Parser)]
 pub enum ListCommand {
     /// List available images.
-    Images,
+    Systems,
 }
 
 /// The `bake` command.

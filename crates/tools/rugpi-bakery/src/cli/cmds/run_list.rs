@@ -7,15 +7,15 @@ use crate::BakeryResult;
 pub fn run(args: &args::Args, cmd: &args::ListCommand) -> BakeryResult<()> {
     let project = load_project(args)?;
     match cmd {
-        args::ListCommand::Images => {
+        args::ListCommand::Systems => {
             rugpi_cli::suspend(|| {
-                if let Some(images) = &project.config().images {
-                    eprintln!("Available Images:");
-                    for name in images.keys() {
+                if let Some(systems) = &project.config().systems {
+                    eprintln!("Available Systems:");
+                    for name in systems.keys() {
                         eprintln!("  {name}");
                     }
                 } else {
-                    eprintln!("No images available.");
+                    eprintln!("No systems available.");
                 }
             });
         }
