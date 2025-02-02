@@ -3,7 +3,7 @@
 use std::io::{BufRead, BufReader, Seek, Write};
 use std::path::Path;
 
-use block_index::compute_block_index;
+use block_index::index_for_block_encoding;
 use block_table::BlockTable;
 use byte_calc::{ByteLen, NumBytes};
 use reportify::{bail, ResultExt};
@@ -22,7 +22,7 @@ pub fn encode_payload_file(
     payload_file: &Path,
     payload_data: &Path,
 ) -> BundleResult<format::BlockEncoding> {
-    let block_index = compute_block_index(block_encoding, payload_file)?;
+    let block_index = index_for_block_encoding(block_encoding, payload_file)?;
     let mut block_table = BlockTable::new();
     let mut block_sizes = Vec::new();
     let mut payload_file = BufReader::with_capacity(
@@ -105,7 +105,7 @@ pub fn encode_payload_file(
                 manifest::Compression::Xz(_) => rugix_compression::CompressionFormat::Xz,
             }),
         chunker: block_index.config().chunker.clone(),
-        block_index: Bytes {
+        block_hashes: Bytes {
             raw: compress_bytes(block_encoding, &block_index.into_hashes_vec()),
         },
         block_sizes: if include_sizes {

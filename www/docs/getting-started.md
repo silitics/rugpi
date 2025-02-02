@@ -164,9 +164,7 @@ Let's say that you made some further changes to the website and would like to up
 This is where Rugix Ctrl comes into play.
 Rugix Ctrl can install updates from Rugix _update bundles_ (and in some cases system images).
 Rugix update bundles are based on a format specifically engineered for efficient and secure over-the-air updates.
-The format provides build-in support for cryptographic integrity checks, compression, and adaptive delta updates (coming soon).[^delta-updates]
-
-[^delta-updates]: Updates bundles already contain all the necessary information. We will finalize the support in Rugix Ctrl in the next weeks.
+The format provides build-in support for cryptographic integrity checks, compression, and adaptive delta updates.
 
 To build an update bundle for the `customized-efi-arm64` system, run:
 

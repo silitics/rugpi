@@ -10,8 +10,9 @@ use reportify::ResultExt;
 use rugix_chunker::{AnyChunker, Chunker, ChunkerAlgorithm};
 use rugix_hashes::{HashAlgorithm, Hasher};
 
+use crate::format::encode::Encode;
 use crate::manifest::BlockEncoding;
-use crate::BundleResult;
+use crate::{format, BundleResult};
 
 pub struct RawBlockIndex<'hashes> {
     hashes: Cow<'hashes, [u8]>,
@@ -34,7 +35,7 @@ impl<'hashes> RawBlockIndex<'hashes> {
 }
 
 /// Build a block index for the provided payload file.
-pub fn compute_block_index(
+pub fn index_for_block_encoding(
     block_encoding: &BlockEncoding,
     payload_file: &Path,
 ) -> BundleResult<BlockIndex> {
@@ -44,6 +45,13 @@ pub fn compute_block_index(
             .unwrap_or(rugix_hashes::HashAlgorithm::Sha512_256),
         chunker: block_encoding.chunker.clone(),
     };
+    compute_block_index(index_config, payload_file)
+}
+
+pub fn compute_block_index(
+    index_config: BlockIndexConfig,
+    payload_file: &Path,
+) -> BundleResult<BlockIndex> {
     let mut index_builder = BlockIndexBuilder::new(index_config.clone())?;
     let mut payload_file =
         BufReader::new(std::fs::File::open(payload_file).whatever("unable to open payload file")?);
@@ -92,6 +100,15 @@ pub struct BlockIndex {
     sizes: Vec<NumBytes>,
 }
 
+pub fn encode_block_sizes(sizes: impl Iterator<Item = u32>) -> Vec<u8> {
+    let (lower_bound, _) = sizes.size_hint();
+    let mut buffer = Vec::with_capacity(lower_bound * 4);
+    for size in sizes {
+        buffer.extend_from_slice(&size.to_be_bytes());
+    }
+    buffer
+}
+
 impl BlockIndex {
     /// Create an empty block index with the given configuration.
     fn new(config: BlockIndexConfig) -> Self {
@@ -101,6 +118,25 @@ impl BlockIndex {
             offsets: Vec::new(),
             sizes: Vec::new(),
         }
+    }
+
+    /// Encode the index for storage.
+    pub fn encode(&self) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        let index_struct = format::BlockIndex {
+            chunker: self.config.chunker.clone(),
+            hash_algorithm: self.config.hash_algorithm,
+            block_hashes: format::Bytes {
+                raw: self.hashes.clone(),
+            },
+            block_sizes: format::Bytes {
+                raw: encode_block_sizes(self.sizes.iter().map(|size| size.raw as u32)),
+            },
+        };
+        index_struct
+            .encode(&mut buffer, format::tags::BLOCK_INDEX)
+            .unwrap();
+        buffer
     }
 
     /// Convert the index into a raw hash vector.
@@ -168,7 +204,6 @@ impl BlockIndex {
 
 /// Block index configuration.
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct BlockIndexConfig {
     /// Hash algorithm to use.
     pub hash_algorithm: HashAlgorithm,

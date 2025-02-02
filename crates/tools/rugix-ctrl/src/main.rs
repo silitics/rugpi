@@ -2,6 +2,7 @@ pub mod cli;
 pub mod config;
 pub mod init;
 pub mod overlay;
+pub mod slot_db;
 pub mod state;
 pub mod utils;
 

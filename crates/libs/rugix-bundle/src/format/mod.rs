@@ -82,9 +82,18 @@ define_struct! {
         pub deduplicated[BLOCK_ENCODING_DEDUPLICATED]: bool,
         pub compression[BLOCK_ENCODING_COMPRESSION]: Option<CompressionFormat>,
         /// Block index.
-        pub block_index[BLOCK_ENCODING_BLOCK_INDEX]: Bytes,
+        pub block_hashes[BLOCK_ENCODING_BLOCK_HASHES]: Bytes,
         /// Block sizes.
         pub block_sizes[BLOCK_ENCODING_BLOCK_SIZES]: Option<Bytes>,
+    }
+}
+
+define_struct! {
+    pub struct BlockIndex {
+        pub chunker[BLOCK_INDEX_CHUNKER]: ChunkerAlgorithm,
+        pub hash_algorithm[BLOCK_INDEX_HASH_ALGORITHM]: HashAlgorithm,
+        pub block_hashes[BLOCK_INDEX_BLOCK_HASHES]: Bytes,
+        pub block_sizes[BLOCK_INDEX_BLOCK_SIZES]: Bytes,
     }
 }
 

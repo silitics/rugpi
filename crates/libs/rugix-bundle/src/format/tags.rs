@@ -151,6 +151,13 @@ define_tags! {
 
     PAYLOAD_TYPE_SLOT_SLOT = 0x1b231de7,
 
+    BLOCK_INDEX = 0x1ae50c8e,
+
+    BLOCK_INDEX_CHUNKER = 0x5cdf21b0,
+    BLOCK_INDEX_HASH_ALGORITHM = 0x1d92a080,
+    BLOCK_INDEX_BLOCK_HASHES = 0x55e547d8,
+    BLOCK_INDEX_BLOCK_SIZES = 0x4668c5ba,
+
     /// Payloads segment of the bundle.
     PAYLOADS = 0x1f38fba,
 
@@ -172,7 +179,7 @@ define_tags! {
     BLOCK_ENCODING_COMPRESSION = 0x783217c6,
 
     /// Block index.
-    BLOCK_ENCODING_BLOCK_INDEX = 0x76b3d7a0,
+    BLOCK_ENCODING_BLOCK_HASHES = 0x76b3d7a0,
     /// Block sizes.
     BLOCK_ENCODING_BLOCK_SIZES = 0x27e5d3f2,
 }

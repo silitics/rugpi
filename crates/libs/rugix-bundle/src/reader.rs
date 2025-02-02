@@ -115,7 +115,7 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
         let mut buffer = vec![0; 8192];
         let mut payload_hasher = self.reader.header.hash_algorithm.hasher();
         if let Some(block_encoding) = self.header.block_encoding {
-            let mut block_index_raw = block_encoding.block_index.raw;
+            let mut block_index_raw = block_encoding.block_hashes.raw;
             if let Some(format) = block_encoding.compression {
                 block_index_raw = uncompress_bytes(format, &block_index_raw);
             }

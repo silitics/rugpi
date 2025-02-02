@@ -4,9 +4,10 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::Path;
 
+use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::source::{ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
-use rugix_hashes::HashDigest;
+use rugix_hashes::{HashAlgorithm, HashDigest};
 use tempfile::TempDir;
 use tracing::error;
 
@@ -22,6 +23,7 @@ use rugix_common::system::{System, SystemResult};
 use xscript::{run, Run};
 
 use crate::overlay::overlay_dir;
+use crate::slot_db;
 use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
 
 fn create_rugix_state_directory() -> SystemResult<()> {
@@ -233,6 +235,37 @@ pub fn main() -> SystemResult<()> {
                 }
                 println!("Boot Entries");
                 println!("{:#?}", system.boot_entries());
+            }
+        },
+        Command::Slots(slots_command) => match slots_command {
+            SlotsCommand::Inspect { slot } => {
+                let indices = slot_db::get_stored_indices(slot)?;
+                if indices.is_empty() {
+                    eprintln!("No indices for slot {slot}")
+                } else {
+                    for index in &indices {
+                        eprintln!("Found index {:?}", &index.index_file);
+                    }
+                }
+            }
+            SlotsCommand::AddIndex {
+                slot,
+                chunker: chunker_algorithm,
+                hash_algorithm,
+            } => {
+                let Some((_, slot)) = system.slots().find_by_name(slot) else {
+                    bail!("slot {slot} not found")
+                };
+                match slot.kind() {
+                    SlotKind::Block(block_slot) => {
+                        slot_db::add_index(
+                            slot.name(),
+                            block_slot.device().path(),
+                            chunker_algorithm,
+                            hash_algorithm,
+                        )?;
+                    }
+                }
             }
         },
     }
@@ -530,6 +563,9 @@ pub enum Command {
     /// Manage the system.
     #[clap(subcommand)]
     System(SystemCommand),
+    /// Manage the update slots of the system.
+    #[clap(subcommand)]
+    Slots(SlotsCommand),
     /// Unstable experimental commands.
     #[clap(subcommand)]
     Unstable(UnstableCommand),
@@ -542,6 +578,18 @@ pub enum StateCommand {
     /// Configure the root filesystem overlay.
     #[clap(subcommand)]
     Overlay(OverlayCommand),
+}
+
+#[derive(Debug, Parser)]
+pub enum SlotsCommand {
+    /// Query the state of a slot.
+    Inspect { slot: String },
+    /// Add an index to a slot.
+    AddIndex {
+        slot: String,
+        chunker: ChunkerAlgorithm,
+        hash_algorithm: HashAlgorithm,
+    },
 }
 
 #[derive(Debug, Parser)]
