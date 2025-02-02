@@ -112,7 +112,7 @@ Let's say that you would like to build an image for Raspberry Pi 4, you can do t
 ./run-bakery bake image customized-pi4
 ```
 
-This command will build an image `build/images/customized-pi4.img` that you can directly write to an SD card, e.g., with [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+This command will build an image `build/customized-pi4/system.img` that you can directly write to an SD card, e.g., with [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 You can then put this SD card into a Raspberry Pi 4 and boot into the system that you just built.
 When visiting the IP address of the Raspberry Pi in your local network in a web browser, you should see the static website with the changes you made.
 If you don't know the IP address, try [`http://rugix-template.local`](http://rugix-template.local).
@@ -191,13 +191,13 @@ For the cryptography nerds, the hash is the root of a [Merkle tree](https://en.w
 After building the bundle, you can transfer it via `scp` to the earlier started VM:
 
 ```shell
-scp -P 2222 build/bundles/customized-efi-arm64.rugixb root@127.0.0.1:/root
+scp -P 2222 build/customized-efi-arm64/system.rugixb root@127.0.0.1:/root
 ```
 
 When the upload is complete, the bundle can be installed via SSH as an update with the following command:
 
 ```shell
-rugix-ctrl update install --verify-bundle <hash> /root/customized-efi-arm64.rugixb
+rugix-ctrl update install --verify-bundle <hash> /root/system.rugixb
 ```
 
 Here, `<hash>` is the bundle hash produced by the earlier `bake` command.

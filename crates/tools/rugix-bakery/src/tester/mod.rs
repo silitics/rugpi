@@ -29,7 +29,7 @@ pub fn main(project: &ProjectRef, test_path: &Path) -> BakeryResult<()> {
         .into_owned();
 
     for system in &test_config.systems {
-        let system_out = Path::new(".rugix/systems").join(&system.system);
+        let system_out = Path::new("build").join(&system.system);
         oven::bake_system(&project, &system.system, &system_out).whatever("error baking system")?;
 
         let test_status = rugix_cli::add_status(TestCliStatus {
