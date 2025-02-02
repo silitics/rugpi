@@ -154,7 +154,7 @@ ssh -p 2222 -L 8080:localhost:80 root@127.0.0.1
 ```
 
 The option `-L 8080:localhost:80` will also forward port `8080` on your machine to the port `80` of the VM.
-Hence, you can now view the static website installed into your system by opening http://127.0.0.1:8080 in your browser.
+Hence, you can now view the static website installed into your system by opening http://localhost:8080 in your browser.
 
 
 ## Installing an Update
