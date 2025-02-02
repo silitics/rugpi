@@ -1,0 +1,8 @@
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/heads/main/schemas/rugix-bundle-manifest.schema.json
+
+[[payloads]]
+filename = "update-script.sh"
+[payloads.config]
+type = "script"
+[payloads.block-encoding]
+chunker = "fixed-64"

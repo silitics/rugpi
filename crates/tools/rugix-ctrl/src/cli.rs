@@ -84,6 +84,7 @@ pub fn main() -> SystemResult<()> {
                     verify_bundle,
                     stream,
                     boot_entry,
+                    without_boot_flow,
                 } => {
                     if reboot_type.is_some() && *no_reboot {
                         bail!("--no-reboot and --reboot are incompatible");
@@ -150,6 +151,7 @@ pub fn main() -> SystemResult<()> {
                         verify_bundle,
                         entry_idx,
                         entry,
+                        *without_boot_flow,
                     )?;
 
                     let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
@@ -291,6 +293,7 @@ fn install_update_stream(
     verify_bundle: &Option<HashDigest>,
     entry_idx: BootGroupIdx,
     entry: &BootGroup,
+    without_boot_flow: bool,
 ) -> SystemResult<()> {
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
@@ -314,7 +317,14 @@ fn install_update_stream(
         if check_hash.is_some() {
             bail!("--check-hash is not supported for update bundles, use --verify-bundle");
         }
-        return install_update_bundle(system, update_stream, verify_bundle, entry_idx, entry);
+        return install_update_bundle(
+            system,
+            update_stream,
+            verify_bundle,
+            entry_idx,
+            entry,
+            without_boot_flow,
+        );
     }
     if verify_bundle.is_some() {
         bail!("--verify-bundle is not supported on images, use --check-hash");
@@ -429,26 +439,26 @@ fn install_update_bundle<R: Read>(
     verify_bundle: &Option<HashDigest>,
     entry_idx: BootGroupIdx,
     entry: &BootGroup,
+    without_boot_flow: bool,
 ) -> SystemResult<()> {
-    system
-        .boot_flow()
-        .pre_install(system, entry_idx)
-        .whatever("error executing pre-install step")?;
+    if !without_boot_flow {
+        system
+            .boot_flow()
+            .pre_install(system, entry_idx)
+            .whatever("error executing pre-install step")?;
+    }
     let bundle_source = ReaderSource::<_, SkipRead>::from_unbuffered(bundle);
     let mut bundle_reader =
         rugix_bundle::reader::BundleReader::start(bundle_source, verify_bundle.clone())
             .whatever("unable to read bundle")?;
 
-    'outer: while let Some(payload) = bundle_reader
+    while let Some(payload) = bundle_reader
         .next_payload()
         .whatever("unable to read payload")?
     {
         let payload_entry = payload.entry();
-        loop {
-            if let Some(slot_type) = &payload_entry.type_slot {
-                let Some(slot) = entry.get_slot(&slot_type.slot) else {
-                    break;
-                };
+        if let Some(slot_type) = &payload_entry.type_slot {
+            if let Some(slot) = entry.get_slot(&slot_type.slot) {
                 let slot = &system.slots()[slot];
                 eprintln!(
                     "Installing bundle payload {} to slot {}",
@@ -464,33 +474,34 @@ fn install_update_bundle<R: Read>(
                 payload
                     .decode_into(target)
                     .whatever("unable to decode payload")?;
-            } else if let Some(_) = &payload_entry.type_script {
-                eprintln!("Executing update script (payload {})", payload.idx(),);
-                let temp_dir = TempDir::new().whatever("unable to create temporary directory")?;
-                let script_file = temp_dir.path().join("update-script");
-                let target = std::fs::OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .open(&script_file)
-                    .whatever("unable to open payload target")?;
-                payload
-                    .decode_into(target)
-                    .whatever("unable to decode payload")?;
-                run!(["chmod", "755", &script_file])
-                    .whatever("unable to set executable permissions")?;
-                run!([script_file]).whatever("unable to execute update script")?;
-            } else {
-                break;
+                continue;
             }
-            continue 'outer;
+        } else if let Some(_) = &payload_entry.type_script {
+            eprintln!("Executing update script (payload {})", payload.idx(),);
+            let temp_dir = TempDir::new().whatever("unable to create temporary directory")?;
+            let script_file = temp_dir.path().join("update-script");
+            let target = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&script_file)
+                .whatever("unable to open payload target")?;
+            payload
+                .decode_into(target)
+                .whatever("unable to decode payload")?;
+            run!(["chmod", "755", &script_file])
+                .whatever("unable to set executable permissions")?;
+            run!([script_file]).whatever("unable to execute update script")?;
+            continue;
         }
         payload.skip().whatever("unable to skip payload")?;
     }
 
-    system
-        .boot_flow()
-        .post_install(system, entry_idx)
-        .whatever("error running post-install step")?;
+    if !without_boot_flow {
+        system
+            .boot_flow()
+            .post_install(system, entry_idx)
+            .whatever("error running post-install step")?;
+    }
     Ok(())
 }
 
@@ -554,6 +565,9 @@ pub enum UpdateCommand {
         /// Prevent Rugix from rebooting the system.
         #[clap(long)]
         no_reboot: bool,
+        /// Do not involve the boot flow in the update.
+        #[clap(long, hide(true))]
+        without_boot_flow: bool,
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,
