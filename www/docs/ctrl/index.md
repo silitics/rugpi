@@ -136,8 +136,8 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | Security: Embedded Signatures | ✅ | ✅ | ✅ | ❌ | Embed signatures into an update. |
 | Security: External Signatures | ❌ | ❌ | ❌ | ✅ | Use an external signature/root of trust. |
 | Security: Encrypted Updates | ❌ | ✅ | ✅ | ❌ | Encrypted update artifacts.
-| Build System: Yocto | ✅ | ✅ | ❌[^swu-yocto] | ✔️[^rugix-yocto] | Support for Yocto. |
-| Build System: Rugix Bakery | ❌ | ❌ | ❌ | ✅ | Support for Rugix Bakery.
+| Build System: Yocto | ✅ | ✅ | ❌[^swu-yocto] | ✔️[^rugix-yocto] | Ready-made Yocto integration. |
+| Build System: Rugix Bakery | ❌ | ❌ | ❌ | ✅ | Supported by Rugix Bakery.
 
 [^mender-update-modules]: With Mender's update modules you could build this yourself, however, there is no built-in support.
 [^mender-script]: With the `script` update module, you can ship a single script as an update, however, you cannot interleave custom scripts into a regular update artifact. Again, you could write your own update module if you need anything specific.
