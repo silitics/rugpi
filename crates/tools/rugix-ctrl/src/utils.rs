@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use reportify::ResultExt;
 use crate::system::SystemResult;
+use reportify::ResultExt;
 use xscript::{run, Run};
 
 pub static DEFERRED_SPARE_REBOOT_FLAG: &str = "/run/rugix/mounts/data/.rugix/deferred-reboot-spare";

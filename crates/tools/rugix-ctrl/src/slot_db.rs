@@ -3,6 +3,7 @@
 use std::hash::BuildHasher;
 use std::path::{Path, PathBuf};
 
+use crate::system::SystemResult;
 use byte_calc::NumBytes;
 use hashbrown::{DefaultHashBuilder, HashTable};
 use reportify::{whatever, ResultExt};
@@ -12,7 +13,6 @@ use rugix_bundle::format::{self, BlockIndex};
 use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::reader::block_provider::{StoredBlock, StoredBlockProvider};
 use rugix_bundle::source::FileSource;
-use crate::system::SystemResult;
 use rugix_hashes::HashAlgorithm;
 use tracing::warn;
 
