@@ -38,6 +38,11 @@ layer = "customized-efi"
 architecture = "arm64"
 target = "generic-grub-efi"
 
+[systems.customized-temp-overlay]
+layer = "customized-temp-overlay"
+architecture = "arm64"
+target = "generic-grub-efi"
+
 # This image has a larger size and can be directly used with QEMU.
 [systems.customized-arm64-vm]
 layer = "customized-efi"

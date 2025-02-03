@@ -20,13 +20,45 @@
       "description": "Default layout configuration.",
       "properties": {
         "system-size": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
         }
       },
       "required": [
         "system-size"
       ],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.Ext4Filesystem": {
+      "$id": "rugix_ctrl.bootstrapping.Ext4Filesystem",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.Filesystem": {
+      "$id": "rugix_ctrl.bootstrapping.Filesystem",
+      "description": "",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Ext4"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
     },
     "rugix_ctrl.bootstrapping.LayoutPartitionConfig": {
       "$id": "rugix_ctrl.bootstrapping.LayoutPartitionConfig",
@@ -37,17 +69,21 @@
           "type": "string"
         },
         "size": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
         },
         "type": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.PartitionType"
         },
         "filesystem": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.Filesystem"
         }
       },
       "required": [],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.NumBytes": {
+      "$id": "rugix_ctrl.bootstrapping.NumBytes",
+      "description": ""
     },
     "rugix_ctrl.bootstrapping.PartitionLayoutConfig": {
       "$id": "rugix_ctrl.bootstrapping.PartitionLayoutConfig",
@@ -65,6 +101,10 @@
         "partitions"
       ],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.PartitionType": {
+      "$id": "rugix_ctrl.bootstrapping.PartitionType",
+      "description": ""
     },
     "rugix_ctrl.bootstrapping.SystemLayoutConfig": {
       "$id": "rugix_ctrl.bootstrapping.SystemLayoutConfig",
@@ -113,7 +153,7 @@
               "const": "default"
             },
             "system-size": {
-              "type": "string"
+              "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
             }
           },
           "required": [
@@ -299,7 +339,10 @@
         "device": {
           "type": "string"
         },
-        "partition": {}
+        "partition": {
+          "type": "integer",
+          "format": "uint32"
+        }
       },
       "required": [],
       "unevaluatedProperties": false
@@ -406,6 +449,9 @@
         },
         "path": {
           "type": "string"
+        },
+        "protected": {
+          "type": "boolean"
         }
       },
       "required": [],
@@ -424,7 +470,10 @@
             "device": {
               "type": "string"
             },
-            "partition": {}
+            "partition": {
+              "type": "integer",
+              "format": "uint32"
+            }
           },
           "required": [
             "type"

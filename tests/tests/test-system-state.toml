@@ -1,6 +1,9 @@
 [[systems]]
 system  = "customized-arm64"
 ssh = { private-key = "./files/id_rsa" }
+[[systems]]
+system  = "customized-temp-overlay"
+ssh = { private-key = "./files/id_rsa" }
 
 [[steps]]
 action = "run"

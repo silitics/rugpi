@@ -1,22 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "rugix_ctrl.output.SystemStateOutput",
+  "$id": "rugix_ctrl.state.StateConfig",
   "type": "object",
-  "description": "",
+  "description": "State management configuration.",
   "properties": {
-    "slots": {
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
-      }
+    "overlay": {
+      "$ref": "#/$defs/rugix_ctrl.state.OverlayConfig"
     },
-    "boot": {
-      "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
+    "persist": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rugix_ctrl.state.PersistConfig"
+      }
     }
   },
-  "required": [
-    "slots"
-  ],
+  "required": [],
   "unevaluatedProperties": false,
   "$defs": {
     "rugix_ctrl.bootstrapping.BootstrappingConfig": {
@@ -40,13 +38,45 @@
       "description": "Default layout configuration.",
       "properties": {
         "system-size": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
         }
       },
       "required": [
         "system-size"
       ],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.Ext4Filesystem": {
+      "$id": "rugix_ctrl.bootstrapping.Ext4Filesystem",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.Filesystem": {
+      "$id": "rugix_ctrl.bootstrapping.Filesystem",
+      "description": "",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Ext4"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
     },
     "rugix_ctrl.bootstrapping.LayoutPartitionConfig": {
       "$id": "rugix_ctrl.bootstrapping.LayoutPartitionConfig",
@@ -57,17 +87,21 @@
           "type": "string"
         },
         "size": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
         },
         "type": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.PartitionType"
         },
         "filesystem": {
-          "type": "string"
+          "$ref": "#/$defs/rugix_ctrl.bootstrapping.Filesystem"
         }
       },
       "required": [],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.NumBytes": {
+      "$id": "rugix_ctrl.bootstrapping.NumBytes",
+      "description": ""
     },
     "rugix_ctrl.bootstrapping.PartitionLayoutConfig": {
       "$id": "rugix_ctrl.bootstrapping.PartitionLayoutConfig",
@@ -85,6 +119,10 @@
         "partitions"
       ],
       "unevaluatedProperties": false
+    },
+    "rugix_ctrl.bootstrapping.PartitionType": {
+      "$id": "rugix_ctrl.bootstrapping.PartitionType",
+      "description": ""
     },
     "rugix_ctrl.bootstrapping.SystemLayoutConfig": {
       "$id": "rugix_ctrl.bootstrapping.SystemLayoutConfig",
@@ -133,7 +171,7 @@
               "const": "default"
             },
             "system-size": {
-              "type": "string"
+              "$ref": "#/$defs/rugix_ctrl.bootstrapping.NumBytes"
             }
           },
           "required": [
@@ -199,6 +237,26 @@
         }
       },
       "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.SystemStateOutput": {
+      "$id": "rugix_ctrl.output.SystemStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
+          }
+        },
+        "boot": {
+          "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
+        }
+      },
+      "required": [
+        "slots"
+      ],
       "unevaluatedProperties": false
     },
     "rugix_ctrl.state.OverlayConfig": {
@@ -273,24 +331,6 @@
       ],
       "unevaluatedProperties": false
     },
-    "rugix_ctrl.state.StateConfig": {
-      "$id": "rugix_ctrl.state.StateConfig",
-      "type": "object",
-      "description": "State management configuration.",
-      "properties": {
-        "overlay": {
-          "$ref": "#/$defs/rugix_ctrl.state.OverlayConfig"
-        },
-        "persist": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/rugix_ctrl.state.PersistConfig"
-          }
-        }
-      },
-      "required": [],
-      "unevaluatedProperties": false
-    },
     "rugix_ctrl.system.BlockSlotConfig": {
       "$id": "rugix_ctrl.system.BlockSlotConfig",
       "type": "object",
@@ -299,7 +339,10 @@
         "device": {
           "type": "string"
         },
-        "partition": {}
+        "partition": {
+          "type": "integer",
+          "format": "uint32"
+        }
       },
       "required": [],
       "unevaluatedProperties": false
@@ -406,6 +449,9 @@
         },
         "path": {
           "type": "string"
+        },
+        "protected": {
+          "type": "boolean"
         }
       },
       "required": [],
@@ -424,7 +470,10 @@
             "device": {
               "type": "string"
             },
-            "partition": {}
+            "partition": {
+              "type": "integer",
+              "format": "uint32"
+            }
           },
           "required": [
             "type"

@@ -1,32 +1,22 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "rugix_ctrl.system.SystemConfig",
+  "$id": "rugix_ctrl.output.SystemStateOutput",
   "type": "object",
-  "description": "System configuration.",
+  "description": "",
   "properties": {
-    "config-partition": {
-      "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
-    },
-    "data-partition": {
-      "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
-    },
     "slots": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/$defs/rugix_ctrl.system.SlotConfig"
+        "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
       }
     },
-    "boot-groups": {
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/$defs/rugix_ctrl.system.BootGroupConfig"
-      }
-    },
-    "boot-flow": {
-      "$ref": "#/$defs/rugix_ctrl.system.BootFlowConfig"
+    "boot": {
+      "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
     }
   },
-  "required": [],
+  "required": [
+    "slots"
+  ],
   "unevaluatedProperties": false,
   "$defs": {
     "rugix_ctrl.bootstrapping.BootstrappingConfig": {
@@ -249,26 +239,6 @@
         }
       },
       "required": [],
-      "unevaluatedProperties": false
-    },
-    "rugix_ctrl.output.SystemStateOutput": {
-      "$id": "rugix_ctrl.output.SystemStateOutput",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "slots": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
-          }
-        },
-        "boot": {
-          "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
-        }
-      },
-      "required": [
-        "slots"
-      ],
       "unevaluatedProperties": false
     },
     "rugix_ctrl.state.OverlayConfig": {
@@ -510,6 +480,36 @@
           ]
         }
       ]
+    },
+    "rugix_ctrl.system.SystemConfig": {
+      "$id": "rugix_ctrl.system.SystemConfig",
+      "type": "object",
+      "description": "System configuration.",
+      "properties": {
+        "config-partition": {
+          "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
+        },
+        "data-partition": {
+          "$ref": "#/$defs/rugix_ctrl.system.PartitionConfig"
+        },
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.system.SlotConfig"
+          }
+        },
+        "boot-groups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.system.BootGroupConfig"
+          }
+        },
+        "boot-flow": {
+          "$ref": "#/$defs/rugix_ctrl.system.BootFlowConfig"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
     }
   }
 }
