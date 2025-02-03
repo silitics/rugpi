@@ -91,7 +91,7 @@ We will add support for that later.
 For now, you can use an external tool, like `wget`, and stream the update into Rugix Ctrl:
 
 ```shell
-wget -q -t 0 -O - <url to the image> | rugix-ctrl update install -
+wget -q -t 0 -O - <url to the bundle> | rugix-ctrl update install -
 ```
 
 This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
