@@ -38,6 +38,8 @@ While one may choose to already prepare the provisioning image and its partition
 The layout always affects the disk of the booted root filesystem. Unless configured otherwise, Rugix Ctrl will apply a default layout as part of the bootstrapping process. If that works for you, there is no need to read any further.
 :::
 
+### Custom Layouts
+
 :::warning
 Custom system layouts are experimental.
 **We may introduce breaking changes to the configuration format in minor versions.**
@@ -74,6 +76,8 @@ partitions = [
 
 Both layouts prepare the system for an A/B update setup with two boot and two system partitions. The last partition is not required to have a size, in which case, it will take up the entire remaining space. So, in case of the examples, the data partition will take up all the remaining space. In case of an MBR partition table, the extended partition does also not require a size and will extend to the end of the disk. The `filesystem` option is optional and will cause Rugix Ctrl to create a filesystem. The `type` option is also optional defaulting to `83` and `0FC63DAF-8483-4772-8E79-3D69D8477DE4` for MBR and GPT, respectively.
 
+### Default Layout
+
 For a typical system, you would use one of the layouts above. As a shortcut, the `type` of the layout can be set to `default`. In that case, only a `system-size` needs to be configured. Rugix Ctrl will then automatically create a matching partition table based on the type of table it finds on the root disk and the configured system size. Here is an example:
 
 ```toml title="bootstrapping.toml"
@@ -81,6 +85,8 @@ For a typical system, you would use one of the layouts above. As a shortcut, the
 type = "default"
 system-size = "4GB"
 ```
+
+### Disable Partition Creation
 
 If you do not want Rugix Ctrl to create any partitions, simply set the layout's `type` to `none`:
 
