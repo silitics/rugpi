@@ -135,6 +135,7 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | Security: Block-Wise Verification | ❌ | ✅ | ❌ | ✅ | Check blocks individually before writing them. |
 | Security: Embedded Signatures | ✅ | ✅ | ✅ | ❌ | Embed signatures in the bundle. |
 | Security: External Signatures | ❌ | ❌ | ❌ | ✅ | Use an external signature/root of trust. |
+| Security: Encrypted Updates | ❌ | ✅ | ✅ | ❌ | Encrypt update bundles.
 | Build System: Yocto | ✅ | ✅ | ❌[^swu-yocto] | ✔️[^rugix-yocto] | Support for Yocto. |
 | Build System: Rugix Bakery | ❌ | ❌ | ❌ | ✅ | Support for Rugix Bakery.
 
