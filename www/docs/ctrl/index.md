@@ -90,7 +90,7 @@ Let's start with the uncontroversial facts about licenses and programming langua
 
 All the solutions we consider here are open-source and can be used in commercial products.
 
-Being written in Rust, a memory-safe language, Rugix Ctrl has a reduced surface for any memory-related security vulnerabilities.
+Being written in Rust, a [memory-safe language](https://en.wikipedia.org/wiki/Memory_safety), Rugix Ctrl has a reduced surface for any [memory-related security vulnerabilities](https://en.wikipedia.org/wiki/Memory_safety#Impact).
 We take this to be an advantage over all the other solutions as updates are an inherently security sensitive issue.
 
 #### General Remarks
