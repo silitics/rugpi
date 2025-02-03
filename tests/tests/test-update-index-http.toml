@@ -7,7 +7,7 @@ action = "run"
 description = "adding an index to the `system-a` slot"
 script = """
 #!/bin/bash
-rugix-ctrl slots add-index system-a casync-64 sha512-256
+rugix-ctrl slots create-index system-a casync-64 sha512-256
 if [ ! -e /run/rugix/mounts/data/rugix/slots/system-a/casync-64_sha512-256.rugix-block-index ]; then
     echo "Block index has not been created."
     exit 1

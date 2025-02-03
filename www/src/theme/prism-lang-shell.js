@@ -3,10 +3,10 @@ Prism.languages.shell = {
     pattern: /#.*/,
   },
   function: {
-    pattern: /(\sxz\s|\bwget\b|\bchmod\b|\bcurl\b|docker|ssh|scp|rugix-ctrl|rugix-ctrl|rugix-bundler|^\.\/run-bakery|\bgit\b|\bdocker\b|\bif\b|\bthen\b|\bfi\b|\becho\b)/
+    pattern: /(\sxz\s|\bwget\b|\bchmod\b|\bcurl\b|docker|ssh|scp|rugix-ctrl|jq|rugix-ctrl|rugix-bundler|^\.\/run-bakery|\bgit\b|\bdocker\b|\becho\b)/
   },  
   constant: {
-    pattern: /(true|false|<[^>]*>)/,
+    pattern: /(true|false|<[^>]*>|\bif\b|\bthen\b|\bfi\b|\belse\b)/,
     alias: "keyword",
   },
   parameter: {
@@ -15,5 +15,6 @@ Prism.languages.shell = {
   },
   punctuation: {
     pattern: /(\\)|;/,
-  }
+  },
+  string: /"[^"]+"/,
 }

@@ -250,7 +250,7 @@ pub fn main() -> SystemResult<()> {
                     }
                 }
             }
-            SlotsCommand::AddIndex {
+            SlotsCommand::CreateIndex {
                 slot,
                 chunker: chunker_algorithm,
                 hash_algorithm,
@@ -628,7 +628,7 @@ pub enum SlotsCommand {
     /// Query the state of a slot.
     Inspect { slot: String },
     /// Add an index to a slot.
-    AddIndex {
+    CreateIndex {
         slot: String,
         chunker: ChunkerAlgorithm,
         hash_algorithm: HashAlgorithm,

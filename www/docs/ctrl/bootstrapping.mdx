@@ -49,12 +49,12 @@ Rugix Ctrl supports MBR (DOS) partition tables and GPT partition tables. Here ar
 [layout]
 type = "mbr"
 partitions = [
-    { name = "config", size = "256MB", type = "0c" },
-    { name = "boot-a", size = "128MB", type = "0c" },
-    { name = "boot-b", size = "128MB", type = "0c" },
+    { name = "config", size = "256MiB", type = "0c" },
+    { name = "boot-a", size = "128MiB", type = "0c" },
+    { name = "boot-b", size = "128MiB", type = "0c" },
     { name = "extended", type = "05" },
-    { name = "system-a", size = "6GB" },
-    { name = "system-b", size = "6GB" },
+    { name = "system-a", size = "6GiB" },
+    { name = "system-b", size = "6GiB" },
     { name = "data", filesystem = "ext4" },
 ]
 ```
@@ -63,11 +63,11 @@ partitions = [
 [layout]
 type = "gpt"
 partitions = [
-    { name = "EFI", size = "256MB", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" },
-    { name = "boot-a", size = "256MB" },
-    { name = "boot-b", size = "256MB" },
-    { name = "system-a", size = "6GB" },
-    { name = "system-b", size = "6GB" },
+    { name = "EFI", size = "256MiB", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" },
+    { name = "boot-a", size = "256MiB" },
+    { name = "boot-b", size = "256MiB" },
+    { name = "system-a", size = "6GiB" },
+    { name = "system-b", size = "6GiB" },
     { name = "data", filesystem = "ext4" },
 ]
 ```

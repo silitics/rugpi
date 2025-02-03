@@ -96,6 +96,47 @@ wget -q -t 0 -O - <url to the image> | rugix-ctrl update install -
 
 This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
 
+### Adaptive Delta Updates
+
+Rugix Ctrl supports _adaptive delta updates_ via HTTP range queries.
+If you are installing an update via HTTP, the server supports range queries, and the bundle and system contain the necessary _block indices_, then Rugix Ctrl will adaptively download only parts of the update that it does not already have, e.g., within the currently booted system partition.[^delta-read-only]
+While we will improve the workflow in the future, for the moment, adaptive delta updates require the manual creation of system block indices, for instance, with:
+
+```shell
+rugix-ctrl slots create-index boot-a casync-64 sha512-256
+rugix-ctrl slots create-index system-a casync-64 sha512-256
+```
+
+You can read more about block indices in the [advanced section on Update Bundles](./advanced/update-bundles.mdx).
+The update bundles built with Rugix Bakery use the parameters `casync-64` and `sha512-256` by default.
+If you want to use adaptive delta updates right now, just create the index before installing the update bundle via HTTP.
+If the currently active system is A, then create an index for `system-a` and `boot-a`.
+If the currently active system is B, then create an index for `system-b` and `boot-b`.
+You can use `rugix-ctrl system info` to query whether the currently booted system is A or B.
+Here is an example script for installing an update:
+
+```shell title="install-update.sh"
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+URL=$1
+
+ACTIVE_SYSTEM=$(rugix-ctrl system info | jq -r ".boot.activeGroup")
+
+if [ "$ACTIVE_SYSTEM" == "a" ]; then
+    rugix-ctrl slots create-index boot-a casync-64 sha512-256
+    rugix-ctrl slots create-index system-a casync-64 sha512-256
+else
+    rugix-ctrl slots create-index boot-b casync-64 sha512-256
+    rugix-ctrl slots create-index system-b casync-64 sha512-256
+fi
+
+rugix-ctrl update install "$URL"
+```
+
+[^delta-read-only]: Currently, this requires the system partition to be read-only. We will lift that restriction in the future. However, note that a read-only system partition is recommended in any case and made easy with Rugix Ctrl's state management functionality.
+
 ### Automatic Reboots
 
 Typically, Rugix Ctrl will reboot the device automatically when installing an update.
