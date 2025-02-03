@@ -5,7 +5,7 @@ sidebar_position: 1
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
 import ReactMarkdown from "react-markdown";
 
-import ConfigSchema from "@site/schemas/rugix-ctrl-state.schema.json";
+import OutputSchema from "@site/schemas/rugix-ctrl-state.schema.json";
 
 
 # Over-the-Air Updates
@@ -24,7 +24,7 @@ The only service interruption is caused, when the device reboots into the new ve
 Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
 - As the previous version is kept, a rollback to the old version is possible if there are any problems with the new version.[^rollback]
 
-[^rollback]: This requires suppert by your application.
+[^rollback]: This requires support by your application.
 
 **Other Update Schemes.** We generally recommend using an A/B update scheme due to the advantages stated above.
 For cases where an A/B update scheme is not the right choice, Rugix Ctrl can flexibly be configured for other update schemes, for instance, an asymmetric setup with a recovery partition or a setup with more than two redundant system partitions.
@@ -63,7 +63,7 @@ Note that this command will produce JSON output when piped into another program 
 You can use tools like [`jq`](https://jqlang.org/) to process the JSON output produced by Rugix Ctrl.
 As a reference, here is the full schema of the `rugix-ctrl system info` output:
 
-<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+<JSONSchemaViewer schema={OutputSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
 
@@ -123,7 +123,7 @@ Rugix Ctrl supports _adaptive delta updates_ via HTTP range queries.
 If you are installing an update via HTTP, the server supports range queries, and the bundle and system contain the necessary _block indices_, then Rugix Ctrl will adaptively download only parts of the update that it does not already have, e.g., within the currently booted system partition.[^delta-read-only]
 While we will improve the workflow in the future, for the moment, adaptive delta updates require the manual creation of system block indices, for instance, with:[^future-delta]
 
-[^delta-read-only]: Currently, this requires the system partition to be read-only. We will lift that restriction in the future. However, note that a read-only system partition is recommended in any case and made easy with Rugix Ctrl's state management functionality.
+[^delta-read-only]: Currently, this requires the system partition to be read-only. We will lift that restriction in the future. However, note that a read-only system partition is recommended in any case and made easy with Rugix Ctrl's state management functionality. For now, if a partition has been modified after creating the index used by an update, the update will simply fail without rebooting.
 
 [^future-delta]: In the future, Rugix Ctrl will create indices automatically based on the indices it finds in the bundle.
 
