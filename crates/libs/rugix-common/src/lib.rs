@@ -11,7 +11,6 @@ use reportify::{Report, ResultExt};
 use crate::boot::uboot::UBootEnv;
 
 pub mod boot;
-pub mod ctrl_config;
 pub mod devices;
 pub mod disk;
 #[cfg(target_os = "linux")]
@@ -22,7 +21,6 @@ pub mod maybe_compressed;
 pub mod mount;
 pub mod partitions;
 pub mod stream_hasher;
-pub mod system;
 pub mod utils;
 
 reportify::new_whatever_type! {

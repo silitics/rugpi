@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use rugix_common::system::boot_groups::BootGroup;
+use crate::system::boot_groups::BootGroup;
 
 /// Get the overlay directory for the given partition set.
 pub fn overlay_dir(entry: &BootGroup) -> PathBuf {

@@ -2218,7 +2218,6 @@ dependencies = [
  "axum",
  "clap",
  "indoc",
- "rugix-common",
  "tokio",
  "xscript 0.4.0",
 ]

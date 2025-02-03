@@ -1,13 +1,15 @@
 use boot_flows::BootFlow;
 use boot_groups::{BootGroup, BootGroupIdx, BootGroups};
-use config::{load_system_config, SystemConfig};
+use config::load_system_config;
 use partitions::ConfigPartition;
 use reportify::{bail, whatever, Report, ResultExt};
 use root::{find_system_device, SystemRoot};
 use slots::{SlotKind, SystemSlots};
 use tracing::warn;
 
-use crate::disk::blkdev::BlockDevice;
+use rugix_common::disk::blkdev::BlockDevice;
+
+use crate::config::system::{PartitionConfig, SystemConfig};
 
 pub mod boot_flows;
 pub mod boot_groups;
@@ -43,7 +45,12 @@ impl System {
             .as_ref()
             .and_then(SystemRoot::from_system_device);
 
-        let config_partition = ConfigPartition::from_config(&system_config.config_partition);
+        let config_partition = ConfigPartition::from_config(
+            system_config
+                .config_partition
+                .as_ref()
+                .unwrap_or(&PartitionConfig::new()),
+        );
         let Some(config_partition) = config_partition else {
             bail!("config partition cannot currently be disabled");
         };

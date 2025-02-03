@@ -4,7 +4,8 @@ use std::sync::atomic::{self, AtomicBool};
 use indexmap::IndexMap;
 use reportify::bail;
 
-use super::config::BootGroupsConfig;
+use crate::config::system::BootGroupConfig;
+
 use super::slots::{SlotIdx, SystemSlots};
 use super::SystemResult;
 
@@ -23,12 +24,12 @@ pub struct BootGroups {
 impl BootGroups {
     pub fn from_config(
         slots: &SystemSlots,
-        config: Option<&BootGroupsConfig>,
+        config: Option<&IndexMap<String, BootGroupConfig>>,
     ) -> SystemResult<Self> {
         let mut groups = Vec::new();
         match config {
             Some(config) => {
-                for (group_name, group_config) in config {
+                for (group_name, group_config) in config.iter() {
                     let mut map = IndexMap::new();
                     for (alias, name) in &group_config.slots {
                         let Some((idx, _)) = slots.find_by_name(name) else {

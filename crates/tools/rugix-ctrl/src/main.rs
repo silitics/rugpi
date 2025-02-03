@@ -1,3 +1,4 @@
+pub mod boot;
 pub mod cli;
 pub mod config;
 pub mod http_source;
@@ -5,6 +6,7 @@ pub mod init;
 pub mod overlay;
 pub mod slot_db;
 pub mod state;
+pub mod system;
 pub mod system_state;
 pub mod utils;
 

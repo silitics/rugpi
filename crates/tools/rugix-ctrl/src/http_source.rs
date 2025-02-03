@@ -1,9 +1,9 @@
 use std::io::Read;
 
+use crate::system::SystemResult;
 use byte_calc::NumBytes;
 use reportify::{bail, ResultExt};
 use rugix_bundle::source::BundleSource;
-use rugix_common::system::SystemResult;
 use ureq::http::Response;
 use ureq::Body;
 

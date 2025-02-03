@@ -22,6 +22,8 @@ record PartitionConfig {
     partition?: u32,
     /// Path where the partition is or should be mounted.
     path?: string,
+    /// Indicates whether the partition is write-protected.
+    protected?: bool,
 }
 
 /// System slot configuration.
@@ -36,7 +38,7 @@ record BlockSlotConfig {
     /// Path to the block device.
     device?: string,
     /// Partition number of the block device.
-    partition?: u16,
+    partition?: u32,
 }
 
 /// Boot group configuration.

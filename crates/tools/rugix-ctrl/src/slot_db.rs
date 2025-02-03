@@ -12,7 +12,7 @@ use rugix_bundle::format::{self, BlockIndex};
 use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::reader::block_provider::{StoredBlock, StoredBlockProvider};
 use rugix_bundle::source::FileSource;
-use rugix_common::system::SystemResult;
+use crate::system::SystemResult;
 use rugix_hashes::HashAlgorithm;
 use tracing::warn;
 

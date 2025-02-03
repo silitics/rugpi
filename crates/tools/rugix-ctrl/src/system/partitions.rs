@@ -7,10 +7,11 @@ use reportify::{bail, ResultExt};
 use tracing::{error, warn};
 use xscript::{run, Run};
 
-use super::config::PartitionConfig;
+use crate::config::system::PartitionConfig;
+
 use super::root::SystemRoot;
 use super::{paths, SystemResult};
-use crate::disk::blkdev::BlockDevice;
+use rugix_common::disk::blkdev::BlockDevice;
 
 /// Resolve the data partition block device.
 pub fn resolve_data_partition(
@@ -47,7 +48,7 @@ fn resolve_partition(
     config: &PartitionConfig,
     default: impl FnOnce() -> SystemResult<u32>,
 ) -> SystemResult<Option<BlockDevice>> {
-    if config.disabled {
+    if config.disabled.unwrap_or(false) {
         return Ok(None);
     }
     let device = if let Some(device) = &config.device {
@@ -91,7 +92,7 @@ pub struct ConfigPartition {
 
 impl ConfigPartition {
     pub fn from_config(config: &PartitionConfig) -> Option<Self> {
-        if config.disabled {
+        if config.disabled.unwrap_or(false) {
             None
         } else {
             Some(Self::new(

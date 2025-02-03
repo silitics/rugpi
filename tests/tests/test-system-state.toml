@@ -1,0 +1,57 @@
+[[systems]]
+system  = "customized-arm64"
+ssh = { private-key = "./files/id_rsa" }
+
+[[steps]]
+action = "run"
+description = "create files and reboot"
+may-disconnect = true
+script = """
+#!/bin/bash
+touch /var/this-file-should-not-persist
+touch /run/rugix/state/this-file-should-persist
+reboot
+"""
+
+[[steps]]
+action = "wait"
+duration = 10
+
+[[steps]]
+action = "run"
+description = "check whether files still exist"
+script = """
+#!/bin/bash
+if [ -e /var/this-file-should-not-persist ]; then
+    echo "File should not exist anymore!"
+    exit1
+fi
+if [ ! -e /run/rugix/state/this-file-should-persist ]; then
+    echo "File should still exist!"
+    exit1
+fi
+"""
+
+[[steps]]
+action = "run"
+description = "perform a factory reset"
+may-disconnect = true
+script = """
+#!/bin/bash
+rugix-ctrl state reset
+"""
+
+[[steps]]
+action = "wait"
+duration = 10
+
+[[steps]]
+action = "run"
+description = "check whether files still exist"
+script = """
+#!/bin/bash
+if [ -e /run/rugix/state/this-file-should-persist ]; then
+    echo "File should not exist anymore!"
+    exit1
+fi
+"""

@@ -35,26 +35,27 @@ async fn main() {
 
 #[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
-    use rugix_common::system::System;
+    // use crate::system::System;
 
-    tokio::task::spawn_blocking(|| {
-        let system = System::initialize().unwrap();
-        let default_entry = system.boot_flow().get_default(&system).unwrap();
-        let active_entry = system.active_boot_entry().unwrap();
-        Html(
-            include_str!("../assets/index.html")
-                .replace(
-                    "HOT_PARTITIONS",
-                    &system.boot_entries()[active_entry].name().to_uppercase(),
-                )
-                .replace(
-                    "DEFAULT_PARTITIONS",
-                    &system.boot_entries()[default_entry].name().to_uppercase(),
-                ),
-        )
-    })
-    .await
-    .unwrap()
+    // tokio::task::spawn_blocking(|| {
+    //     let system = System::initialize().unwrap();
+    //     let default_entry = system.boot_flow().get_default(&system).unwrap();
+    //     let active_entry = system.active_boot_entry().unwrap();
+    //     Html(
+    //         include_str!("../assets/index.html")
+    //             .replace(
+    //                 "HOT_PARTITIONS",
+    //                 &system.boot_entries()[active_entry].name().to_uppercase(),
+    //             )
+    //             .replace(
+    //                 "DEFAULT_PARTITIONS",
+    //                 &system.boot_entries()[default_entry].name().to_uppercase(),
+    //             ),
+    //     )
+    // })
+    // .await
+    // .unwrap()
+    todo!()
 }
 
 #[cfg(debug_assertions)]

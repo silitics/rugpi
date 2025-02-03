@@ -73,6 +73,12 @@ pub fn make_system(config: &SystemConfig, frozen: &FrozenLayer, out: &Path) -> B
             }
             Target::Unknown => { /* nothing to do */ }
         }
+
+        if !matches!(target, Target::Unknown) {
+            std::fs::create_dir_all(config_dir.join(".rugix")).ok();
+            std::fs::File::create(config_dir.join(".rugix/bootstrap"))
+                .whatever("unable to create file `.rugix/bootstrap`")?;
+        }
     }
 
     // At this point, everything is initialized and we can compute the partition table.

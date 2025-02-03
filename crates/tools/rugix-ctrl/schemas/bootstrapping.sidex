@@ -1,5 +1,11 @@
 //! Bootstrapping configuration.
 
+#[rust(type="byte_calc::NumBytes")]
+opaque NumBytes
+
+#[rust(type="rugix_common::disk::PartitionType")]
+opaque PartitionType
+
 /// Bootstrapping configuration.
 record BootstrappingConfig {
     /// Disable bootstrapping altogether.
@@ -32,17 +38,26 @@ record LayoutPartitionConfig {
     /// Optional name of the partition.
     name?: string,
     /// Size of the partition.
-    size?: string,
+    size?: NumBytes,
     /// Type of the partition (one byte hex or GUID).
     #[json(name = "type")]
-    ty?: string,
+    ty?: PartitionType,
     /// Filesystem of the partition.
-    filesystem?: string,
+    filesystem?: Filesystem,
+}
+
+#[json(tag="type")]
+variant Filesystem {
+    Ext4: Ext4Filesystem,
+}
+
+record Ext4Filesystem {
+    label?: string,
 }
 
 /// Default layout configuration.
 #[json(rename_all = "kebab-case")]
 record DefaultLayoutConfig {
     /// Size of the system partitions.
-    system_size: string,
+    system_size: NumBytes,
 }

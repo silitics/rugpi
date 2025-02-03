@@ -9,7 +9,6 @@ use reportify::{Report, ResultExt};
 use sha1::{Digest, Sha1};
 use thiserror::Error;
 
-use crate::system::System;
 use crate::utils::ascii_numbers::{self, bytes_to_ascii_hex};
 
 /// Signature of Grub environment blocks.
@@ -69,7 +68,7 @@ pub enum InvalidEnvblk {
 }
 
 pub const RUGIX_BOOTPART: &str = "rugpi_bootpart";
-const RUGIX_BOOT_SPARE: &str = "rugpi_boot_spare";
+pub const RUGIX_BOOT_SPARE: &str = "rugpi_boot_spare";
 
 /// Encode a Grub environment block.
 pub fn grub_envblk_encode(values: &HashMap<String, String>) -> Result<String, InvalidEnvblk> {
@@ -185,51 +184,6 @@ pub fn save_grub_env<P: AsRef<Path>>(path: P, env: &GrubEnv) -> Result<(), Repor
         Ok(())
     }
     inner(path.as_ref(), env)
-}
-
-pub fn set_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
-    let mut envblk = HashMap::new();
-    envblk.insert(RUGIX_BOOT_SPARE.to_owned(), "true".to_owned());
-    let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;
-    let config_partition = system
-        .require_config_partition()
-        .whatever("unable to get config partition")?;
-    config_partition
-        .ensure_writable(|| -> Result<(), Report<GrubEnvError>> {
-            // It is safe to directly write to the file here. If the file is corrupt,
-            // the system will simply boot from the default partition set. We still
-            // need to use `rugpi` here to not break existing systems.
-            std::fs::write(
-                config_partition.path().join("rugpi/boot_spare.grubenv"),
-                envblk,
-            )
-            .whatever("unable to write Grub environment")?;
-            Ok(())
-        })
-        .whatever("unable to make config partition writable")??;
-    Ok(())
-}
-
-pub fn clear_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
-    let mut envblk = HashMap::new();
-    envblk.insert(RUGIX_BOOT_SPARE.to_owned(), "false".to_owned());
-    let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;
-    let config_partition = system
-        .require_config_partition()
-        .whatever("unable to get config partition")?;
-    config_partition
-        .ensure_writable(|| -> Result<(), Report<GrubEnvError>> {
-            // It is safe to directly write to the file here. If the file is corrupt,
-            // the system will simply boot from the default partition set.
-            std::fs::write(
-                config_partition.path().join("rugpi/boot_spare.grubenv"),
-                envblk,
-            )
-            .whatever("unable to write Grub environment")?;
-            Ok(())
-        })
-        .whatever("unable to make config partition writable")??;
-    Ok(())
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use rugix_common::system::System;
+use crate::system::System;
 
 use crate::config::output::{
     BootGroupStateOutput, BootStateOutput, SlotStateOutput, SystemStateOutput,

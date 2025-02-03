@@ -14,5 +14,3 @@ indoc = "2.0.3"
 tokio = { version = "1.29.1", features = ["full"] }
 
 xscript.workspace = true
-
-rugix-common.workspace = true

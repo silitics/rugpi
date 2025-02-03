@@ -10,26 +10,21 @@ use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
 
 use super::boot_groups::{BootGroupIdx, BootGroups};
-use super::config::BootFlowConfig;
 use super::slots::SlotIdx;
 use super::{ConfigPartition, System};
-use crate::boot::grub::{self, load_grub_env, write_with_hash, RUGIX_BOOTPART};
-use crate::boot::tryboot::{self, AutobootSection, AUTOBOOT_A, AUTOBOOT_B};
-use crate::boot::uboot::{self, UBootEnv};
-use crate::mount::Mounted;
-use crate::partitions::get_disk_id;
+use crate::config::system::BootFlowConfig;
 use crate::system::slots::SlotKind;
-use crate::utils::ascii_numbers;
-use crate::{grub_patch_env, rpi_patch_boot};
+use rugix_common::boot::grub::{load_grub_env, write_with_hash, RUGIX_BOOTPART};
+use rugix_common::boot::tryboot::{self, AutobootSection, AUTOBOOT_A, AUTOBOOT_B};
+use rugix_common::boot::uboot::UBootEnv;
+use rugix_common::mount::Mounted;
+use rugix_common::partitions::get_disk_id;
+use rugix_common::utils::ascii_numbers;
+use rugix_common::{grub_patch_env, rpi_patch_boot};
 
 reportify::new_whatever_type! {
     BootFlowError
 }
-
-#[cfg(feature = "compat-mender")]
-pub(super) mod mender;
-#[cfg(feature = "compat-rauc")]
-pub(super) mod rauc;
 
 pub type BootFlowResult<T> = Result<T, Report<BootFlowError>>;
 
@@ -265,9 +260,9 @@ struct UBoot {
 impl BootFlow for UBoot {
     fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<()> {
         if entry != self.get_default(system)? {
-            uboot::set_spare_flag(system)?;
+            crate::boot::uboot::set_spare_flag(system)?;
         } else {
-            uboot::clear_spare_flag(system)?;
+            crate::boot::uboot::clear_spare_flag(system)?;
         }
         Ok(())
     }
@@ -378,9 +373,9 @@ struct GrubEfi {
 impl BootFlow for GrubEfi {
     fn set_try_next(&self, system: &System, entry: BootGroupIdx) -> BootFlowResult<()> {
         if entry != self.get_default(system)? {
-            grub::set_spare_flag(system).whatever("unable to set spare flag")?;
+            crate::boot::grub::set_spare_flag(system).whatever("unable to set spare flag")?;
         } else {
-            grub::clear_spare_flag(system).whatever("unable to clear spare flag")?;
+            crate::boot::grub::clear_spare_flag(system).whatever("unable to clear spare flag")?;
         }
         Ok(())
     }

@@ -10,7 +10,7 @@ homepage.workspace = true
 
 [dependencies]
 hex = "0.4.3"
-indexmap = "2.5.0"
+indexmap = { version = "2.5.0", features = ["serde"] }
 indoc = "2.0.2"
 serde_json = "1.0.133"
 sha2 = "0.10.8"

@@ -12,14 +12,14 @@ use rugix_hashes::{HashAlgorithm, HashDigest};
 use tempfile::TempDir;
 use tracing::error;
 
+use crate::system::boot_groups::{BootGroup, BootGroupIdx};
+use crate::system::slots::SlotKind;
+use crate::system::{System, SystemResult};
 use clap::{Parser, ValueEnum};
 use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugix_common::disk::stream::ImgStream;
 use rugix_common::maybe_compressed::{MaybeCompressed, PeekReader};
 use rugix_common::stream_hasher::StreamHasher;
-use rugix_common::system::boot_groups::{BootGroup, BootGroupIdx};
-use rugix_common::system::slots::SlotKind;
-use rugix_common::system::{System, SystemResult};
 use xscript::{run, Run};
 
 use crate::http_source::HttpSource;

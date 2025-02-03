@@ -1,12 +1,14 @@
 use std::ops::Index;
 use std::sync::Mutex;
 
+use indexmap::IndexMap;
 use reportify::{bail, ResultExt};
 
-use super::config::{BlockSlotConfig, SlotConfig, SlotConfigKind, SlotsConfig};
+use crate::config::system::{BlockSlotConfig, SlotConfig};
+
 use super::root::SystemRoot;
 use super::SystemResult;
-use crate::disk::blkdev::BlockDevice;
+use rugix_common::disk::blkdev::BlockDevice;
 
 /// Unique index of a slot of a system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -28,7 +30,7 @@ impl SystemSlots {
     {
         let mut slots = Vec::new();
         for (name, config) in iter {
-            let SlotConfigKind::Block(raw) = &config.kind;
+            let SlotConfig::Block(raw) = &config;
             let device = if let Some(device) = &raw.device {
                 BlockDevice::new(device)
                     .whatever("slot device is not a block device")
@@ -55,7 +57,7 @@ impl SystemSlots {
 
     pub fn from_config(
         root: Option<&SystemRoot>,
-        config: Option<&SlotsConfig>,
+        config: Option<&IndexMap<String, SlotConfig>>,
     ) -> SystemResult<Self> {
         match config {
             Some(config) => Self::from_iter(
@@ -109,7 +111,7 @@ impl Index<SlotIdx> for SystemSlots {
 pub struct Slot {
     name: String,
     kind: SlotKind,
-    config: SlotConfig,
+    _config: SlotConfig,
     active: Mutex<bool>,
 }
 
@@ -119,7 +121,7 @@ impl Slot {
         Self {
             name,
             kind,
-            config,
+            _config: config,
             active: Mutex::new(false),
         }
     }
@@ -132,11 +134,6 @@ impl Slot {
     /// Kind of the slot.
     pub fn kind(&self) -> &SlotKind {
         &self.kind
-    }
-
-    /// Indicates whether the slot is protected.
-    pub fn protected(&self) -> bool {
-        self.config.protected
     }
 
     /// Indicates whether the slot is active.
@@ -189,11 +186,8 @@ const DEFAULT_GPT_SLOTS: &[(&str, SlotConfig)] = &[
 
 /// Configuration of default slots for the given partition.
 const fn default_slot_config(partition: u32) -> SlotConfig {
-    SlotConfig {
-        kind: SlotConfigKind::Block(BlockSlotConfig {
-            device: None,
-            partition: Some(partition),
-        }),
-        protected: false,
-    }
+    SlotConfig::Block(BlockSlotConfig {
+        device: None,
+        partition: Some(partition),
+    })
 }
