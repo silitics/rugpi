@@ -16,7 +16,7 @@ In addition, it has the following advantages:
 - OTA updates can almost completely run in the background, without adversely affecting any users of a device.
 The only service interruption is caused, when the device reboots into the new version.
 Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
-- As the previous version is kept, a rollback to the old version is possible if users experience any problems with the new version.[^rollback]
+- As the previous version is kept, a rollback to the old version is possible if there are any problems with the new version.[^rollback]
 
 [^rollback]: This requires suppert by your application.
 
@@ -49,20 +49,65 @@ If you want your own integration, check out the [documentation on boot flows](./
 We also refer to Partition 1 as the _config partition_ and to Partition 6 as the _data partition_.
 
 
-## Updating a System
+## Installing an Update
 
-To update a system, you first need to build a system image, e.g., using Rugix Bakery, or a Rugix Ctrl update bundle.
-Further, the image or bundle need to find their way onto the system that you want to update.
-As explained earlier, how exactly this happens is up to you as Rugix Ctrl does not prescribe any delivery mechanism.
-Once the image or bundle is on the device, you can install it with:
+Updates are delivered to devices in the form of _update bundles_.
+Update bundles are installed with the following command:[^non-a-b]
+
+[^non-a-b]: The following commands assume that you use a traditional A/B update scheme. If you use a non-A/B update scheme, the commands will require you to explicitly specify the [boot group](./advanced/system-configuration.mdx).
 
 ```shell
-rugix-ctrl update install <path to the image or bundle>
+rugix-ctrl update install <update bundle>
 ```
 
-This command will also automatically try rebooting into the new version after it has been installed.
-To prevent this from happening, use the `--no-reboot` command line flag.
-Note that this command will not make the update permanent in any way.
+In addition to reading update bundles from local files, which must be stored on the device or provided on external storage, Rugix Ctrl also supports _streaming updates_.
+The parts of a streaming update will be directly written to their final location on the device while they arrive, e.g., while they are downloaded from the network.
+You can use `-` to install a bundle streamed via stdin to Rugix Ctrl.
+
+For instance, to download and install a bundle on-the-fly run:
+
+```shell
+curl <url to the bundle> | rugix-ctrl update install -
+```
+
+Rugix Ctrl also supports installing streaming updates directly from HTTP with:
+
+```shell
+rugix-ctrl update install <url to the bundle>
+```
+
+:::info
+All three mechanisms are useful for different use cases:
+An update might be installed from an USB stick (local file), uploaded via a web UI (streaming via stdin), or downloaded from an update server (HTTP).
+By supporting all three methods natively, Rugix gives you the flexibility to install updates from anywhere in the most efficient way possible.
+:::
+
+Unless the bundle is provided on an external storage medium, like a USB stick, we recommend that you stream updates to devices.
+Streaming updates are not only faster, since the update has to be written to storage only once, but also have the advantage that they do not take up precious space on the data partition during the installation.
+If your device is running low on storage space, non-streaming updates may become impossible, leading to failed updates.
+
+Rugix Ctrl does currently not support resuming HTTP updates when the internet connection is unstable and drops intermittently.
+We will add support for that later.
+For now, you can use an external tool, like `wget`, and stream the update into Rugix Ctrl:
+
+```shell
+wget -q -t 0 -O - <url to the image> | rugix-ctrl update install -
+```
+
+This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
+
+### Automatic Reboots
+
+Typically, Rugix Ctrl will reboot the device automatically when installing an update.
+In some cases, this may not be desired.
+For instance, you may want to install the update in the background and afterwards indicate to a user that an update is now ready.
+Only if the user then confirms the update, you want to quickly reboot into the new version.
+Such an update flow minimizes disruptions and makes sure that an update happens at the discretion of users.
+To prevent automatic reboots, use the `--no-reboot` command line flag:
+
+```shell
+rugix-ctrl update install --no-reboot <update bundle>
+```
 
 When using the `--no-reboot` flag, a reboot to the inactive, _spare_ system[^spare-system] can later be triggered with:
 
@@ -72,33 +117,39 @@ When using the `--no-reboot` flag, a reboot to the inactive, _spare_ system[^spa
 rugix-ctrl system reboot --spare
 ```
 
-Rugix Ctrl also has support for _streaming updates_, i.e., installing updates without intermediately storing them on the device.
-A streaming update will typically be directly written to the underlying storage while it is downloaded from the network.
-You can use `-` as the input path to install an image streamed via stdin to Rugix Ctrl.
-For instance, to download and install an image on-the-fly run:
+### Cryptographic Bundle Verification
 
-```shell
-curl <url to the image> | rugix-ctrl update install -
+To verify the integrity of an update bundle, use the `--verify-bundle <hash>` option.
+This option takes a hash of the bundle header, which is then used to ensure the integrity of the bundle, preventing any manipulated data from ever been written.
+
+Rugix Ctrl does not yet support embedding signatures into a bundle.
+However, you can still implement signed updates in multiple ways on top of Rugix Ctrl's flexible streaming functionality.
+For instance, you could ship a signed update manifest to your device that contains the URL of the bundle and the hash for verification.
+You could also combine such an manifest with the bundle in a Tar archive which users can upload through your web UI.
+The respective endpoint would then read the manifest out of the Tar archive, verify its signature, and afterwards stream the bundle itself into Rugix Ctrl, providing it with the hash for verification.
+
+### Installing Images
+
+Rugix Ctrl can in some cases install updates directly from system images.
+Currently, this is the case for all images built with Rugix Bakery for generic and specific targets.
+Images can only be streamed via stdin or provided as a local file.
+If you want to install an image via HTTP, use `curl` or `wget` to stream it into Rugix Ctrl.
+Rugix Ctrl will transparently decompress `xz` compressed images provided to it.
+For other decompression formats, you can pipe the image through the respective decompression tool before feeding it into Rugix Ctrl.
+To verify the integrity of an image, you can use the `--check-hash` option providing it with a SHA256 hash, e.g.:
+
+```plain
+--check-hash sha256:a9627e22da964b5b6ad7c1465a79bae4d11b71a064966b37596c057de106c1a9
 ```
 
-Rugix Ctrl will also transparently decompress `xz` compressed images and update bundles provided to it via stdin. For other compression formats, you can pipe the image or bundle through the respective decompression tool before feeding it into Rugix Ctrl.
-
-In case the internet connection of the device is unstable, you may also want to continue downloading and installing the update in the presence of intermittent network failures.
-This can be achieved by running:
-
-```shell
-wget -q -t 0 -O - <url to the image> | rugix-ctrl update install -
-```
-
-This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
-
-:::info
-We highly recommend that you stream updates to devices.
-This is not only faster, since the update has to be written to storage only once, but also has the advantage that it does not take up precious space on the data partition during the installation.
-If your device is running low on space on the data partition, non-streaming updates may become impossible.
+:::warning
+This feature is deprecated.
+**You should use update bundles not system images to install updates.**
+We may remove this functionality in the future.
+Installing images is less secure as Rugix Ctrl can only verify the provided hash after reading the entire image, at which point potentially manipulated data has already been written to the device's storage.
 :::
 
-### Committing an Update
+## Committing an Update
 
 Recall that Rugix Ctrl implements a two-stage update process where updates need to be committed to be permanent.
 After rebooting into the new version and validating that everything is in working order, the update is made permanent with:
@@ -122,7 +173,7 @@ Note that this also means that it will commit an old version if booted into, for
 Use a [_pre-commit hook_](./hooks.md#system-update-hooks) to ensure that a commit is only possible when the system is in proper working order.
 :::
 
-### Performing a Rollback
+## Performing a Rollback
 
 Like updating, performing a rollback is a two-stage process.
 A full rollback consists of first rebooting into the spare system (containing the previous version) and then committing the rollback after verifying that it is in proper working order.
@@ -143,33 +194,4 @@ rugix-ctrl system commit
 What we call a rollback here should not be confused with a failed update.
 A rollback always reverts a _previously committed_ update.
 This allows you to revert to the previous version even though you already committed to the update, for instance, if you notice some issues during regular operation and when you already committed to the update.
-:::
-
-## Signed Updates
-
-To prevent manipulated updates from being installed, Rugix Ctrl provides the option `--check-hash` which can be used to check the SHA256 hash of a (streamed) update.
-Rugix Ctrl does not implement its own signature mechanism yet.
-While we are working towards cryptographic verification of updates directly in Rugix Ctrl, so far, this is up to the delivery mechanism.
-Recall that Rugix Ctrl is only an update installer and does not prescribe how the updates get on the device.
-For now, we push the responsibility of verifying signatures to the delivery mechanism.
-For instance, you can use GPG or OpenSSL to sign an _update manifest_ that contains an URL and the SHA256 hash of the update.
-In a typical setup, the delivery mechanism would then first check the signature of the manifest and then install the update by feeding it via `wget` or `curl` (see above) into Rugix Ctrl, providing the hash via the `--check-hash` option.
-This ensures that Rugix Ctrl will check the hash and abort the update if the hash does not match.
-
-Here is an example with the `--check-hash` option:
-
-```shell
-rugix-ctrl update install --check-hash sha256:a9627e22da964b5b6ad7c1465a79bae4d11b71a064966b37596c057de106c1a9 <path to the image or bundle>
-```
-
-Note that this mechanism is very flexible and allows us to build on trusted tools in a simple way instead of implementing our own signature verification, which may introduce security vulnerabilities.
-You can also combine an update and the signed manifest in a `.tar` archive and process that in a streaming fashion as part of your update workflow.
-
-:::warning
-There is one downside to this approach: The hash can be checked only after the update has been written to disk.
-This means that manipulated data may have been written to the boot and system partition where the update is installed.
-You must be careful not to initiate a rollback into that system, thereby accidentally booting a manipulated system.
-When Rugix Ctrl finds that the hash does not match, it will partially overwrite those partitions, however, an attacker with physical access may prevent that by cutting power at the right time and may then somehow exploit your application to do a rollback.
-In the future, Rugix Ctrl will provide a mechanism based on a signed block list with per-block hashes.
-It will then verify the integrity of each block **before** writing it to disk, thereby ensuring that potentially manipulated data never finds their way onto the disk.
 :::
