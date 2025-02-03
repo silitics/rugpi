@@ -18,7 +18,6 @@ use rugix_common::disk::stream::ImgStream;
 use rugix_common::maybe_compressed::{MaybeCompressed, PeekReader};
 use rugix_common::stream_hasher::StreamHasher;
 use rugix_common::system::boot_groups::{BootGroup, BootGroupIdx};
-use rugix_common::system::info::SystemInfo;
 use rugix_common::system::slots::SlotKind;
 use rugix_common::system::{System, SystemResult};
 use xscript::{run, Run};
@@ -26,6 +25,7 @@ use xscript::{run, Run};
 use crate::http_source::HttpSource;
 use crate::overlay::overlay_dir;
 use crate::slot_db::{self, BlockProvider};
+use crate::system_state;
 use crate::utils::{clear_flag, reboot, set_flag, DEFERRED_SPARE_REBOOT_FLAG};
 
 fn create_rugix_state_directory() -> SystemResult<()> {
@@ -182,24 +182,27 @@ pub fn main() -> SystemResult<()> {
         }
         Command::System(sys_cmd) => match sys_cmd {
             SystemCommand::Info { json } => {
-                if *json {
-                    let info = SystemInfo::from(&system);
-                    serde_json::to_writer_pretty(std::io::stdout(), &info)
+                let output = system_state::state_from_system(&system);
+                if let Some(boot) = &output.boot {
+                    eprintln!("Boot Flow: {}", boot.boot_flow);
+                    eprintln!(
+                        "Active Boot Group: {}",
+                        boot.active_group.as_deref().unwrap_or("<unknown>")
+                    );
+                    eprintln!(
+                        "Default Boot Group: {}",
+                        boot.default_group.as_deref().unwrap_or("<unknown>")
+                    );
+                }
+                for (name, info) in &output.slots {
+                    eprintln!(
+                        "Slot {name:?}: {}",
+                        if info.active { "active" } else { "inactive" }
+                    );
+                }
+                if !rugix_cli::is_attended() || *json {
+                    serde_json::to_writer(std::io::stdout(), &output)
                         .whatever("unable to write system info to stdout")?;
-                } else {
-                    println!("Boot Flow: {}", system.boot_flow().name());
-                    let hot = system.active_boot_entry().unwrap();
-                    let default = system
-                        .boot_flow()
-                        .get_default(&system)
-                        .whatever("unable to get default boot group")?;
-                    let spare = system.spare_entry()?.unwrap().0;
-                    let cold = if hot == default { spare } else { default };
-                    let entries = system.boot_entries();
-                    println!("Hot: {}", entries[hot].name());
-                    println!("Cold: {}", entries[cold].name());
-                    println!("Default: {}", entries[default].name());
-                    println!("Spare: {}", entries[spare].name());
                 }
             }
             SystemCommand::Commit => {

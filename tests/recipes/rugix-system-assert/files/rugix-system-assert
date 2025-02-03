@@ -3,7 +3,7 @@
 json_path=$1;
 expected_value=$2;
 
-json_value=$(rugix-ctrl system info --json | jq -r "$json_path")
+json_value=$(rugix-ctrl system info | jq -r "$json_path")
 
 if [ "$json_value" != "$expected_value" ]; then
     echo "Invalid value for '${json_path}'. Expected '${expected_value}, got '${json_value}'."

@@ -134,6 +134,73 @@
         }
       ]
     },
+    "rugix_ctrl.output.BootGroupStateOutput": {
+      "$id": "rugix_ctrl.output.BootGroupStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {},
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.BootStateOutput": {
+      "$id": "rugix_ctrl.output.BootStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "bootFlow": {
+          "type": "string"
+        },
+        "activeGroup": {
+          "type": "string"
+        },
+        "defaultGroup": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.output.BootGroupStateOutput"
+          }
+        }
+      },
+      "required": [
+        "bootFlow",
+        "groups"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.SlotStateOutput": {
+      "$id": "rugix_ctrl.output.SlotStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.SystemStateOutput": {
+      "$id": "rugix_ctrl.output.SystemStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
+          }
+        },
+        "boot": {
+          "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
+        }
+      },
+      "required": [
+        "slots"
+      ],
+      "unevaluatedProperties": false
+    },
     "rugix_ctrl.state.OverlayConfig": {
       "$id": "rugix_ctrl.state.OverlayConfig",
       "enum": [

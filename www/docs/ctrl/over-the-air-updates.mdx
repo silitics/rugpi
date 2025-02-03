@@ -2,6 +2,12 @@
 sidebar_position: 1
 ---
 
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-state.schema.json";
+
+
 # Over-the-Air Updates
 
 Rugix Ctrl's core functionality is the safe installation of _over-the-air_ (OTA) system updates.
@@ -47,6 +53,21 @@ If you want your own integration, check out the [documentation on boot flows](./
 - Partition 6: Contains any persistent data and state (see [State Management](./state-management)).
 
 We also refer to Partition 1 as the _config partition_ and to Partition 6 as the _data partition_.
+
+
+## Querying the System State
+
+To query the state of the system, e.g., to find out which partitions are in use, you can use `rugix-ctrl system info`.
+Note that this command will produce JSON output when piped into another program (or invoked with `--json`).
+**The human readable output is not considered stable and you should not rely on it when integrating with Rugix Ctrl.**
+You can use tools like [`jq`](https://jqlang.org/) to process the JSON output produced by Rugix Ctrl.
+As a reference, here is the full schema of the `rugix-ctrl system info` output:
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-state.schema.json).
 
 
 ## Installing an Update

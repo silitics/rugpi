@@ -5,6 +5,7 @@ pub mod init;
 pub mod overlay;
 pub mod slot_db;
 pub mod state;
+pub mod system_state;
 pub mod utils;
 
 pub fn main() {

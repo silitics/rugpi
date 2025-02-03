@@ -1,0 +1,17 @@
+record SystemStateOutput {
+    slots: [string: SlotStateOutput],
+    boot?: BootStateOutput,
+}
+
+record SlotStateOutput {
+    active?: bool,
+}
+
+record BootStateOutput {
+    boot_flow: string,
+    active_group?: string,
+    default_group?: string,
+    groups: [string: BootGroupStateOutput],
+}
+
+record BootGroupStateOutput {}

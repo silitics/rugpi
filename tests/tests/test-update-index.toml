@@ -19,8 +19,8 @@ action = "run"
 description = "check system state prior to update"
 script = """
 #!/bin/bash
-rugix-system-assert ".defaultBootGroup" "a"
-rugix-system-assert ".activeBootGroup" "a"
+rugix-system-assert ".boot.defaultGroup" "a"
+rugix-system-assert ".boot.activeGroup" "a"
 """
 
 [[steps]]
@@ -43,9 +43,9 @@ action = "run"
 description = "check whether the update has been installed"
 script = """
 #!/bin/bash
-rugix-system-assert ".defaultBootGroup" "a"
-rugix-system-assert ".activeBootGroup" "b"
+rugix-system-assert ".boot.defaultGroup" "a"
+rugix-system-assert ".boot.activeGroup" "b"
 rugix-ctrl system commit
-rugix-system-assert ".defaultBootGroup" "b"
-rugix-system-assert ".activeBootGroup" "b"
+rugix-system-assert ".boot.defaultGroup" "b"
+rugix-system-assert ".boot.activeGroup" "b"
 """

@@ -1,20 +1,22 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "rugix_ctrl.state.StateConfig",
+  "$id": "rugix_ctrl.output.SystemStateOutput",
   "type": "object",
-  "description": "State management configuration.",
+  "description": "",
   "properties": {
-    "overlay": {
-      "$ref": "#/$defs/rugix_ctrl.state.OverlayConfig"
-    },
-    "persist": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/rugix_ctrl.state.PersistConfig"
+    "slots": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/rugix_ctrl.output.SlotStateOutput"
       }
+    },
+    "boot": {
+      "$ref": "#/$defs/rugix_ctrl.output.BootStateOutput"
     }
   },
-  "required": [],
+  "required": [
+    "slots"
+  ],
   "unevaluatedProperties": false,
   "$defs": {
     "rugix_ctrl.bootstrapping.BootstrappingConfig": {
@@ -152,6 +154,53 @@
         }
       ]
     },
+    "rugix_ctrl.output.BootGroupStateOutput": {
+      "$id": "rugix_ctrl.output.BootGroupStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {},
+      "required": [],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.BootStateOutput": {
+      "$id": "rugix_ctrl.output.BootStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "bootFlow": {
+          "type": "string"
+        },
+        "activeGroup": {
+          "type": "string"
+        },
+        "defaultGroup": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/rugix_ctrl.output.BootGroupStateOutput"
+          }
+        }
+      },
+      "required": [
+        "bootFlow",
+        "groups"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.output.SlotStateOutput": {
+      "$id": "rugix_ctrl.output.SlotStateOutput",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "unevaluatedProperties": false
+    },
     "rugix_ctrl.state.OverlayConfig": {
       "$id": "rugix_ctrl.state.OverlayConfig",
       "enum": [
@@ -222,6 +271,24 @@
       "required": [
         "file"
       ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.state.StateConfig": {
+      "$id": "rugix_ctrl.state.StateConfig",
+      "type": "object",
+      "description": "State management configuration.",
+      "properties": {
+        "overlay": {
+          "$ref": "#/$defs/rugix_ctrl.state.OverlayConfig"
+        },
+        "persist": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rugix_ctrl.state.PersistConfig"
+          }
+        }
+      },
+      "required": [],
       "unevaluatedProperties": false
     },
     "rugix_ctrl.system.BlockSlotConfig": {
