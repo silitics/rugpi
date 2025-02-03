@@ -10,7 +10,7 @@ use rugix_bundle::source::{BundleSource, ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
 use tempfile::TempDir;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::system::boot_groups::{BootGroup, BootGroupIdx};
 use crate::system::slots::SlotKind;
@@ -345,15 +345,20 @@ fn install_update_stream(
         if check_hash.is_some() {
             bail!("--check-hash is not supported for update bundles, use --verify-bundle");
         }
-        let bundle_source = HttpSource::new(image)?;
-        return install_update_bundle(
+        let mut bundle_source = HttpSource::new(image)?;
+        install_update_bundle(
             system,
-            bundle_source,
+            &mut bundle_source,
             verify_bundle,
             entry_idx,
             entry,
             without_boot_flow,
+        )?;
+        info!(
+            "downloaded {:.1}% of the full bundle",
+            bundle_source.get_download_ratio() * 100.0
         );
+        return Ok(());
     }
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()

@@ -14,6 +14,8 @@ pub struct HttpSource {
     current_position: u64,
     current_skipped: u64,
     skip_buffer: Vec<u8>,
+    bytes_read: u64,
+    bytes_skipped: u64,
 }
 
 impl HttpSource {
@@ -32,7 +34,15 @@ impl HttpSource {
             current_skipped: 0,
             current_position: 0,
             skip_buffer: Vec::new(),
+            bytes_read: 0,
+            bytes_skipped: 0,
         })
+    }
+}
+
+impl HttpSource {
+    pub fn get_download_ratio(&self) -> f64 {
+        self.bytes_read as f64 / (self.bytes_read + self.bytes_skipped) as f64
     }
 }
 
@@ -45,7 +55,9 @@ impl BundleSource for HttpSource {
                     .header("Range", format!("bytes={}-", self.current_position))
                     .call()
                     .whatever("unable to get bundle from URL")?;
+                self.bytes_skipped += self.current_skipped;
             } else {
+                self.bytes_read += self.current_skipped;
                 let mut remaining = self.current_skipped;
                 while remaining > 0 {
                     self.skip_buffer.resize(remaining.min(8192) as usize, 0);
@@ -69,6 +81,7 @@ impl BundleSource for HttpSource {
             .as_reader()
             .read(slice)
             .whatever("unable to read from HTTP source")?;
+        self.bytes_read += read as u64;
         self.current_position += read as u64;
         Ok(read)
     }
