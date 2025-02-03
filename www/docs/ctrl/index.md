@@ -91,7 +91,7 @@ Let's start with the uncontroversial facts about licenses and programming langua
 All the solutions we consider here are open-source and can be used in commercial products.
 
 Being written in Rust, a [memory-safe language](https://en.wikipedia.org/wiki/Memory_safety), Rugix Ctrl has a reduced surface for any [memory-related security vulnerabilities](https://en.wikipedia.org/wiki/Memory_safety#Impact).
-We take this to be an advantage over all the other solutions as updates are an inherently security sensitive issue.
+We take this to be an advantage over all the other solutions as updates are an inherently security-sensitive issue.
 
 #### General Remarks
 
@@ -123,9 +123,9 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | Streaming: HTTP | ✅ | ✅ | ✅ | ✅ | Streaming updates over HTTP. |
 | Delta Updates: Adaptive | ❌ | ✅ | ✔️[^build-yourself] | ✅ | Fetch only changed blocks via HTTP. |
 | Delta Updates: Static | ✔️[^mender-delta] | ❌ | ✔️[^build-yourself] | ✔️[^build-yourself] | Offline delta compression. |
-| Non-A/B Update Schemes | ❌[^mender-update-modules] | ✅ | ✅ | ✅ | Support for non-A/B update schemes.
-| Update Scripts | ❌[^mender-script] | ❌ | ✅ | ✅ | Ship and run scripts as part of an update. |
-| Arbitrary Update Payloads | ✅ | ❌ | ✅ | ✅ | Support for arbitrary update payloads.
+| Non-A/B Update Schemes | ❌[^mender-update-modules] | ✅ | ✅ | ✅ | Support for non-A/B rootfs updates.
+| Update Scripts | ✅ | ✅ | ✅ | ✅ | Ship and run scripts as part of an update. |
+| Arbitrary Update Payloads | ✅ | ✅ | ✅ | ✅ | Support for arbitrary update payloads.
 | Bootloaders: Grub | ✅ | ✅ | ✅ | ✅ | Support for Grub. |
 | Bootloaders: U-Boot | ✅ | ✅ | ✅ | ✅ | Support for U-Boot. |
 | Bootloaders: Barebox | ❌ | ✅ | ❌ | ❌ | Support for Barebox. |
@@ -136,11 +136,9 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | Security: Embedded Signatures | ✅ | ✅ | ✅ | ❌ | Embed signatures into an update. |
 | Security: External Signatures | ❌ | ❌ | ❌ | ✅ | Use an external signature/root of trust. |
 | Security: Encrypted Updates | ❌ | ✅ | ✅ | ❌ | Encrypted update artifacts.
-| Build System: Yocto | ✅ | ✅ | ❌[^swu-yocto] | ✔️[^rugix-yocto] | Ready-made Yocto integration. |
-| Build System: Rugix Bakery | ❌ | ❌ | ❌ | ✅ | Supported by Rugix Bakery.
+| Yocto Integration | ✅ | ✅ | ❌[^swu-yocto] | ✔️[^rugix-yocto] | Ready-made Yocto integration. |
 
 [^mender-update-modules]: With Mender's update modules you could build this yourself, however, there is no built-in support.
-[^mender-script]: With the `script` update module, you can ship a single script as an update, however, you cannot interleave custom scripts into a regular update artifact. Again, you could write your own update module if you need anything specific.
 [^mender-delta]: Only supported in the enterprise version, not the open-source version.
 [^build-yourself]: You can build this yourself using third-party tools.
 [^tryboot]: Official mechanism to realize A/B updates on Raspberry Pi.
