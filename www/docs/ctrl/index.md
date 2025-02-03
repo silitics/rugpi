@@ -125,7 +125,7 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | Delta Updates: Static | ✔️[^mender-delta] | ❌ | ✔️[^build-yourself] | ✔️[^build-yourself] | Offline delta compression. |
 | Non-A/B Update Schemes | ❌[^mender-update-modules] | ✅ | ✅ | ✅ | Support for non-A/B update schemes.
 | Update Scripts | ❌[^mender-script] | ❌ | ✅ | ✅ | Ship and run scripts as part of an update. |
-| Arbitrary Update Payloads | ✅ | ❌ | ✅ | ✅ | Supports for arbitrary update payloads.
+| Arbitrary Update Payloads | ✅ | ❌ | ✅ | ✅ | Support for arbitrary update payloads.
 | Bootloaders: Grub | ✅ | ✅ | ✅ | ✅ | Support for Grub. |
 | Bootloaders: U-Boot | ✅ | ✅ | ✅ | ✅ | Support for U-Boot. |
 | Bootloaders: Barebox | ❌ | ✅ | ❌ | ❌ | Support for Barebox. |
