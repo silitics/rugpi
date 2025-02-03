@@ -5,7 +5,7 @@ sidebar_position: 45
 # Upgrading from v0.7
 
 Rugpi has been renamed to Rugix and gained a lot of new functionality.
-As part of the transition, we also clearly separated Rugix Ctrl from Rugix Bakery, so that they can be used independently.
+As part of the transition, we also cleanly separated Rugix Ctrl from Rugix Bakery, so that they can be used independently.
 Here is what you need to do to upgrade to Rugix v0.8:
 
 - You need to replace “Rugpi” with “Rugix” everywhere (including in any environment variables).
