@@ -197,7 +197,15 @@ pub fn main() -> SystemResult<()> {
                 for (name, info) in &output.slots {
                     eprintln!(
                         "Slot {name:?}: {}",
-                        if info.active { "active" } else { "inactive" }
+                        if let Some(active) = info.active {
+                            if active {
+                                "active"
+                            } else {
+                                "inactive"
+                            }
+                        } else {
+                            "<unknown>"
+                        }
                     );
                 }
                 if !rugix_cli::is_attended() || *json {
