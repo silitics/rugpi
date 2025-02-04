@@ -167,13 +167,13 @@ In some cases, this may not be desired.
 For instance, you may want to install the update in the background and afterwards indicate to a user that an update is now ready.
 Only if the user then confirms the update, you want to quickly reboot into the new version.
 Such an update flow minimizes disruptions and makes sure that an update happens at the discretion of users.
-To prevent automatic reboots, use the `--no-reboot` command line flag:
+To prevent automatic reboots, use the `--reboot no` command line flag:
 
 ```shell
-rugix-ctrl update install --no-reboot <update bundle>
+rugix-ctrl update install --reboot no <update bundle>
 ```
 
-When using the `--no-reboot` flag, a reboot to the inactive, _spare_ system[^spare-system] can later be triggered with:
+When using the `--reboot no` flag, a reboot to the inactive, _spare_ system[^spare-system] can later be triggered with:
 
 [^spare-system]: This is the inactive system (A or B) to which we install updates.
 

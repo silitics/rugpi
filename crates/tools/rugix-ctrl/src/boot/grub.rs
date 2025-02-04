@@ -2,10 +2,12 @@ use std::collections::HashMap;
 
 use reportify::{Report, ResultExt};
 use rugix_common::boot::grub::{grub_envblk_encode, GrubEnvError, RUGIX_BOOT_SPARE};
+use tracing::info;
 
 use crate::system::System;
 
 pub fn set_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
+    info!("setting spare flag for Grub boot flow");
     let mut envblk = HashMap::new();
     envblk.insert(RUGIX_BOOT_SPARE.to_owned(), "true".to_owned());
     let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;
@@ -29,6 +31,7 @@ pub fn set_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
 }
 
 pub fn clear_spare_flag(system: &System) -> Result<(), Report<GrubEnvError>> {
+    info!("clearing spare flag for Grub boot flow");
     let mut envblk = HashMap::new();
     envblk.insert(RUGIX_BOOT_SPARE.to_owned(), "false".to_owned());
     let envblk = grub_envblk_encode(&envblk).whatever("unable to encode Grub environment")?;

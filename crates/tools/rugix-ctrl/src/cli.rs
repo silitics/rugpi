@@ -90,18 +90,12 @@ pub fn main() -> SystemResult<()> {
             match update_cmd {
                 UpdateCommand::Install {
                     image,
-                    no_reboot,
                     reboot: reboot_type,
                     keep_overlay,
                     check_hash,
                     verify_bundle,
                     boot_entry,
-                    without_boot_flow,
                 } => {
-                    if reboot_type.is_some() && *no_reboot {
-                        bail!("--no-reboot and --reboot are incompatible");
-                    }
-
                     let check_hash = check_hash.as_deref()
                         .map(|encoded_hash| -> SystemResult<ImageHash> {
                             let (algorithm, hash) = encoded_hash
@@ -121,26 +115,29 @@ pub fn main() -> SystemResult<()> {
                     }
 
                     // Find the entry where we are going to install the update to.
-                    let (entry_idx, boot_group) = match boot_entry {
+                    let boot_group = match boot_entry {
                         Some(entry_name) => {
                             let Some(entry) = system.boot_entries().find_by_name(entry_name) else {
                                 bail!("unable to find entry {entry_name}")
                             };
-                            entry
+                            Some(entry)
                         }
                         None => {
-                            let Some(entry) = system
-                                .boot_entries()
-                                .iter()
-                                .find(|(_, entry)| !entry.active())
-                            else {
-                                bail!("unable to find an entry");
-                            };
-                            entry
+                            if system.boot_entries().iter().count() > 2 {
+                                None
+                            } else {
+                                system
+                                    .boot_entries()
+                                    .iter()
+                                    .find(|(_, entry)| !entry.active())
+                            }
                         }
                     };
-                    if boot_group.active() {
-                        bail!("selected entry {} is active", boot_group.name());
+                    if let Some((_, boot_group)) = boot_group {
+                        info!("installing update to boot group {:?}", boot_group.name());
+                        if boot_group.active() {
+                            bail!("selected entry {} is active", boot_group.name());
+                        }
                     }
 
                     let hooks = HooksLoader::default()
@@ -148,7 +145,7 @@ pub fn main() -> SystemResult<()> {
                         .whatever("unable to load `update-install` hooks")?;
 
                     let hook_vars = vars! {
-                        RUGIX_BOOT_GROUP = boot_group.name(),
+                        RUGIX_BOOT_GROUP = boot_group.map(|g| g.1.name()).unwrap_or(""),
                     };
 
                     hooks
@@ -156,32 +153,33 @@ pub fn main() -> SystemResult<()> {
                         .whatever("error running `pre-update` hooks")?;
 
                     if !keep_overlay {
-                        let spare_overlay_dir = overlay_dir(boot_group);
-                        fs::remove_dir_all(spare_overlay_dir).ok();
+                        if let Some(boot_group) = &boot_group {
+                            let spare_overlay_dir = overlay_dir(boot_group.1);
+                            fs::remove_dir_all(spare_overlay_dir).ok();
+                        }
                     }
 
-                    install_update_stream(
+                    let should_reboot = install_update_stream(
                         &system,
                         image,
                         check_hash,
                         verify_bundle,
-                        entry_idx,
-                        boot_group,
-                        *without_boot_flow,
+                        boot_group.as_ref(),
                     )?;
 
                     hooks
                         .run_hooks("post-update", hook_vars.clone())
                         .whatever("error running `post-update` hooks")?;
 
-                    let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
-                        UpdateRebootType::No
-                    } else {
-                        UpdateRebootType::Yes
-                    });
+                    let reboot_type = reboot_type.clone().unwrap_or(should_reboot);
 
                     match reboot_type {
                         UpdateRebootType::Yes => {
+                            let (entry_idx, boot_group) = boot_group.unwrap();
+                            info!(
+                                "instructing boot flow to try booting into {:?}",
+                                boot_group.name()
+                            );
                             system
                                 .boot_flow()
                                 .set_try_next(&system, entry_idx)
@@ -368,28 +366,20 @@ fn install_update_stream(
     image: &String,
     check_hash: Option<ImageHash>,
     verify_bundle: &Option<HashDigest>,
-    entry_idx: BootGroupIdx,
-    entry: &BootGroup,
-    without_boot_flow: bool,
-) -> SystemResult<()> {
+    boot_group: Option<&(BootGroupIdx, &BootGroup)>,
+) -> SystemResult<UpdateRebootType> {
     if image.starts_with("http") {
         if check_hash.is_some() {
             bail!("--check-hash is not supported for update bundles, use --verify-bundle");
         }
         let mut bundle_source = HttpSource::new(image)?;
-        install_update_bundle(
-            system,
-            &mut bundle_source,
-            verify_bundle,
-            entry_idx,
-            entry,
-            without_boot_flow,
-        )?;
+        let should_reboot =
+            install_update_bundle(system, &mut bundle_source, verify_bundle, boot_group)?;
         info!(
             "downloaded {:.1}% of the full bundle",
             bundle_source.get_download_ratio() * 100.0
         );
-        return Ok(());
+        return Ok(should_reboot);
     }
     let reader: &mut dyn io::Read = if image == "-" {
         &mut io::stdin()
@@ -414,25 +404,22 @@ fn install_update_stream(
             bail!("--check-hash is not supported for update bundles, use --verify-bundle");
         }
         let bundle_source = ReaderSource::<_, SkipRead>::from_unbuffered(update_stream);
-        return install_update_bundle(
-            system,
-            bundle_source,
-            verify_bundle,
-            entry_idx,
-            entry,
-            without_boot_flow,
-        );
+        return install_update_bundle(system, bundle_source, verify_bundle, boot_group);
     }
     if verify_bundle.is_some() {
         bail!("--verify-bundle is not supported on images, use --check-hash");
     }
+
+    let Some((entry_idx, entry)) = boot_group else {
+        bail!("for image updates, you need to specify a boot group");
+    };
 
     let update_stream =
         MaybeCompressed::new(update_stream).whatever("error decompressing stream")?;
 
     system
         .boot_flow()
-        .pre_install(system, entry_idx)
+        .pre_install(system, *entry_idx)
         .whatever("error executing pre-install step")?;
 
     let boot_slot = entry.get_slot("boot").unwrap();
@@ -529,29 +516,30 @@ fn install_update_stream(
 
     system
         .boot_flow()
-        .post_install(system, entry_idx)
+        .post_install(system, *entry_idx)
         .whatever("error running post-install step")?;
-    Ok(())
+    Ok(UpdateRebootType::Yes)
 }
 
 fn install_update_bundle<R: BundleSource>(
     system: &System,
     bundle_source: R,
     verify_bundle: &Option<HashDigest>,
-    entry_idx: BootGroupIdx,
-    entry: &BootGroup,
-    without_boot_flow: bool,
-) -> SystemResult<()> {
-    if !without_boot_flow {
-        system
-            .boot_flow()
-            .pre_install(system, entry_idx)
-            .whatever("error executing pre-install step")?;
-    }
-
+    boot_group: Option<&(BootGroupIdx, &BootGroup)>,
+) -> SystemResult<UpdateRebootType> {
     let mut bundle_reader =
         rugix_bundle::reader::BundleReader::start(bundle_source, verify_bundle.clone())
             .whatever("unable to read bundle")?;
+
+    if !bundle_reader.header().is_incremental {
+        let Some((entry_idx, _)) = boot_group else {
+            bail!("full system updates require teh specification of a boot group");
+        };
+        system
+            .boot_flow()
+            .pre_install(system, *entry_idx)
+            .whatever("error executing pre-install step")?;
+    }
 
     while let Some(payload) = bundle_reader
         .next_payload()
@@ -559,8 +547,8 @@ fn install_update_bundle<R: BundleSource>(
     {
         let payload_entry = payload.entry();
         if let Some(slot_type) = &payload_entry.type_slot {
-            let slot = entry
-                .get_slot(&slot_type.slot)
+            let slot = boot_group
+                .and_then(|(_, entry)| entry.get_slot(&slot_type.slot))
                 .or_else(|| system.slots().find_by_name(&slot_type.slot).map(|e| e.0));
             if let Some(slot) = slot {
                 let slot = &system.slots()[slot];
@@ -658,13 +646,15 @@ fn install_update_bundle<R: BundleSource>(
         payload.skip().whatever("unable to skip payload")?;
     }
 
-    if !without_boot_flow {
+    if !bundle_reader.header().is_incremental {
         system
             .boot_flow()
-            .post_install(system, entry_idx)
-            .whatever("error running post-install step")?;
+            .post_install(system, boot_group.unwrap().0)
+            .whatever("error executing post-install step")?;
+        Ok(UpdateRebootType::Yes)
+    } else {
+        Ok(UpdateRebootType::No)
     }
-    Ok(())
 }
 
 #[derive(Debug)]
@@ -786,12 +776,6 @@ pub enum UpdateCommand {
         /// Verify a bundle.
         #[clap(long)]
         verify_bundle: Option<HashDigest>,
-        /// Prevent Rugix from rebooting the system.
-        #[clap(long)]
-        no_reboot: bool,
-        /// Do not involve the boot flow in the update.
-        #[clap(long, hide(true))]
-        without_boot_flow: bool,
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,

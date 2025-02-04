@@ -8,7 +8,7 @@ use rugix_hashes::HashDigest;
 use crate::block_encoding::encode_payload_file;
 use crate::format::stlv::{write_atom_head, write_segment_end, write_segment_start};
 use crate::format::{self, Bytes, PayloadEntry, PayloadHeader};
-use crate::manifest::{self, BundleManifest, HashAlgorithm};
+use crate::manifest::{self, BundleManifest, HashAlgorithm, UpdateType};
 use crate::BundleResult;
 
 pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
@@ -22,6 +22,7 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
         .unwrap_or(rugix_hashes::HashAlgorithm::Sha512_256);
     let mut bundle_header = format::BundleHeader {
         manifest: Some(serde_json::to_string(&manifest).unwrap()),
+        is_incremental: matches!(manifest.update_type, UpdateType::Incremental),
         hash_algorithm,
         payload_index: Vec::new(),
     };

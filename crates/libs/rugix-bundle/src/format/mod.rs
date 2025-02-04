@@ -31,6 +31,9 @@ define_struct! {
     pub struct BundleHeader {
         /// Optional bundle manifest (JSON-encoded).
         pub manifest[BUNDLE_HEADER_MANIFEST]: Option<String>,
+        /// Indicates whether the update is incremental.
+        pub is_incremental[BUNDLE_HEADER_IS_INCREMENTAL]: bool,
+        /// Hash algorithm to secure the bundle.
         pub hash_algorithm[BUNDLE_HEADER_HASH_ALGORITHM]: HashAlgorithm,
         /// Payload index.
         pub payload_index[BUNDLE_HEADER_PAYLOAD_INDEX]: Vec<PayloadEntry>,
