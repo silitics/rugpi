@@ -1,6 +1,6 @@
 [[systems]]
 system  = "customized-slots"
-ssh = { private-key = "./files/id_rsa" }
+ssh = { private-key = "./keys/id_rsa" }
 
 [[steps]]
 action = "run"
