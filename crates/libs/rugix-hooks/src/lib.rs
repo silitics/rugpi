@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use tracing::{info, warn};
 
-use xscript::{run, Run};
+use xscript::{run, Run, Vars};
 
 use reportify::{ErrorExt, Report, ResultExt};
 
@@ -28,11 +28,12 @@ impl Hooks {
     }
 
     /// Run the hooks for the given stage.
-    pub fn run_hooks(&self, stage: &str) -> Result<(), Report<HooksRunError>> {
+    pub fn run_hooks(&self, stage: &str, vars: Vars) -> Result<(), Report<HooksRunError>> {
         info!("running hooks for \"{}/{}\"", self.operation, stage);
         for hook in self.hooks(stage) {
             info!("running hook {}", hook.name);
-            run!([&hook.path]
+            run!([&hook.path, stage]
+                .with_vars(vars.clone())
                 .with_stderr(xscript::Out::Capture)
                 .with_stdout(xscript::Out::Capture))
             .whatever_with(|_| {

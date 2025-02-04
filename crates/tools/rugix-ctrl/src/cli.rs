@@ -9,6 +9,7 @@ use rugix_bundle::reader::block_provider::StoredBlockProvider;
 use rugix_bundle::source::{BundleSource, ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
+use rugix_hooks::HooksLoader;
 use tempfile::TempDir;
 use tracing::{error, info};
 
@@ -20,7 +21,7 @@ use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugix_common::disk::stream::ImgStream;
 use rugix_common::maybe_compressed::{MaybeCompressed, PeekReader};
 use rugix_common::stream_hasher::StreamHasher;
-use xscript::{run, Run};
+use xscript::{run, vars, Run, Vars};
 
 use crate::http_source::HttpSource;
 use crate::overlay::overlay_dir;
@@ -61,6 +62,13 @@ pub fn main() -> SystemResult<()> {
     match &args.command {
         Command::State(state_cmd) => match state_cmd {
             StateCommand::Reset => {
+                let reset_hooks = HooksLoader::default()
+                    .load_hooks("state-reset")
+                    .whatever("unable to load `state-reset` hooks")?;
+
+                reset_hooks
+                    .run_hooks("prepare", Vars::new())
+                    .whatever("unable to run `state-reset/prepare` hooks")?;
                 create_rugix_state_directory()?;
                 set_rugix_state_flag("reset-state")?;
                 reboot()?;
@@ -86,7 +94,6 @@ pub fn main() -> SystemResult<()> {
                     keep_overlay,
                     check_hash,
                     verify_bundle,
-                    stream,
                     boot_entry,
                     without_boot_flow,
                 } => {
@@ -113,7 +120,7 @@ pub fn main() -> SystemResult<()> {
                     }
 
                     // Find the entry where we are going to install the update to.
-                    let (entry_idx, entry) = match boot_entry {
+                    let (entry_idx, boot_group) = match boot_entry {
                         Some(entry_name) => {
                             let Some(entry) = system.boot_entries().find_by_name(entry_name) else {
                                 bail!("unable to find entry {entry_name}")
@@ -131,21 +138,25 @@ pub fn main() -> SystemResult<()> {
                             entry
                         }
                     };
-                    if entry.active() {
-                        bail!("selected entry {} is active", entry.name());
+                    if boot_group.active() {
+                        bail!("selected entry {} is active", boot_group.name());
                     }
+
+                    let hooks = HooksLoader::default()
+                        .load_hooks("update-install")
+                        .whatever("unable to load `update-install` hooks")?;
+
+                    let hook_vars = vars! {
+                        RUGIX_BOOT_GROUP = boot_group.name(),
+                    };
+
+                    hooks
+                        .run_hooks("pre-update", hook_vars.clone())
+                        .whatever("error running `pre-update` hooks")?;
 
                     if !keep_overlay {
-                        let spare_overlay_dir = overlay_dir(entry);
+                        let spare_overlay_dir = overlay_dir(boot_group);
                         fs::remove_dir_all(spare_overlay_dir).ok();
-                    }
-
-                    if *stream {
-                        indoc::eprintdoc! {"
-                        **Deprecation Warning:**
-                        The option `--stream` has been deprecated and will be removed in future versions.
-                        Streaming updates are the default now.
-                    "}
                     }
 
                     install_update_stream(
@@ -154,9 +165,13 @@ pub fn main() -> SystemResult<()> {
                         check_hash,
                         verify_bundle,
                         entry_idx,
-                        entry,
+                        boot_group,
                         *without_boot_flow,
                     )?;
+
+                    hooks
+                        .run_hooks("post-update", hook_vars.clone())
+                        .whatever("error running `post-update` hooks")?;
 
                     let reboot_type = reboot_type.clone().unwrap_or(if *no_reboot {
                         UpdateRebootType::No
@@ -215,7 +230,16 @@ pub fn main() -> SystemResult<()> {
             }
             SystemCommand::Commit => {
                 if system.needs_commit()? {
+                    let hooks = HooksLoader::default()
+                        .load_hooks("system-commit")
+                        .whatever("unable to load `system-commit` hooks")?;
+                    hooks
+                        .run_hooks("pre-commit", Vars::new())
+                        .whatever("unable to run `pre-commit` hooks")?;
                     system.commit()?;
+                    hooks
+                        .run_hooks("post-commit", Vars::new())
+                        .whatever("unable to run `post-commit` hooks")?;
                 } else {
                     println!("Hot partition is already the default!");
                 }
@@ -678,9 +702,6 @@ pub enum UpdateCommand {
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,
-        /// Use the streaming update mechanism (deprecated).
-        #[clap(long)]
-        stream: bool,
         #[clap(long)]
         reboot: Option<UpdateRebootType>,
         /// Boot entry to install the update to.

@@ -14,3 +14,4 @@ Here is what you need to do to upgrade to Rugix v0.8:
 - The output of `rugix-ctrl system info` has changed. If you integrate with Rugix Ctrl, use the new JSON output.
 - The `images` section in `rugpi-bakery.toml` has been superseded by a `systems` section in `rugix-bakery.toml`.
 - Updates should now be delivered as Rugix update bundles.
+- The deprecated option `--stream` of `rugpi-ctrl update install` has been removed.

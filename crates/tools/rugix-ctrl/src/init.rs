@@ -28,8 +28,8 @@ use rugix_common::disk::repart::{
 };
 use rugix_common::disk::PartitionTable;
 use rugix_common::partitions::mkfs_ext4;
-use rugix_hooks::HooksLoader;
-use xscript::{run, Run};
+use rugix_hooks::{Hook, HooksLoader};
+use xscript::{run, Run, Vars};
 
 use crate::utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG};
 
@@ -158,8 +158,18 @@ fn init() -> SystemResult<()> {
     // 6️⃣ Setup state in `/run/rugix/state`.
     let state_profile = Path::new(DEFAULT_STATE_DIR);
     if state_profile.join(".rugix/reset-state").exists() {
+        let reset_hooks = HooksLoader::default()
+            .load_hooks("state-reset")
+            .whatever("unable to load `state-reset` hooks")?;
+
+        reset_hooks
+            .run_hooks("pre-reset", Vars::new())
+            .whatever("unable to run `pre-reset` hooks")?;
         // The existence of the file indicates that the state shall be reset.
         fs::remove_dir_all(state_profile).ok();
+        reset_hooks
+            .run_hooks("pre-reset", Vars::new())
+            .whatever("unable to run `post-reset` hooks")?;
     }
     fs::create_dir_all(state_profile).ok();
     fs::create_dir_all(STATE_DIR).ok();
@@ -204,7 +214,7 @@ fn bootstrap(root: &SystemRoot) -> SystemResult<()> {
         .whatever("unable to load bootstrap hooks")?;
 
     bootstrap_hooks
-        .run_hooks("prepare")
+        .run_hooks("prepare", Vars::new())
         .whatever("unable to run `bootstrap/prepare` hooks")?;
 
     let bootstrap_config = load_bootstrap_config()?;
@@ -249,7 +259,7 @@ fn bootstrap(root: &SystemRoot) -> SystemResult<()> {
 
     if let Some(schema) = schema {
         bootstrap_hooks
-            .run_hooks("pre-layout")
+            .run_hooks("pre-layout", Vars::new())
             .whatever("unable to run `bootstrap/pre-layout` hooks")?;
         if let Some((old_table, _)) = bootstrap_partitions(&schema, root)? {
             // Partition is new, let's see whether we need to create a filesystem.
@@ -291,7 +301,7 @@ fn bootstrap(root: &SystemRoot) -> SystemResult<()> {
             }
         }
         bootstrap_hooks
-            .run_hooks("post-layout")
+            .run_hooks("post-layout", Vars::new())
             .whatever("unable to run `bootstrap/post-layout` hooks")?;
     }
 

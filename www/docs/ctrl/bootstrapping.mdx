@@ -43,6 +43,7 @@ The layout always affects the disk of the booted root filesystem. Unless configu
 :::warning
 Custom system layouts are experimental.
 **We may introduce breaking changes to the configuration format in minor versions.**
+If you just want to change the size of the system partition, use the [default layout](#default-layout).
 :::
 
 Rugix Ctrl supports MBR (DOS) partition tables and GPT partition tables. Here are two example layouts:
@@ -83,7 +84,7 @@ For a typical system, you would use one of the layouts above. As a shortcut, the
 ```toml title="bootstrapping.toml"
 [layout]
 type = "default"
-system-size = "4GB"
+system-size = "4GiB"
 ```
 
 ### Disable Partition Creation
