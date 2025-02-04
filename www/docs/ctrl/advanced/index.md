@@ -1,3 +1,3 @@
 # Advanced Topics
 
-This part of the documentation covers more advanced topics like fleet management and custom configurations.
+This part of the documentation covers more advanced topics like fleet management, custom configurations, and update bundles.
