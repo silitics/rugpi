@@ -11,6 +11,7 @@ description = "create files and reboot"
 may-disconnect = true
 script = """
 #!/bin/bash
+set -euo pipefail
 touch /var/this-file-should-not-persist
 touch /run/rugix/state/this-file-should-persist
 reboot
@@ -25,6 +26,7 @@ action = "run"
 description = "check whether files still exist"
 script = """
 #!/bin/bash
+set -euo pipefail
 if [ -e /var/this-file-should-not-persist ]; then
     echo "File should not exist anymore!"
     exit1
@@ -41,6 +43,7 @@ description = "perform a factory reset"
 may-disconnect = true
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-ctrl state reset
 """
 
@@ -53,6 +56,7 @@ action = "run"
 description = "check whether files still exist"
 script = """
 #!/bin/bash
+set -euo pipefail
 if [ -e /run/rugix/state/this-file-should-persist ]; then
     echo "File should not exist anymore!"
     exit1

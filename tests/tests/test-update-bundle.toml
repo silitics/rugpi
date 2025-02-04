@@ -7,6 +7,7 @@ action = "run"
 description = "check system state prior to update"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-system-assert ".boot.defaultGroup" "a"
 rugix-system-assert ".boot.activeGroup" "a"
 """
@@ -19,6 +20,7 @@ stdin-file = "./build/customized-arm64/system.rugixb"
 may-disconnect = true
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-ctrl update install -
 """
 
@@ -31,6 +33,7 @@ action = "run"
 description = "check whether the update has been installed"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-system-assert ".boot.defaultGroup" "a"
 rugix-system-assert ".boot.activeGroup" "b"
 rugix-ctrl system commit

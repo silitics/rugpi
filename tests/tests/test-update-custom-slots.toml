@@ -7,6 +7,8 @@ action = "run"
 description = "check system state prior to update"
 script = """
 #!/bin/bash
+set -euo pipefail
+
 mkdir -p /run/rugix/state/app/custom-dir
 
 if [ -e /run/rugix/state/test-file ]; then
@@ -25,8 +27,9 @@ description = "install update bundle"
 stdin-file = "./build/slots-bundle.rugixb"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-ctrl system info --json
-rugix-ctrl update install --no-reboot --without-boot-flow -
+rugix-ctrl update install --reboot no -
 """
 
 [[steps]]
@@ -34,6 +37,7 @@ action = "run"
 description = "check system state after to update"
 script = """
 #!/bin/bash
+set -euo pipefail
 if [ ! -e /run/rugix/state/test-file ]; then
     echo "Update marker for test-file should exist!"
     exit 1

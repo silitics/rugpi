@@ -7,6 +7,7 @@ action = "run"
 description = "adding an index to the `system-a` slot"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-ctrl slots create-index system-a casync-64 sha512-256
 if [ ! -e /run/rugix/mounts/data/rugix/slots/system-a/casync-64_sha512-256.rugix-block-index ]; then
     echo "Block index has not been created."
@@ -19,6 +20,7 @@ action = "run"
 description = "check system state prior to update"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-system-assert ".boot.defaultGroup" "a"
 rugix-system-assert ".boot.activeGroup" "a"
 """
@@ -31,6 +33,7 @@ stdin-file = "./build/customized-arm64/system.rugixb"
 may-disconnect = true
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-ctrl update install -
 """
 
@@ -43,6 +46,7 @@ action = "run"
 description = "check whether the update has been installed"
 script = """
 #!/bin/bash
+set -euo pipefail
 rugix-system-assert ".boot.defaultGroup" "a"
 rugix-system-assert ".boot.activeGroup" "b"
 rugix-ctrl system commit

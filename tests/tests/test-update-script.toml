@@ -7,6 +7,7 @@ action = "run"
 description = "check system state prior to update"
 script = """
 #!/bin/bash
+set -euo pipefail
 if [ -e /run/rugix/state/the-update-script-was-here ]; then
     echo "Update marker should not exist yet!"
     exit 1
@@ -19,7 +20,8 @@ description = "install update bundle"
 stdin-file = "./build/script-bundle.rugixb"
 script = """
 #!/bin/bash
-rugix-ctrl update install --no-reboot --without-boot-flow -
+set -euo pipefail
+rugix-ctrl update install -
 """
 
 [[steps]]
@@ -27,6 +29,7 @@ action = "run"
 description = "check system state after to update"
 script = """
 #!/bin/bash
+set -euo pipefail
 if [ ! -e /run/rugix/state/the-update-script-was-here ]; then
     echo "Bundle script did not run!"
     exit 1
