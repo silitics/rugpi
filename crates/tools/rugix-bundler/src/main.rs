@@ -123,9 +123,10 @@ fn main() -> BundleResult<()> {
                         )
                     );
                 }
-                if let Some(_) = &entry.type_script {
+                if let Some(type_execute) = &entry.type_execute {
+                    let command = type_execute.handler.join(" ");
                     println!(
-                        "  {idx}: <script> file={}",
+                        "  {idx}: execute({command}) file={}",
                         HashDigest::new_unchecked(
                             reader.header().hash_algorithm,
                             &entry.file_hash.raw

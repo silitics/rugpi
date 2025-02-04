@@ -44,15 +44,19 @@ pub fn pack(path: &Path, dst: &Path) -> BundleResult<()> {
         }
         let payload_header = format::encode::to_vec(&payload_header, format::tags::PAYLOAD_HEADER);
         bundle_header.payload_index.push(PayloadEntry {
-            type_slot: if let manifest::PayloadConfig::Slot(slot_config) = &payload.config {
+            type_slot: if let manifest::DeliveryConfig::Slot(slot_config) = &payload.delivery {
                 Some(format::SlotPayloadType {
                     slot: slot_config.slot.clone(),
                 })
             } else {
                 None
             },
-            type_script: if let manifest::PayloadConfig::Script(_) = &payload.config {
-                Some(format::ScriptPayloadType {})
+            type_execute: if let manifest::DeliveryConfig::Execute(execute_delivery_config) =
+                &payload.delivery
+            {
+                Some(format::ExecutePayloadType {
+                    handler: execute_delivery_config.handler.clone(),
+                })
             } else {
                 None
             },

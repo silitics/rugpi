@@ -42,7 +42,7 @@ define_struct! {
     pub struct PayloadEntry {
         /// Slot where the payload should be installed to.
         pub type_slot[PAYLOAD_ENTRY_TYPE_SLOT]: Option<SlotPayloadType>,
-        pub type_script[PAYLOAD_ENTRY_TYPE_SCRIPT]: Option<ScriptPayloadType>,
+        pub type_execute[PAYLOAD_ENTRY_TYPE_EXECUTE]: Option<ExecutePayloadType>,
         /// Hash of the payload header.
         pub header_hash[PAYLOAD_ENTRY_HEADER_HASH]: Bytes,
         /// Hash of the payload file.
@@ -59,7 +59,8 @@ define_struct! {
 
 define_struct! {
     /// Header of a payload.
-    pub struct ScriptPayloadType {
+    pub struct ExecutePayloadType {
+        pub handler[PAYLOAD_TYPE_EXECUTE_HANDLER]: Vec<String>,
     }
 }
 

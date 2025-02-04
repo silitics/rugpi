@@ -1,8 +1,11 @@
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/heads/main/schemas/rugix-bundle-manifest.schema.json
 
+update-type = "incremental"
+
 [[payloads]]
 filename = "update-script.sh"
-[payloads.config]
-type = "script"
+[payloads.delivery]
+type = "execute"
+handler = ["/bin/bash", "-"]
 [payloads.block-encoding]
 chunker = "fixed-64"

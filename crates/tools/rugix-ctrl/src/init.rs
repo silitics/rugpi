@@ -28,7 +28,7 @@ use rugix_common::disk::repart::{
 };
 use rugix_common::disk::PartitionTable;
 use rugix_common::partitions::mkfs_ext4;
-use rugix_hooks::{Hook, HooksLoader};
+use rugix_hooks::HooksLoader;
 use xscript::{run, Run, Vars};
 
 use crate::utils::{clear_flag, is_flag_set, is_init_process, reboot, DEFERRED_SPARE_REBOOT_FLAG};

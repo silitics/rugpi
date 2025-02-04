@@ -3,7 +3,7 @@
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use std::process::{Child, ChildStdin};
+use std::process::Child;
 
 use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::reader::block_provider::StoredBlockProvider;
@@ -12,7 +12,6 @@ use rugix_bundle::source::{BundleSource, ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
 use rugix_hooks::HooksLoader;
-use tempfile::TempDir;
 use tracing::{error, info};
 
 use crate::system::boot_groups::{BootGroup, BootGroupIdx};
@@ -23,7 +22,7 @@ use reportify::{bail, whatever, ErrorExt, ResultExt};
 use rugix_common::disk::stream::ImgStream;
 use rugix_common::maybe_compressed::{MaybeCompressed, PeekReader};
 use rugix_common::stream_hasher::StreamHasher;
-use xscript::{run, vars, Run, Vars};
+use xscript::{vars, Vars};
 
 use crate::http_source::HttpSource;
 use crate::overlay::overlay_dir;
@@ -648,21 +647,12 @@ fn install_update_bundle<R: BundleSource>(
                     payload.idx()
                 );
             }
-        } else if let Some(_) = &payload_entry.type_script {
-            eprintln!("Executing update script (payload {})", payload.idx(),);
-            let temp_dir = TempDir::new().whatever("unable to create temporary directory")?;
-            let script_file = temp_dir.path().join("update-script");
-            let target = std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&script_file)
-                .whatever("unable to open payload target")?;
+        } else if let Some(type_execute) = &payload_entry.type_execute {
+            eprintln!("executing update payload {}", payload.idx(),);
+            let target = CustomTarget::new(type_execute.handler.iter().map(|arg| arg.as_str()))?;
             payload
                 .decode_into(target, None)
                 .whatever("unable to decode payload")?;
-            run!(["chmod", "755", &script_file])
-                .whatever("unable to set executable permissions")?;
-            run!([script_file]).whatever("unable to execute update script")?;
             continue;
         }
         payload.skip().whatever("unable to skip payload")?;

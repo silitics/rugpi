@@ -4,6 +4,9 @@
   "type": "object",
   "description": "",
   "properties": {
+    "update-type": {
+      "$ref": "#/$defs/rugix_bundle.manifest.UpdateType"
+    },
     "hash-algorithm": {
       "$ref": "#/$defs/rugix_bundle.manifest.HashAlgorithm"
     },
@@ -15,6 +18,7 @@
     }
   },
   "required": [
+    "update-type",
     "payloads"
   ],
   "unevaluatedProperties": false,
@@ -64,37 +68,8 @@
         }
       ]
     },
-    "rugix_bundle.manifest.HashAlgorithm": {
-      "$id": "rugix_bundle.manifest.HashAlgorithm",
-      "description": ""
-    },
-    "rugix_bundle.manifest.NumBytes": {
-      "$id": "rugix_bundle.manifest.NumBytes",
-      "description": ""
-    },
-    "rugix_bundle.manifest.Payload": {
-      "$id": "rugix_bundle.manifest.Payload",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "config": {
-          "$ref": "#/$defs/rugix_bundle.manifest.PayloadConfig"
-        },
-        "filename": {
-          "type": "string"
-        },
-        "block-encoding": {
-          "$ref": "#/$defs/rugix_bundle.manifest.BlockEncoding"
-        }
-      },
-      "required": [
-        "config",
-        "filename"
-      ],
-      "unevaluatedProperties": false
-    },
-    "rugix_bundle.manifest.PayloadConfig": {
-      "$id": "rugix_bundle.manifest.PayloadConfig",
+    "rugix_bundle.manifest.DeliveryConfig": {
+      "$id": "rugix_bundle.manifest.DeliveryConfig",
       "description": "",
       "oneOf": [
         {
@@ -108,32 +83,78 @@
             }
           },
           "required": [
-            "type"
+            "type",
+            "slot"
           ]
         },
         {
           "type": "object",
           "properties": {
             "type": {
-              "const": "script"
+              "const": "execute"
+            },
+            "handler": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "required": [
-            "type"
+            "type",
+            "handler"
           ]
         }
       ]
     },
-    "rugix_bundle.manifest.ScriptPayloadConfig": {
-      "$id": "rugix_bundle.manifest.ScriptPayloadConfig",
+    "rugix_bundle.manifest.ExecuteDeliveryConfig": {
+      "$id": "rugix_bundle.manifest.ExecuteDeliveryConfig",
       "type": "object",
       "description": "",
-      "properties": {},
-      "required": [],
+      "properties": {
+        "handler": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "handler"
+      ],
       "unevaluatedProperties": false
     },
-    "rugix_bundle.manifest.SlotPayloadConfig": {
-      "$id": "rugix_bundle.manifest.SlotPayloadConfig",
+    "rugix_bundle.manifest.HashAlgorithm": {
+      "$id": "rugix_bundle.manifest.HashAlgorithm",
+      "description": ""
+    },
+    "rugix_bundle.manifest.NumBytes": {
+      "$id": "rugix_bundle.manifest.NumBytes",
+      "description": ""
+    },
+    "rugix_bundle.manifest.Payload": {
+      "$id": "rugix_bundle.manifest.Payload",
+      "type": "object",
+      "description": "",
+      "properties": {
+        "delivery": {
+          "$ref": "#/$defs/rugix_bundle.manifest.DeliveryConfig"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "block-encoding": {
+          "$ref": "#/$defs/rugix_bundle.manifest.BlockEncoding"
+        }
+      },
+      "required": [
+        "delivery",
+        "filename"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.SlotDeliveryConfig": {
+      "$id": "rugix_bundle.manifest.SlotDeliveryConfig",
       "type": "object",
       "description": "",
       "properties": {
@@ -141,8 +162,18 @@
           "type": "string"
         }
       },
-      "required": [],
+      "required": [
+        "slot"
+      ],
       "unevaluatedProperties": false
+    },
+    "rugix_bundle.manifest.UpdateType": {
+      "$id": "rugix_bundle.manifest.UpdateType",
+      "enum": [
+        "full",
+        "incremental"
+      ],
+      "description": ""
     },
     "rugix_bundle.manifest.XzCompression": {
       "$id": "rugix_bundle.manifest.XzCompression",

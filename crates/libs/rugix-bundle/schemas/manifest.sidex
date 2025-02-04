@@ -9,14 +9,21 @@ opaque NumBytes
 
 #[json(rename_all="kebab-case")]
 record BundleManifest {
+    update_type: UpdateType,
     hash_algorithm?: HashAlgorithm,
     payloads: [Payload],
+}
+
+#[json(tagged=externally, rename_all="kebab-case")]
+variant UpdateType {
+    Full,
+    Incremental
 }
 
 #[json(rename_all="kebab-case")]
 record Payload {
     /// Payload configuration.
-    config: PayloadConfig,
+    delivery: DeliveryConfig,
     /// Filename of the payload file.
     filename: string,
     /// Block encoding.
@@ -24,17 +31,19 @@ record Payload {
 }
 
 #[json(tag="type", rename_all="kebab-case")]
-variant PayloadConfig {
-    Slot: SlotPayloadConfig,
-    Script: ScriptPayloadConfig,
+variant DeliveryConfig {
+    Slot: SlotDeliveryConfig,
+    Execute: ExecuteDeliveryConfig,
 }
 
-record SlotPayloadConfig {
+record SlotDeliveryConfig {
     /// Slot where the payload should be installed.
     slot: string,
 }
 
-record ScriptPayloadConfig {}
+record ExecuteDeliveryConfig {
+    handler: [string]
+}
 
 #[json(rename_all="kebab-case")]
 record BlockEncoding{

@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
@@ -50,6 +50,17 @@ When the update bundle is installed, the payload file is _unpacked_ and then _in
 
 Note that Rugix Ctrl implements streaming updates, i.e., the unpacking step will not reconstruct the entire payload file but instead stream it to the installation step in pieces as the update bundle is read, e.g., over the network.
 
+### Update Types
+
+Update bundles can be built for two _types_ of updates:
+
+- `full`: For full system updates involving a boot flow.
+- `incremental`: For incremental updates not involving a boot flow.
+
+For full system updates, a boot group must be provided to `rugix-ctrl` as a installation target (if there are more than two boot groups).
+For incremental system updates, a boot group can be provided but it does not have to be.
+
+
 ## Bundle Creation
 
 To work with bundles, you can use Rugix Bundler (`rugix-bundler`).
@@ -76,11 +87,13 @@ Here is an example of a bundle manifest:
 ```toml
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bundle-manifest.schema.json
 
+update-type = "full"
+
 hash-algorithm = "sha512-256"
 
 [[payloads]]
 filename = "boot.vfat"
-[payloads.config]
+[payloads.delivery]
 type = "slot"
 slot = "boot"
 [payloads.block-encoding]
@@ -91,7 +104,7 @@ deduplication = true
 
 [[payloads]]
 filename = "system.ext4"
-[payloads.config]
+[payloads.delivery]
 type = "slot"
 slot = "system"
 [payloads.block-encoding]

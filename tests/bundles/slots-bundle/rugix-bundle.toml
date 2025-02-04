@@ -1,8 +1,10 @@
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/heads/main/schemas/rugix-bundle-manifest.schema.json
 
+update-type = "incremental"
+
 [[payloads]]
 filename = "test-file"
-[payloads.config]
+[payloads.delivery]
 type = "slot"
 slot = "test-file"
 [payloads.block-encoding]
@@ -10,7 +12,7 @@ chunker = "casync-64"
 
 [[payloads]]
 filename = "test-dir.tar"
-[payloads.config]
+[payloads.delivery]
 type = "slot"
 slot = "custom-dir"
 [payloads.block-encoding]

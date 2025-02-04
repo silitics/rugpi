@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-rm -rf .rugix
-rm -rf build
-mkdir build
+# rm -rf .rugix
+# rm -rf build
+# mkdir build
 
 export RUGIX_DEV=true
 
@@ -10,8 +10,8 @@ export RUGIX_DEV=true
 # ./run-bakery test test-update-bundle
 # ./run-bakery test test-update-image
 
-# ./run-bakery bundler bundle bundles/script-bundle build/script-bundle.rugixb
-# ./run-bakery test test-update-script
+./run-bakery bundler bundle bundles/script-bundle build/script-bundle.rugixb
+./run-bakery test test-update-script
 
 rm -f bundles/slots-bundle/payloads/test-dir.tar
 tar -cvf bundles/slots-bundle/payloads/test-dir.tar -C bundles/slots-bundle/payloads test-file
