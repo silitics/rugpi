@@ -1,11 +1,13 @@
 //! Definition of the command line interface (CLI).
 
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::Path;
+use std::process::{Child, ChildStdin};
 
 use rugix_bundle::manifest::ChunkerAlgorithm;
 use rugix_bundle::reader::block_provider::StoredBlockProvider;
+use rugix_bundle::reader::PayloadTarget;
 use rugix_bundle::source::{BundleSource, ReaderSource, SkipRead};
 use rugix_bundle::BUNDLE_MAGIC;
 use rugix_hashes::{HashAlgorithm, HashDigest};
@@ -302,6 +304,12 @@ pub fn main() -> SystemResult<()> {
                             hash_algorithm,
                         )?;
                     }
+                    SlotKind::File { path } => {
+                        slot_db::add_index(slot.name(), path, chunker_algorithm, hash_algorithm)?;
+                    }
+                    SlotKind::Custom { .. } => {
+                        bail!("cannot create indices on custom slots");
+                    }
                 }
             }
         },
@@ -431,8 +439,12 @@ fn install_update_stream(
     let boot_slot = entry.get_slot("boot").unwrap();
     let system_slot = entry.get_slot("system").unwrap();
 
-    let SlotKind::Block(raw_boot_slot) = system.slots()[boot_slot].kind();
-    let SlotKind::Block(raw_system_slot) = system.slots()[system_slot].kind();
+    let SlotKind::Block(raw_boot_slot) = system.slots()[boot_slot].kind() else {
+        bail!("boot slot must be a block device");
+    };
+    let SlotKind::Block(raw_system_slot) = system.slots()[system_slot].kind() else {
+        bail!("system slot must be a block device");
+    };
 
     let mut img_stream =
         ImgStream::new(update_stream).whatever("error reading image partitions")?;
@@ -548,7 +560,10 @@ fn install_update_bundle<R: BundleSource>(
     {
         let payload_entry = payload.entry();
         if let Some(slot_type) = &payload_entry.type_slot {
-            if let Some(slot) = entry.get_slot(&slot_type.slot) {
+            let slot = entry
+                .get_slot(&slot_type.slot)
+                .or_else(|| system.slots().find_by_name(&slot_type.slot).map(|e| e.0));
+            if let Some(slot) = slot {
                 let slot = &system.slots()[slot];
                 eprintln!(
                     "Installing bundle payload {} to slot {}",
@@ -563,34 +578,75 @@ fn install_update_bundle<R: BundleSource>(
                         block_encoding.hash_algorithm,
                     );
                     for (_, slot) in system.slots().iter() {
+                        // Since we erased all the indices of the target slot, it
+                        // is fine to also add the target slot here.
                         match slot.kind() {
                             SlotKind::Block(block_slot) => {
-                                // Since we erased all the indices of the target slot, it
-                                // is fine to also add the target slot here.
                                 provider.add_slot(
                                     slot.name(),
                                     block_slot.device().path().to_path_buf(),
                                 )?;
                             }
+                            SlotKind::File { path } => {
+                                provider.add_slot(slot.name(), path.to_path_buf())?;
+                            }
+                            SlotKind::Custom { .. } => { /* nothing to do */ }
                         }
                     }
                     block_provider = Some(provider);
                 }
-                let SlotKind::Block(slot) = slot.kind();
-                let target = std::fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .open(slot.device())
-                    .whatever("unable to open payload target")?;
-                payload
-                    .decode_into(
-                        target,
-                        block_provider
-                            .as_ref()
-                            .map(|p| p as &dyn StoredBlockProvider),
-                    )
-                    .whatever("unable to decode payload")?;
+                match slot.kind() {
+                    SlotKind::Block(block_slot) => {
+                        let target = std::fs::OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .open(block_slot.device())
+                            .whatever("unable to open payload target")?;
+                        payload
+                            .decode_into(
+                                target,
+                                block_provider
+                                    .as_ref()
+                                    .map(|p| p as &dyn StoredBlockProvider),
+                            )
+                            .whatever("unable to decode payload")?;
+                    }
+                    SlotKind::File { path } => {
+                        let target = std::fs::OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .create(true)
+                            .truncate(true)
+                            .open(path)
+                            .whatever("unable to open payload target")?;
+                        payload
+                            .decode_into(
+                                target,
+                                block_provider
+                                    .as_ref()
+                                    .map(|p| p as &dyn StoredBlockProvider),
+                            )
+                            .whatever("unable to decode payload")?;
+                    }
+                    SlotKind::Custom { handler } => {
+                        let target = CustomTarget::new(handler.iter().map(|arg| arg.as_str()))?;
+                        payload
+                            .decode_into(
+                                target,
+                                block_provider
+                                    .as_ref()
+                                    .map(|p| p as &dyn StoredBlockProvider),
+                            )
+                            .whatever("unable to decode payload")?;
+                    }
+                }
                 continue;
+            } else {
+                error!(
+                    "slot {:?} for bundle payload {} not found",
+                    slot_type.slot,
+                    payload.idx()
+                );
             }
         } else if let Some(_) = &payload_entry.type_script {
             eprintln!("Executing update script (payload {})", payload.idx(),);
@@ -619,6 +675,53 @@ fn install_update_bundle<R: BundleSource>(
             .whatever("error running post-install step")?;
     }
     Ok(())
+}
+
+#[derive(Debug)]
+pub struct CustomTarget {
+    child: Child,
+}
+
+impl CustomTarget {
+    pub fn new<'arg>(mut command: impl Iterator<Item = &'arg str>) -> SystemResult<Self> {
+        let Some(prog) = command.next() else {
+            bail!("custom update handler cannot be an empty sequence");
+        };
+        let child = std::process::Command::new(prog)
+            .args(command)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .whatever("unable to spawn custom update handler")?;
+        Ok(Self { child })
+    }
+}
+
+impl PayloadTarget for CustomTarget {
+    fn write(&mut self, bytes: &[u8]) -> rugix_bundle::BundleResult<()> {
+        self.child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(bytes)
+            .whatever("unable to write payload to custom handler")
+    }
+
+    fn finalize(mut self) -> rugix_bundle::BundleResult<()> {
+        info!("waiting on custom update handler to finalize");
+        // Flush all bytes and close stdin.
+        drop(self.child.stdin.take().unwrap());
+        let status = self
+            .child
+            .wait()
+            .whatever("error waiting for update handler")?;
+        if !status.success() {
+            bail!(
+                "error running custom update handler, code {:?}",
+                status.code()
+            )
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, ValueEnum)]

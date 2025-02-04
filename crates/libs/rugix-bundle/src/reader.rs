@@ -224,12 +224,13 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
         {
             bail!("payload hash mismatch");
         }
+        target.finalize()?;
         let _ = expect_end(&mut self.reader.source, tags::PAYLOAD)?;
         Ok(())
     }
 }
 
-pub trait PayloadTarget {
+pub trait PayloadTarget: Sized {
     fn write(&mut self, bytes: &[u8]) -> BundleResult<()>;
 
     #[expect(unused_variables)]
@@ -240,6 +241,10 @@ pub trait PayloadTarget {
         buffer: &mut Vec<u8>,
     ) -> BundleResult<()> {
         bail!("target does not support reading blocks");
+    }
+
+    fn finalize(self) -> BundleResult<()> {
+        Ok(())
     }
 }
 

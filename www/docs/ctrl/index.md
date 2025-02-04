@@ -120,7 +120,7 @@ Now, here is the promised feature-wise comparison of the different solutions.[^c
 | | Mender | RAUC | SWUpdate | Rugix Ctrl | Description |
 | - | :-: | :-: | :-: | :-: | - |
 | Streaming: Arbitrary Sources | ❌ | ❌ | ✅ | ✅ | Streaming updates from arbitrary sources. |
-| Streaming: HTTP | ✅ | ✅ | ✅ | ✅ | Streaming updates over HTTP. |
+| Streaming: HTTP | ✅ | ✅ | ✅ | ✅ | Streaming updates from an HTTP server. |
 | Delta Updates: Adaptive | ❌ | ✅ | ✔️[^build-yourself] | ✅ | Fetch only changed blocks via HTTP. |
 | Delta Updates: Static | ✔️[^mender-delta] | ❌ | ✔️[^build-yourself] | ✔️[^build-yourself] | Offline delta compression. |
 | Non-A/B Update Schemes | ❌[^mender-update-modules] | ✅ | ✅ | ✅ | Support for non-A/B rootfs updates.

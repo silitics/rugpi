@@ -1,0 +1,5 @@
+parent = "customized-efi"
+
+recipes = [
+    "customized-slots",
+]

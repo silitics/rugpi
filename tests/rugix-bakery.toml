@@ -38,6 +38,11 @@ layer = "customized-efi"
 architecture = "arm64"
 target = "generic-grub-efi"
 
+[systems.customized-slots]
+layer = "customized-slots"
+architecture = "arm64"
+target = "generic-grub-efi"
+
 [systems.customized-temp-overlay]
 layer = "customized-temp-overlay"
 architecture = "arm64"

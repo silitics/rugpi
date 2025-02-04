@@ -1,4 +1,5 @@
 use std::ops::Index;
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use indexmap::IndexMap;
@@ -30,27 +31,33 @@ impl SystemSlots {
     {
         let mut slots = Vec::new();
         for (name, config) in iter {
-            let SlotConfig::Block(raw) = &config;
-            let device = if let Some(device) = &raw.device {
-                BlockDevice::new(device)
-                    .whatever("slot device is not a block device")
-                    .with_info(|_| format!("device: {device:?}"))?
-            } else if let Some(partition) = &raw.partition {
-                let Some(root) = root else {
-                    bail!("no system root")
-                };
-                let Some(device) = root.resolve_partition(*partition) else {
-                    bail!("partition {partition} for slot {name:?} not found");
-                };
-                device
-            } else {
-                bail!("invalid configuration: no device and partition for {name}");
+            let kind = match config {
+                SlotConfig::Block(block_slot_config) => {
+                    let device = if let Some(device) = &block_slot_config.device {
+                        BlockDevice::new(device)
+                            .whatever("slot device is not a block device")
+                            .with_info(|_| format!("device: {device:?}"))?
+                    } else if let Some(partition) = &block_slot_config.partition {
+                        let Some(root) = root else {
+                            bail!("no system root")
+                        };
+                        let Some(device) = root.resolve_partition(*partition) else {
+                            bail!("partition {partition} for slot {name:?} not found");
+                        };
+                        device
+                    } else {
+                        bail!("invalid configuration: no device and partition for {name}");
+                    };
+                    SlotKind::Block(BlockSlot { device })
+                }
+                SlotConfig::File(file_slot_config) => SlotKind::File {
+                    path: file_slot_config.path.clone().into(),
+                },
+                SlotConfig::Custom(custom_slot_config) => SlotKind::Custom {
+                    handler: custom_slot_config.handler.clone(),
+                },
             };
-            slots.push(Slot::new(
-                name.to_owned(),
-                SlotKind::Block(BlockSlot { device }),
-                config.clone(),
-            ))
+            slots.push(Slot::new(name.to_owned(), kind, config.clone()));
         }
         Ok(Self { slots })
     }
@@ -155,6 +162,8 @@ impl Slot {
 #[derive(Debug)]
 pub enum SlotKind {
     Block(BlockSlot),
+    File { path: PathBuf },
+    Custom { handler: Vec<String> },
 }
 
 #[derive(Debug)]
@@ -189,5 +198,6 @@ const fn default_slot_config(partition: u32) -> SlotConfig {
     SlotConfig::Block(BlockSlotConfig {
         device: None,
         partition: Some(partition),
+        immutable: Some(true),
     })
 }

@@ -342,6 +342,9 @@
         "partition": {
           "type": "integer",
           "format": "uint32"
+        },
+        "immutable": {
+          "type": "boolean"
         }
       },
       "required": [],
@@ -432,6 +435,40 @@
       ],
       "unevaluatedProperties": false
     },
+    "rugix_ctrl.system.CustomSlotConfig": {
+      "$id": "rugix_ctrl.system.CustomSlotConfig",
+      "type": "object",
+      "description": "Custom slot configuration.",
+      "properties": {
+        "handler": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "handler"
+      ],
+      "unevaluatedProperties": false
+    },
+    "rugix_ctrl.system.FileSlotConfig": {
+      "$id": "rugix_ctrl.system.FileSlotConfig",
+      "type": "object",
+      "description": "File slot configuration.",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "immutable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "unevaluatedProperties": false
+    },
     "rugix_ctrl.system.PartitionConfig": {
       "$id": "rugix_ctrl.system.PartitionConfig",
       "type": "object",
@@ -473,10 +510,49 @@
             "partition": {
               "type": "integer",
               "format": "uint32"
+            },
+            "immutable": {
+              "type": "boolean"
             }
           },
           "required": [
             "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "file"
+            },
+            "path": {
+              "type": "string"
+            },
+            "immutable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "path"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "custom"
+            },
+            "handler": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "handler"
           ]
         }
       ]

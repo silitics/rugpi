@@ -1,0 +1,17 @@
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/heads/main/schemas/rugix-bundle-manifest.schema.json
+
+[[payloads]]
+filename = "test-file"
+[payloads.config]
+type = "slot"
+slot = "test-file"
+[payloads.block-encoding]
+chunker = "casync-64"
+
+[[payloads]]
+filename = "test-dir.tar"
+[payloads.config]
+type = "slot"
+slot = "custom-dir"
+[payloads.block-encoding]
+chunker = "casync-64"

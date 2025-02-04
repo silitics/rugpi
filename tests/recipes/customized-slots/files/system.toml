@@ -1,0 +1,29 @@
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-ctrl-system.schema.json
+
+[slots.boot-a]
+type = "block"
+partition = 2
+immutable = true
+
+[slots.boot-b]
+type = "block"
+partition = 3
+immutable = true
+
+[slots.system-a]
+type = "block"
+partition = 4
+immutable = true
+
+[slots.system-b]
+type = "block"
+partition = 5
+immutable = true
+
+[slots.test-file]
+type = "file"
+path = "/run/rugix/state/test-file"
+
+[slots.custom-dir]
+type = "custom"
+handler = ["tar", "xvf", "-", "-C", "/run/rugix/state/app/custom-dir"]

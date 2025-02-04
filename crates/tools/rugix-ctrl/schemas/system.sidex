@@ -31,6 +31,10 @@ record PartitionConfig {
 variant SlotConfig {
     /// Block device slot.
     Block: BlockSlotConfig,
+    /// File slot.
+    File: FileSlotConfig,
+    /// Custom slot.
+    Custom: CustomSlotConfig,
 }
 
 /// Block device slot configuration.
@@ -39,6 +43,18 @@ record BlockSlotConfig {
     device?: string,
     /// Partition number of the block device.
     partition?: u32,
+    immutable?: bool,
+}
+
+/// File slot configuration.
+record FileSlotConfig {
+    path: string,
+    immutable?: bool,
+}
+
+/// Custom slot configuration.
+record CustomSlotConfig {
+    handler: [string],
 }
 
 /// Boot group configuration.

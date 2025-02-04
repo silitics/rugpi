@@ -66,16 +66,21 @@ If you do not use the state management feature, then Rugix Ctrl will not mount t
 In that case, you are responsible for mounting them (if they are not disabled) and you can specify their path via the `path` setting.
 
 
-## Slots and Boot Groups
+## Update Slots
 
 Rugix Ctrl's OTA update mechanism uses _slots_ to flexibly handle different OTA scenarios and requirements.[^rauc]
 Typically, a _slot_ corresponds to a device partition where updates can be applied.
-Each slot has a name and a _type_.
-Currently, the only supported slot type is `block`, corresponding to a block device. The block device of a `block` slot can be specified either explicitly via the `device` setting or by a root device partition number via the `partition` setting.
+Each slot has a name and one of the following types:
 
 [^rauc]: This design has been inspired by [RAUC](https://rauc.io/).
 
-Example configuration for an A/B update setup with four slots:
+- `block`: The slot is a block device.
+- `file`: The slot is a regular file (usually on the data partition).
+- `custom`: The slot has a custom _update handler_.
+
+### Block Slots: A Typical A/B Setup
+
+Here is an example configuration for a typical A/B setup with four slots. The block device of a `block` slot can be specified either explicitly via the `device` setting or by a root device partition number via the `partition` setting.
 
 ```toml title="/etc/rugix/system.toml"
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-ctrl-system.schema.json
@@ -83,19 +88,53 @@ Example configuration for an A/B update setup with four slots:
 [slots.boot-a]
 type = "block"
 device = "/dev/sda2"
+immutable = true
 
 [slots.boot-b]
 type = "block"
 device = "/dev/sda3"
+immutable = true
 
 [slots.system-a]
 type = "block"
 partition = 4
+immutable = true
 
 [slots.system-b]
 type = "block"
 partition = 5
+immutable = true
 ```
+
+The `immutable` option is used to specify that the contents of the slot will only change with updates via Rugix Ctrl.
+
+### File Slots
+
+File slots require a `path` setting specifying an absolute path to a file.
+Note that if a `file` slot points to a path that is not persisted through reboots, then the contents of the slot will be lost when rebooting.
+Thus, `file` slots would typically point to files on the data partition, in the state directory, or are paired with a state management configuration persisting the respective files.
+
+As with `block` slots, `file` slots also have an `immutable` option.
+
+If you want to update a directory, use a custom slot with a Tar archive as a payload that you can then extract.[^no-directory-slots]
+
+[^no-directory-slots]: There are two reasons why there are no native directory slots: First, we want to keep things simple within Rugix Ctrl and directory slots can trivially be implemented with custom handlers. Second, in contrast to directories, files are more directly usable for adaptive delta updates by computing an index over them. That's why we support them natively.
+
+### Custom Slots
+
+Custom slots allow you to implement your own update logic that receives an arbitrary update payload as a stream on stdin.
+This requires a `handler` setting specifying an arbitrary command to install the update payload.
+
+Here is an example to extract a Tar archive to a specific directory:
+
+```toml
+[slots.app-data]
+handler = ["tar", "xf", "-", "-C", "/run/rugix/mounts/data/app/my-app-data"]
+```
+
+Note that custom slots are incompatible with block deduplication.
+
+## Boot Groups
 
 Slots are grouped into _boot groups_, which are sets of related slots into which the system can boot via a bootloader integration.
 Each boot group has a name and a _slot mapping_ that defines aliases for slot names.

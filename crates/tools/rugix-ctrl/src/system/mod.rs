@@ -60,10 +60,11 @@ impl System {
         let mut active_boot_entry = None;
         for (idx, entry) in boot_entries.iter() {
             for (_, slot) in entry.slots() {
-                let SlotKind::Block(raw) = &slots[slot].kind();
-                if Some(raw.device()) == system_device.as_ref() {
-                    entry.mark_active();
-                    break;
+                if let SlotKind::Block(raw) = &slots[slot].kind() {
+                    if Some(raw.device()) == system_device.as_ref() {
+                        entry.mark_active();
+                        break;
+                    }
                 }
                 /* TODO: Also look at `/proc/cmdline` to allow setting the active boot
                 entry explicitly via a flag `rugpi.boot-entry=...`. For compatibility

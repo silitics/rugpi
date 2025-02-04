@@ -1,0 +1,45 @@
+[[systems]]
+system  = "customized-slots"
+ssh = { private-key = "./files/id_rsa" }
+
+[[steps]]
+action = "run"
+description = "check system state prior to update"
+script = """
+#!/bin/bash
+mkdir -p /run/rugix/state/app/custom-dir
+
+if [ -e /run/rugix/state/test-file ]; then
+    echo "Update marker should not exist yet!"
+    exit 1
+fi
+if [ -e /run/rugix/state/app/custom-dir/test-file ]; then
+    echo "Update marker should not exist yet!"
+    exit 1
+fi
+"""
+
+[[steps]]
+action = "run"
+description = "install update bundle"
+stdin-file = "./build/slots-bundle.rugixb"
+script = """
+#!/bin/bash
+rugix-ctrl system info --json
+rugix-ctrl update install --no-reboot --without-boot-flow -
+"""
+
+[[steps]]
+action = "run"
+description = "check system state after to update"
+script = """
+#!/bin/bash
+if [ ! -e /run/rugix/state/test-file ]; then
+    echo "Update marker for test-file should exist!"
+    exit 1
+fi
+if [ ! -e /run/rugix/state/app/custom-dir/test-file ]; then
+    echo "Update marker for custom-dir should exist!"
+    exit 1
+fi
+"""
