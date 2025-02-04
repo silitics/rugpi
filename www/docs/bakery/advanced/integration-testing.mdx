@@ -31,7 +31,7 @@ Each test system declaration must specify a `disk-image`, which is the image to 
 To execute commands on the system under test, Rugix Bakery connects to the system running in the VM via SSH. To this end, a private key needs to specified. This private key must be placed in the project directory. It is recommended to generate a pair of keys exclusively for this purpose and inject the public key with an additional layer on-top of the actual system layer.[^1] To generate a suitable pair of SSH keys in the current working directory, run:
 
 ```shell
-ssh-keygen -t rsa -b 40960 -f id_rsa
+ssh-keygen -t rsa -b 4096 -f id_rsa
 ```
 
 The declaration of test systems is followed by a specification of _test steps_.
