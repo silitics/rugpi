@@ -163,9 +163,9 @@ fn extract(project: &ProjectRef, image_url: &str, layer_path: &Path) -> BakeryRe
             .whatever("unable to mount system partition")?;
         let _mounted_boot = Mounted::mount(loop_dev.partition(1), temp_dir_path.join("roots/boot"))
             .whatever("unable to mount boot partition")?;
+        run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])
+            .whatever("unable to create layer tar file")?;
     }
-    run!(["tar", "-c", "-f", &layer_path, "-C", temp_dir_path, "."])
-        .whatever("unable to create layer tar file")?;
     Ok(())
 }
 
