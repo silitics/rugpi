@@ -32,7 +32,7 @@ impl Hooks {
         info!("running hooks for \"{}/{}\"", self.operation, stage);
         for hook in self.hooks(stage) {
             info!("running hook {}", hook.name);
-            run!([&hook.path, stage]
+            run!([&hook.path, self.operation, stage]
                 .with_vars(vars.clone())
                 .with_stderr(xscript::Out::Capture)
                 .with_stdout(xscript::Out::Capture))
