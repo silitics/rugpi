@@ -48,6 +48,13 @@ pub fn make_system(config: &SystemConfig, frozen: &FrozenLayer, out: &Path) -> B
     let layer = frozen.unfreeze()?;
     let layer_path = layer.path();
 
+    let artifacts_dir = layer_path.join("artifacts");
+    if artifacts_dir.exists() {
+        rugix_fs::Copier::new()
+            .copy_dir(&layer.path().join("artifacts"), &out.join("artifacts"))
+            .whatever("error copying artifacts")?;
+    }
+
     let system_dir = layer_path.join("roots/system");
     fs::create_dir_all(&system_dir).whatever("unable to create system directory")?;
 

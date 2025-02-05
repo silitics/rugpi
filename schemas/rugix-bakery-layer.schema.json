@@ -39,88 +39,11 @@
           "$ref": "#/$defs/rugix_bakery.recipes.ParameterValue"
         }
       }
-    },
-    "artifacts": {
-      "$ref": "#/$defs/rugix_bakery.artifacts.ArtifactsDecl"
     }
   },
   "required": [],
   "unevaluatedProperties": false,
   "$defs": {
-    "rugix_bakery.artifacts.ArtifactDecl": {
-      "$id": "rugix_bakery.artifacts.ArtifactDecl",
-      "description": "",
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "const": "file"
-            },
-            "path": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "type",
-            "path"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "const": "directory"
-            },
-            "path": {
-              "type": "string"
-            },
-            "as-tar": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "type",
-            "path"
-          ]
-        }
-      ]
-    },
-    "rugix_bakery.artifacts.ArtifactsDecl": {
-      "$id": "rugix_bakery.artifacts.ArtifactsDecl",
-      "description": "A map type."
-    },
-    "rugix_bakery.artifacts.DirectoryArtifactProps": {
-      "$id": "rugix_bakery.artifacts.DirectoryArtifactProps",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "path": {
-          "type": "string"
-        },
-        "as-tar": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "unevaluatedProperties": false
-    },
-    "rugix_bakery.artifacts.FileArtifactProps": {
-      "$id": "rugix_bakery.artifacts.FileArtifactProps",
-      "type": "object",
-      "description": "",
-      "properties": {
-        "path": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "unevaluatedProperties": false
-    },
     "rugix_bakery.foreign.NumBytes": {
       "$id": "rugix_bakery.foreign.NumBytes",
       "description": "Number of bytes."
@@ -286,9 +209,6 @@
           "additionalProperties": {
             "$ref": "#/$defs/rugix_bakery.recipes.ParameterDef"
           }
-        },
-        "artifacts": {
-          "$ref": "#/$defs/rugix_bakery.artifacts.ArtifactsDecl"
         }
       },
       "required": [],

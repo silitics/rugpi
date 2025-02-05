@@ -1,7 +1,5 @@
 //! Recipe configuration.
 
-import artifacts::ArtifactsDecl
-
 /// Recipe configuration.
 record RecipeConfig {
     /// Description of the recipe.
@@ -12,8 +10,6 @@ record RecipeConfig {
     dependencies?: [string],
     /// Parameter definitions of the recipe.
     parameters?: [string: ParameterDef],
-    /// Artifacts declaration.
-    artifacts?: ArtifactsDecl,
 }
 
 /// Recipe parameter definition.

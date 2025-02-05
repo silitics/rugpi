@@ -131,7 +131,6 @@ pub fn customize(
     std::fs::create_dir_all(&root_dir).ok();
     let logger = Logger::new(&layer.name, layer_path)?;
     apply_recipes(&layer_ctx, &logger, project, arch, &jobs, &root_dir)?;
-    layer_ctx.extract_artifacts(config.artifacts.as_ref())?;
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;
@@ -400,6 +399,7 @@ fn apply_recipes(
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGIX_LAYER_DIR = "/run/rugix/bakery/bundle/",
+                        RUGIX_ARTIFACTS_DIR = "/run/rugix/bakery/bundle/artifacts",
                         RUGIX_ROOT_DIR = "/",
                         RUGIX_PROJECT_DIR = "/run/rugix/bakery/project/",
                         RUGIX_ARCH = arch.as_str(),
@@ -424,6 +424,7 @@ fn apply_recipes(
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
                         RUGIX_LAYER_DIR = &layer_ctx.build_dir,
+                        RUGIX_ARTIFACTS_DIR = layer_ctx.build_dir.join("artifacts"),
                         RUGIX_ROOT_DIR = root_dir_path,
                         RUGIX_PROJECT_DIR = &project_dir,
                         RUGIX_ARCH = arch.as_str(),
@@ -438,7 +439,6 @@ fn apply_recipes(
                 }
             }
         }
-        layer_ctx.extract_artifacts(recipe.config.artifacts.as_ref())?;
     }
 
     Ok(())

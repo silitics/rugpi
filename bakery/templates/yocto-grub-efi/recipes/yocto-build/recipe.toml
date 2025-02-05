@@ -1,7 +1,2 @@
 description = "build Yocto system"
 priority = 10_000_000
-
-[artifacts.yocto-images]
-type = "directory"
-path = "yocto/images"
-as-tar = false

@@ -1,6 +1,5 @@
 //! Layer configuration.
 
-import artifacts::ArtifactsDecl
 import recipes::ParameterValue
 
 /// Layer configuration.
@@ -21,6 +20,4 @@ record LayerConfig {
     exclude?: [string],
     /// Recipe parameters.
     parameters?: [string: [string: ParameterValue]],
-    /// Artifacts declaration.
-    artifacts?: ArtifactsDecl,
 }
