@@ -5,7 +5,7 @@ rugix-extra = { git = "https://github.com/silitics/rugix-extra.git", branch = "v
 # - Raspberry Pi 5
 # - Raspberry Pi 4 (with recent firmware)
 # - Raspberry Pi CM4 (with recent firmware)
-[images.tryboot]
+[systems.rpi-tryboot]
 layer = "customized"
 architecture = "arm64"
 target = "rpi-tryboot"
@@ -15,7 +15,7 @@ target = "rpi-tryboot"
 # Compatible with:
 # - Raspberry Pi 4
 # - Raspberry Pi CM4
-[images.tryboot-pi4]
+[systems.rpi-tryboot-pi4]
 layer = "customized-pi4"
 architecture = "arm64"
 target = "rpi-tryboot"
@@ -26,7 +26,7 @@ target = "rpi-tryboot"
 # - Raspberry Pi 3
 # - Raspberry Pi CM3
 # - Raspberry Pi Zero 2 W
-[images.uboot-arm64]
+[systems.rpi-uboot-arm64]
 layer = "customized"
 architecture = "arm64"
 target = "rpi-uboot"
@@ -37,7 +37,7 @@ target = "rpi-uboot"
 # - Raspberry Pi 2
 # - Raspberry Pi 1
 # - Raspberry Pi Zero
-[images.uboot-armhf]
+[systems.rpi-uboot-armhf]
 layer = "customized"
 architecture = "armhf"
 target = "rpi-uboot"
