@@ -161,6 +161,8 @@ The `execute` delivery mechanism is extremely flexible and can be used to delive
 
 ## Delta Updates
 
+Rugix Ctrl supports adaptive delta updates out-of-the-box and can also be configured towards static delta updates.
+
 ### Adaptive Delta Updates
 
 Adaptive delta updates work with any HTTP server supporting range queries, making them particularly easy to implement.
@@ -173,17 +175,22 @@ Adaptive delta updates have the following advantages:
 - Only a single update bundle is required to update from any version.
 - A block index may be required anyway (see security considerations below).
 
+Adaptive delta updates require matching block indices in the bundle and on the device (see [Over-the-Air Updates](../over-the-air-updates.mdx)).
+
 ### Static Delta Updates
 
 In addition to adaptive delta updates, you can also implement static delta updates, where you create a bundle to specifically go from one version to another.
 This allows the use of efficient delta compression algorithms typically leading to very small update sizes.
 Static delta updates are realized as part of the preprocessing and installation step using off-the-shelf tools like [Xdelta](https://en.wikipedia.org/wiki/Xdelta).
 Compared to adaptive delta updates, static delta updates typically require much less data to be transferred.
-
-Even with static delta updates you likely want a block index (with a large fixed block size) to ensure the integrity of blocks before feeding them through the delta compression tool for security reasons (see below).
-
+Therefore, they are ideal when the bandwidth to a device is severely limited or traffic is at a premium.
 You can realize static delta updates right now with custom update slots.
+If you need help, Silitics, [the company behind Rugix](/commercial-support) has you covered.
 We may add native support in the future.
+
+:::warning
+Even with static delta updates you likely want a block index (with a large fixed block size) to ensure the integrity of blocks before feeding them through the delta compression tool for security reasons (see below).
+:::
 
 
 ## Block Encoding
@@ -215,7 +222,7 @@ The block encoding has three main purposes:
 3. Adaptive delta updates.
 
 **Cryptographic Verification.**
-When unpacking the payload, the block index is used to verify the integrity of each block individually, thereby establishing trust in their contents before thy are installed/written anywhere.
+When unpacking the payload, the block index is used to verify the integrity of each block individually, thereby establishing trust in their contents before they are installed/written anywhere.
 This enables streaming updates while never writing any untrusted data anywhere.
 Furthermore, it becomes impossible to exploit security vulnerabilities in tools processing the bundle file as part of the installation stage, as no untrusted input is fed to the installation stage.
 
@@ -233,7 +240,7 @@ If you try to install a payload with block deduplication to a `custom` slot, the
 **Adaptive Delta Updates.**
 We use the block index to adaptively only fetch those blocks of the payload data that we do not already have locally on the device.
 This requires the ability to efficiently skip over blocks in the payload data, that we do already have.
-Skipping can be realized by HTTP range queries.
+Rugix Ctrl implements efficient skipping with HTTP range queries.
 This technique is also used by [RAUC](https://rauc.io/) and can significantly reduce the required data transfer to those parts of the update which have actually changed.
 The process may then roughly look as follows:
 
@@ -256,11 +263,10 @@ Note that this is orthogonal to block deduplication.
 
 **Variable Block Sizes.**
 Blocks may have a variable or fixed size.
-In case of variable block sizes, e.g., when using a rolling hash to divide the payload file (as done by [Casync](https://github.com/systemd/casync)), we need an additional sequence storing the block sizes called a _size index_.
-For this sequence, we can always use block deduplication, assuming that blocks with an identical hash also have an identical size.
+In case of variable block sizes, e.g., when using a rolling hash to divide the payload file (as done by [Casync](https://github.com/systemd/casync)), the update bundle also contains a _size index_.
 
 **Block Compression.**
-To reduce the size of the update bundle while still enabling adaptive delta updates and block-wise cryptographic verification of updates, we can compress blocks individually.
+To reduce the size of the update bundle while still enabling adaptive delta updates and block-wise cryptographic verification of updates, blocks can be compressed individually.
 In that case, we always need a size index, as fixed size blocks may compress to different sizes.
 If block compression is enabled, then the size index stores the sizes of compressed blocks while the hash index contains the hashes of the uncompressed block.
 This allows skipping blocks that we already have.
@@ -269,7 +275,7 @@ If blocks are variable size, then the true block size of unknown blocks becomes 
 
 ## Configuration Reference
 
-For reference, here is the complete schema for system configuration files:
+For reference, here is the complete schema for bundle manifest files:
 
 <JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />

@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::Write;
 
+use custom::CustomBootFlow;
 use reportify::{bail, Report, ResultExt};
 use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
@@ -21,6 +22,8 @@ use rugix_common::mount::Mounted;
 use rugix_common::partitions::get_disk_id;
 use rugix_common::utils::ascii_numbers;
 use rugix_common::{grub_patch_env, rpi_patch_boot};
+
+pub mod custom;
 
 reportify::new_whatever_type! {
     BootFlowError
@@ -57,36 +60,6 @@ pub trait BootFlow: Debug {
     fn post_install(&self, system: &System, group: BootGroupIdx) -> BootFlowResult<()> {
         Ok(())
     }
-
-    /// Get the number of remaining attempts for the given boot group.
-    ///
-    /// Returns [`None`] in case there is an unlimited number of attempts.
-    #[allow(unused_variables)]
-    fn remaining_attempts(
-        &self,
-        system: &System,
-        group: BootGroupIdx,
-    ) -> BootFlowResult<Option<u64>> {
-        Ok(None)
-    }
-
-    /// Get the status of the boot group.
-    #[allow(unused_variables)]
-    fn get_status(&self, system: &System, group: BootGroupIdx) -> BootFlowResult<BootGroupStatus> {
-        Ok(BootGroupStatus::Unknown)
-    }
-
-    /// Mark a boot group as good.
-    #[allow(unused_variables)]
-    fn mark_good(&self, system: &System, group: BootGroupIdx) -> BootFlowResult<()> {
-        Ok(())
-    }
-
-    /// Mark a boot group as bad.
-    #[allow(unused_variables)]
-    fn mark_bad(&self, system: &System, group: BootGroupIdx) -> BootFlowResult<()> {
-        Ok(())
-    }
 }
 
 /// Boot group status.
@@ -106,7 +79,44 @@ pub fn from_config(
     config_partition: &ConfigPartition,
     boot_entries: &BootGroups,
 ) -> BootFlowResult<Box<dyn BootFlow>> {
-    assert!(config.is_none(), "config not supported yet");
+    if let Some(config) = config {
+        return Ok(match config {
+            BootFlowConfig::Tryboot => Box::new(Tryboot {
+                inner: rugix_boot_flow(boot_entries)?,
+            }),
+            BootFlowConfig::UBoot => Box::new(UBoot {
+                inner: rugix_boot_flow(boot_entries)?,
+            }),
+            BootFlowConfig::GrubEfi => Box::new(GrubEfi {
+                inner: rugix_boot_flow(boot_entries)?,
+            }),
+            BootFlowConfig::Custom(custom_boot_flow_config) => Box::new(CustomBootFlow {
+                path: custom_boot_flow_config.path.clone().into(),
+            }),
+        });
+    }
+    let inner = rugix_boot_flow(boot_entries)?;
+    if config_partition.path().join("autoboot.txt").exists() {
+        Ok(Box::new(Tryboot { inner }))
+    } else if config_partition
+        .path()
+        .join("bootpart.default.env")
+        .exists()
+    {
+        Ok(Box::new(UBoot { inner }))
+    } else if config_partition
+        .path()
+        .join("rugpi/primary.grubenv")
+        .exists()
+        && config_partition.path().join("EFI").is_dir()
+    {
+        Ok(Box::new(GrubEfi { inner }))
+    } else {
+        bail!("unable to detect boot flow");
+    }
+}
+
+fn rugix_boot_flow(boot_entries: &BootGroups) -> BootFlowResult<RugixBootFlow> {
     let mut entries = boot_entries.iter();
     let Some((entry_a_idx, entry_a)) = entries.next() else {
         bail!("invalid number of entries");
@@ -126,32 +136,14 @@ pub fn from_config(
     let Some(system_b) = entry_b.get_slot("system") else {
         bail!("unable to get B system slot");
     };
-    let inner = RugixBootFlow {
+    Ok(RugixBootFlow {
         entry_a: entry_a_idx,
         entry_b: entry_b_idx,
         boot_a,
         boot_b,
         system_a,
         system_b,
-    };
-    if config_partition.path().join("autoboot.txt").exists() {
-        Ok(Box::new(Tryboot { inner }))
-    } else if config_partition
-        .path()
-        .join("bootpart.default.env")
-        .exists()
-    {
-        Ok(Box::new(UBoot { inner }))
-    } else if config_partition
-        .path()
-        .join("rugpi/primary.grubenv")
-        .exists()
-        && config_partition.path().join("EFI").is_dir()
-    {
-        Ok(Box::new(GrubEfi { inner }))
-    } else {
-        bail!("unable to detect boot flow");
-    }
+    })
 }
 
 #[derive(Debug)]

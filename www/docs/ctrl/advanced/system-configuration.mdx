@@ -35,8 +35,8 @@ We expect most setups to have both partitions, regardless of other aspects of th
 The config partition, usually the first on a device, holds critical settings like bootloader configurations and optional device-specific parameters.
 Meanwhile, the data partition retains persistent data, including user and system state, which is preserved across updates.
 
-The config and data partition are defined in the `config-partition` and `data-partition` sections of the system configuration file, respectively.
-Partitions can be specified either via the `device` setting, which points to a specific block device, or via the `partition` setting, which identifies a root device partition by its number.
+The config and data partition are configured in the `config-partition` and `data-partition` sections of the system configuration file, respectively.
+The partitions can be specified either via the `device` setting, which points to a specific block device, or via the `partition` setting, which identifies a root device partition by its number.
 
 Example configuration:
 
@@ -64,6 +64,8 @@ In addition, it will mount the system partition at `/run/rugix/mounts/system` (r
 
 If you do not use the state management feature, then Rugix Ctrl will not mount the partitions automatically.
 In that case, you are responsible for mounting them (if they are not disabled) and you can specify their path via the `path` setting.
+
+By default, Rugix Ctrl will assume that the first partition on the root device is the config partition and that the sixth (GPT) or seventh (MBR) partition is the data partition, depending on the type of partition table it finds on the root device.
 
 
 ## Update Slots
@@ -132,7 +134,7 @@ Here is an example to extract a Tar archive to a specific directory:
 handler = ["tar", "xf", "-", "-C", "/run/rugix/mounts/data/app/my-app-data"]
 ```
 
-Note that custom slots are incompatible with block deduplication.
+Note that custom slots are incompatible with block deduplication of the update payload (see [Update Bundles](./update-bundles.mdx)).
 
 ## Boot Groups
 
@@ -161,16 +163,16 @@ Without that parameter and if there are only two boot groups, Rugix Ctrl will au
 ## Boot Flow
 
 Bootloader integrations are referred to as _boot flows_.
-Multiple boot flows may exist for the same bootloader, allowing Rugix to adapt to different environments and serve as a drop-in replacement for other OTA solutions.
+Multiple boot flows may exist for the same bootloader, allowing Rugix Ctrl to adapt to different environments and serve as a drop-in replacement for other OTA solutions.
 
 Boot flows are configured via the `boot-flow` section, with the `type` setting indicating the boot flow type.
 
 Currently, Rugix supports the following boot flow types:
 
-- `tryboot`: Uses [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting) (A/B setups only).
 - `u-boot`: Uses an [U-Boot](https://docs.u-boot.org/en/latest/) environment file to switch between partitions (A/B setups only).
 - `grub-efi`: Uses a [Grub](https://www.gnu.org/software/grub/) environment file to switch between partitions (A/B setups only).
-- `custom`: Flexible integration based on an external script.
+- `tryboot`: Uses [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting) (A/B setups only).
+- `custom`: Flexible integration based on an external script/program.
 
 For further details on boot flows, we refer to the [Boot Flows](./boot-flows.md) section.
 

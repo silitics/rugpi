@@ -6,7 +6,7 @@ sidebar_position: 4
 
 _Hooks_ provide a powerful mechanism to inject custom behavior at various stages of Rugix Ctrl's operation.
 
-Hooks are scripts that are executed at specific points in the execution of an operation. For instance, you can run custom scripts after an update is installed (but before the system is rebooted) or before it is committed. Hooks are organized based on the type of the operation and the point in time, referred to as _stage_, when they should run. In addition, each hook has a _rank_, specifying the order in which hooks run. You can use hooks to customize and extend various parts of Rugix Ctrl based on your needs and requirements.
+Hooks are scripts that are executed at specific points in the execution of an operation. For instance, you can run custom scripts after an update is installed (but before the system is rebooted) or before it is committed. Hooks are organized based on the type of the operation and the point in time, referred to as _stage_, when they run. In addition, each hook has a _rank_, specifying the order in which hooks run. You can use hooks to customize and extend various parts of Rugix Ctrl based on your needs and requirements.
 
 Hooks are placed in `/etc/rugix/hooks`. Each operation gets its own directory, for instance, `/etc/rugix/hooks/bootstrap` contains [bootstrapping hooks](#bootstrapping-hooks) and `/etc/rugix/hooks/system-commit` contains [system commit hooks](#system-update-hooks). Each directory gets a subdirectory for each stage of the respective operation. For instance, `system-commit` has a `prepare` stage. The hooks of this stage will run before performing the commit. To add a hook to the respective stage, a file with the name `<rank>-<name>` is placed in the stage directory. Here, `<rank>` is an integer and hooks with a lower rank run earlier than those with a higher rank.
 
@@ -37,6 +37,7 @@ You can perform various checks outside of Rugix Ctrl. For instance, you can chec
 :::
 
 Hooks are provided with the operation as the first and the stage as the second argument. This allows you to write a hook that should run at multiple stages in a single file and then symlink this file into the respective locations. As certain operations and stages may be added in the future, and those may provide further arguments, **a hook should do nothing in case of unknown arguments**.
+Note that it is also fine to ignore the first two arguments and assume that a hook only runs when it should based on its path.
 
 In the following, we document the available hooks.
 
@@ -52,6 +53,8 @@ For committing to an update or rollback, the stages of `system-commit` hooks are
 
 - `pre-commit`: Runs directly before a commit.
 - `post-commit`: Runs directly after a commit.
+
+You can use these hooks, e.g., to prepare and trigger state migrations, if you are not using Rugix Ctrl's [State Management](./state-management.mdx) feature.
 
 
 ## State Management Hooks

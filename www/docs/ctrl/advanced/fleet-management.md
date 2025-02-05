@@ -10,7 +10,10 @@ To manage a fleet of devices remotely and deliver updates to devices, Rugix Ctrl
 :::tip
 As Rugix Ctrl is independent from a fleet management solution, it avoids vendor lock-in.
 When using Rugix Ctrl, **you can switch between different fleet management solutions at anytime** and continue updating your existing fleet.
-It also allows you to chose a fleet management provider based on the needs and requirements of your application.
+It also allows you to choose a fleet management provider based on the needs and requirements of your application.
+If you don't know which solution to choose, Silitics, [the company behind Rugix](/commercial-support) offers consulting _free of charge_, assuming that any purchase of a fleet management solution will go through us such that we can earn a commission on the sale.
+This offer provides you with free, independent consulting on which solution to choose while also supporting the development of Rugix through the commission.
+Typically, the commission will come out of the margin of the fleet management solution, so it will not be to your disadvantage.
 :::
 
 Currently, there are ready-made integrations with [thin-edge.io](https://thin-edge.io/) and [Mender](https://mender.io/).
@@ -19,7 +22,6 @@ For other fleet management solutions, you can develop your own integration or [c
 :::warning
 **We just released version 0.8 and the integrations may not have been migrated.**
 :::
-
 
 ## Thin-edge.io
 
@@ -30,6 +32,12 @@ That is, integrating Thin-edge.io into your system is straightforward with ready
 Those recipes will also include an integration layer for Rugix Ctrl so that you can deploy updates without any further configuration.
 To learn more, check out the [Thin-edge.io Rugix reference repository](https://github.com/thin-edge/tedge-rugpi-image).
 
+## Memfault
+
+[Memfault](https://memfault.com/) is a fleet management solution with a focus on observability.
+We are currently working on an integration for Memfault that is likely to be released as open-source in the upcoming months.
+Stay tuned!
+
 ## Mender
 
 Open-source Mender support for Rugix Ctrl and Rugix Bakery is provided by [Silitics](https://silitics.com), check out the [Mender Rugix reference repository](https://github.com/silitics/rugpi-template-mender).
@@ -39,8 +47,14 @@ Note that Mender also offers their own update installation mechanism, which is p
 You can still deploy updates through Mender's fleet management solution as you normally would.**
 If you want to know the differences between Mender's own solution and Rugix Ctrl, check out the [Comparison to Other Solutions](../index.md/#comparison-to-other-solutions).
 
+:::note
+Unfortunately, Mender's fleet management solution is at the moment incompatible with adaptive delta updates.
+This is also unlikely to change in the future as delta updates are a key feature of Mender's enterprise offering.
+:::
+
 You can also use Rugix Bakery to build images for use with Mender's own OTA solution using [Mender's conversion approach for Debian](https://docs.mender.io/operating-system-updates-debian-family/convert-a-mender-debian-image).
 For Debian-based systems, [Mender's documentation recommends](https://web.archive.org/web/20240815210840/https://docs.mender.io/operating-system-updates-debian-family/convert-a-mender-debian-image#recommended-workflow) that you boot an actual system with an image, make changes, and then extract the image from the running system. We strongly recommend not to use this so called _golden image_ workflow as it is a heavily manual process, making it impossible to reproduce and tedious to apply changes. You always have to manually update and integrate your application, which will lead to much less frequent updates with all the (security) implications that brings.
+In contrast, with Rugix Bakery, you get a modern, end-to-end workflow for building Debian images that you can also run in CI.
 
 If you are building on Raspberry Pi, note that Rugix Ctrl supports [Raspberry Pi's `tryboot` mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting), which is the official way to do A/B updates on a Raspberry Pi.
 Mender does not support the `tryboot` mechanism but relies on its U-Boot integration instead.

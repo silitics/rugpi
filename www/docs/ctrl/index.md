@@ -29,10 +29,12 @@ By utilizing Rugix Ctrl, you can rest assured that your devices remain reliable,
 ## High-Level Overview
 
 Rugix Ctrl is designed around _full system updates_.
-That is, instead of updating individual parts of your system, such as individual libraries or just your application, Rugix Ctrl will always update the system as a whole.
+That is, instead of updating individual parts of your system, such as individual libraries or just your application, Rugix Ctrl will typically update the system as a whole.[^incremental-updates]
 Full system updates are advantageous because they allow you to test all components together and ensure a consistent environment across devices.
 If full system updates sound expensive in terms of download size, don't worry, Rugix has support for _delta updates_, adaptively reducing the download size to the parts of the system that actually changed.
 This gives you the advantages of full system updates at almost no extra cost.
+
+[^incremental-updates]: Rugix Ctrl also supports incremental updates.
 
 Rugix Ctrl is an update installer and does not include any remote delivery mechanism for updates.
 That is, it implements a mechanism for installing updates without prescribing the way in which updates find their way onto the device.

@@ -25,8 +25,8 @@ Rugix Ctrl provides a robust state management mechanism, simplifying state manag
 
 Rugix Ctrl's state management mechanism has been inspired by Docker.
 The basic idea is to construct a virtual writable root filesystem by layering a writeable overlay on top of a read-only system partition.
-Instead of modifying the system partition, any writes will go to the overlay stored on a data partition.
-In addition, certain files or directories can be explicitly bind mounted from the data partition, thereby ensuring that their contents persists through updates.
+Instead of modifying the system partition, any writes will go to the overlay stored on the data partition.
+To persist state, certain files or directories can be explicitly bind mounted from the data partition, thereby ensuring that their contents persists through updates.
 The overlay itself is typically ephemeral and will be discarded whenever the system boots.
 This ensures that no accidental state survives a reboot.
 The following diagram visualizes the idea:

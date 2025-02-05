@@ -22,7 +22,7 @@ In addition, it has the following advantages:
 - OTA updates can almost completely run in the background, without adversely affecting any users of a device.
 The only service interruption is caused, when the device reboots into the new version.
 Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
-- As the previous version is kept, a rollback to the old version is possible if there are any problems with the new version.[^rollback]
+- As the previous version is kept, a rollback to the old version is always possible if there are any problems with the new version.[^rollback]
 
 [^rollback]: This requires support by your application.
 
@@ -34,9 +34,9 @@ To configure Rugix Ctrl for such custom use cases, please have a look at the [Sy
 Rugix Ctrl offers ready-made integrations with popular bootloaders.
 Currently, it provides integrations for:
 
-- [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting)
 - [U-Boot](https://docs.u-boot.org/en/latest/) (popular on single board computers, GPL-2.0)
 - [Grub](https://www.gnu.org/software/grub/) (well-established standard option, GPL-3.0)
+- [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting)
 
 :::tip
 When building a system with Rugix Bakery for a generic or specific target, you will get a system with a bootloader integration for A/B OTA updates out-of-the-box. In that case, no further configuration is necessary and you do not have to worry about how the bootloader integration works.
@@ -61,13 +61,13 @@ To query the state of the system, e.g., to find out which partitions are in use,
 Note that this command will produce JSON output when piped into another program (or invoked with `--json`).
 **The human readable output is not considered stable and you should not rely on it when integrating with Rugix Ctrl.**
 You can use tools like [`jq`](https://jqlang.org/) to process the JSON output produced by Rugix Ctrl.
-As a reference, here is the full schema of the `rugix-ctrl system info` output:
+As a reference, here is the full schema of the output of `rugix-ctrl system info`:
 
 <JSONSchemaViewer schema={OutputSchema} viewerOptions={{
     DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
 }}/>
 
-You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-state.schema.json).
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-output-info.schema.json).
 
 
 ## Installing an Update
@@ -99,13 +99,13 @@ rugix-ctrl update install <url to the bundle>
 
 :::info
 All three mechanisms are useful for different use cases:
-An update might be installed from an USB stick (local file), uploaded via a web UI (streaming via stdin), or downloaded from an update server (HTTP).
+An update might be installed from a thumb drive (local file), uploaded via a web UI (streaming via stdin), or downloaded from an update server (HTTP).
 By supporting all three methods natively, Rugix gives you the flexibility to install updates from anywhere in the most efficient way possible.
 :::
 
-Unless the bundle is provided on an external storage medium, like a USB stick, we recommend that you stream updates to devices.
-Streaming updates are not only faster, since the update has to be written to storage only once, but also have the advantage that they do not take up precious space on the data partition during the installation.
-If your device is running low on storage space, non-streaming updates may become impossible, leading to failed updates.
+Unless the bundle is provided on an external storage medium, like a thumb drive, we recommend that you stream updates to devices.
+Streaming updates are not only faster, since the updates has to be written to storage only once, but also have the advantage that they do not waste write cycles and do not take up precious space on the data partition during the installation.
+If your device is running low on storage space, non-streaming updates may become impossible, leading to the inability to update without streaming.
 
 Rugix Ctrl does currently not support resuming HTTP updates when the internet connection is unstable and drops intermittently.
 We will add support for that later.
@@ -134,7 +134,7 @@ rugix-ctrl slots create-index system-a casync-64 sha512-256
 
 You can read more about block indices in the [advanced section on Update Bundles](./advanced/update-bundles.mdx).
 The update bundles built with Rugix Bakery use the parameters `casync-64` and `sha512-256` by default.
-If you want to use adaptive delta updates right now, just create the index before installing the update bundle via HTTP.
+If you want to use adaptive delta updates right now, just create the indices before installing the update bundle via HTTP.
 If the currently active system is A, then create an index for `system-a` and `boot-a`.
 If the currently active system is B, then create an index for `system-b` and `boot-b`.
 You can use `rugix-ctrl system info` to query whether the currently booted system is A or B.
@@ -181,13 +181,17 @@ When using the `--reboot no` flag, a reboot to the inactive, _spare_ system[^spa
 rugix-ctrl system reboot --spare
 ```
 
+You can also _defer_ the reboot with `--reboot deferred` (only for A/B setups, requires [State Management](./state-management.mdx)).
+If you use that flag, Rugix Ctrl will set a flag and automatically boot into the new version the next time the system is booted.
+This allows users to shut down the system normally while remembering the update and automatically booting into it the next time the system boots.
+
 ### Cryptographic Bundle Verification
 
 To verify the integrity of an update bundle, use the `--verify-bundle <hash>` option.
 This option takes a hash of the bundle header, which is then used to ensure the integrity of the bundle, preventing any manipulated data from ever been written.
 
 Rugix Ctrl does not yet support embedding signatures into a bundle.
-However, you can still implement signed updates in multiple ways on top of Rugix Ctrl's flexible streaming functionality.
+However, you can still implement signed updates in multiple ways on top of Rugix Ctrl's functionality.
 For instance, you could ship a signed update manifest to your device that contains the URL of the bundle and the hash for verification.
 You could also combine such an manifest with the bundle in a Tar archive which users can upload through your web UI.
 The respective endpoint would then read the manifest out of the Tar archive, verify its signature, and afterwards stream the bundle itself into Rugix Ctrl, providing it with the hash for verification.

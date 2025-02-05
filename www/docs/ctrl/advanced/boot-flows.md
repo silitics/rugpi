@@ -4,9 +4,7 @@ sidebar_position: 3
 
 # Boot Flows
 
-A *boot flow* provides the base mechanism to switch between different boot groups, e.g., to realize an A/B update scheme.[^rauc]
-
-[^rauc]: This following design has been inspired by [RAUC](https://rauc.io/).
+A *boot flow* provides the base mechanism to switch between different boot groups, e.g., to realize an A/B update scheme.
 
 Each boot flow must implement at least three operations:
 
@@ -21,22 +19,20 @@ In addition, a boot flow may support the following operations:
 
 - `pre_install(group)`: Runs before installing an update to the given group.
 - `post_install(group)`: Runs after installing an update to the given group.
-- `remaining_attempts()`: Query the _remaining attempts_ of all boot groups.
-- `get_status()`: Query the _status_ (`good`, `bad`, or `unknown`) of all boot groups.
-- `mark_good(group)`: Mark the given boot group as _good_.
-- `mark_bad(group)`: Mark the given boot group as _bad_.
 
 
 Installing an update to a boot group will trigger the following operations:
 
 1. `pre_install(group)`
-2. `post_install(group)`
-3. `set_try_next(group)`
+2. Installation of the update.
+3. `post_install(group)`
+4. `set_try_next(group)`
+5. Reboot.
 
 Rebooting with `--boot-group` or `--spare` will trigger the following operations:
 
-1. `get_status(group)`
-2. `set_try_next(group)` only if the status is not _bad_.
+1. `set_try_next(group)`
+2. Reboot.
 
 Committing an update will trigger the following operations:
 
@@ -44,18 +40,7 @@ Committing an update will trigger the following operations:
 2. `commit(group)` only if the default and given group differ.
 
 Note that `set_try_next` may or may not change the default boot group.
-In any case, it must guarantee that there is a (transitive) fallback to the current default.
-Boot flows can choose to implement a mechanism whereby _remaining boot attempts_ are tracked per boot group.
-The bootloader may then fallback to a different boot group once this number reaches zero.
-This can be advantageous in the rare event that the default boot group experiences problems and a fallback to a recovery boot group should be triggered by the bootloader.
-If the boot flow tracks attempts, `remaining_attempts()` should return the remaining attempts per boot group.
-Marking a boot group as _good_ via `mark_good(group)` should reset the remaining attempts.
-As a result, `mark_good` together with the counter can be used to implement a dead man's switch:
-When the boot group is not marked good frequently, then the remaining attempts will reach zero eventually and the fallback into the recovery system will be triggered.
-Note that Rugix Ctrl will not mark groups as good by itself.
-Marking groups as good (or bad) is up to the application or boot flow.
-Generally, a _good_ boot group is a boot group that the bootloader might boot and a _bad_ boot group is a boot group that the bootloader should not boot.
-Note that most boot flows discussed in the following do neither implement tracking of remaining attempts nor of boot group status.
+In any case, it must guaranteed that there is a (transitive) fallback to the current default, to make sure that a broken update will not leave the system in an inoperable state.
 
 
 ## Available Boot Flows
@@ -148,7 +133,7 @@ GPT =============================== Image
 
 `type = "custom"`
 
-This boot flow allows you to write your own script for controlling the boot process. An example configuration may look as follows:
+This boot flow allows you to write your own custom logic for controlling the boot process. An example may look as follows:
 
 ```toml title="/etc/rugix/system.toml"
 [boot-flow]
@@ -156,14 +141,32 @@ type = "custom"
 path = "<path to your script>"
 ```
 
-Your script will be called with the name of the operation as the first argument.
-The arguments for the operation are then fed via stdin as JSON to the script and the outputs are required to be written as JSON to stdout.
+Your custom boot flow will be called with the name of the operation as the first argument.
+If an operation takes a boot group as an argument, then the second argument will be the name of the boot group.
+**We may add further, optional arguments in the future, hence, your boot flow should ignore any additional arguments.
+We may also add further, optional operations, hence, your script should not do anything (except printing something on stderr), in case it receives an unknown operation as the first argument.**
+Following these rules minimizes churn on your end.
+The boot flow is expected to produce JSON output on stdout.
+
+For now, all operations except `get_default` should simply return an empty JSON object on stdout and indicate success/failure, as usual, through the return code. The output of `get_default` is expected to have the following form:
+
+```json
+{ "group": "<name of the boot group>" }
+```
+
+:::tip
+Custom boot flows can be used to realize a variety of different, more advanced update setups.
+For instance, with custom boot flows you could implement a dead men's switch where systems have to be actively marked as *good* to prevent the bootloader from eventually falling back to a recovery system.
+This makes the system even more robust in case something unexpected happens and the primary system stops working.
+You can also use custom boot flows to migrate from other OTA solutions like Mender, RAUC, or SWUpdate.
+If you need anything specific, Silitics, [the company behind Rugix](/commercial-support), can help you develop a custom boot flow that suits your needs or migrate your existing devices to Rugix Ctrl.
+:::
+
 
 ### Systemd Boot
 
 :::warning
-**Not implemented yet!**
-This is blocked on directory slots in the system configuration.
+**Support for Systemd Boot is not implemented yet.**
 :::
 
 ```
@@ -175,12 +178,12 @@ GPT =============================== Image
      4: data      EXT4   ....
 ```
 
-Uses the [Boot Loader Interface](https://systemd.io/BOOT_LOADER_INTERFACE/) for A/B updates by writing to the following EFI variables:
+Support for Systemd Boot would use the [Boot Loader Interface](https://systemd.io/BOOT_LOADER_INTERFACE/) for A/B updates by writing to the following EFI variables:
 
 - `LoaderEntryDefault-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f` (default entry)
 - `LoaderEntryOneShot-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f` (oneshot entry)
 
-In contrast to the other boot flows there are no separate boot partitions.
+In contrast to the other boot flows there would be no separate boot partitions.
 
 
 ## Automatic Runtime Detection
@@ -191,9 +194,12 @@ If no boot flow is configured, Rugix Ctrl will try to detect it dynamically at r
 2. If a file `bootpart.default.env` exists, then the boot flow is `u-boot`.
 3. If a file `rugpi/grub.cfg` and a directory `EFI` exist, then the boot flow is `grub-efi`.
 
+In all other cases, runtime detection will fail.
+
+
 ## On Atomicity of Commits
 
-Note that commits are the only critical operation because they modify the default partition set.
+Note that commits are the only critical operation because they modify the default boot group.
 This is usually done by temporarily remounting the config partition such that it is writeable and then replacing some files.
 As the filesystem is FAT32, the atomicity of this operation cannot be guaranteed.
 Still, Rugpi Ctrl does its best by first creating a new file and then replacing the old one with the new one by renaming it, and, the Linux kernel does guarantee atomicity for renaming.

@@ -35,7 +35,9 @@ The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` c
 While one may choose to already prepare the provisioning image and its partition table for the exact storage capacity of a device, this may not always be feasible. Maybe you have different variants of a device with different storage capacities and want to use the same image for all of them, or you may want your users to be able to flash an image onto their own storage media. In these cases, the partition table of the image will not match the storage capacity and typically does not even contain all the required partitions, such as redundant system partitions and the data partition. In that case, you can configure Rugix Ctrl to adapt the partition table and create the necessary partitions and filesystems. The desired _system layout_ is defined in the `layout` configuration section.
 
 :::info
-The layout always affects the disk of the booted root filesystem. Unless configured otherwise, Rugix Ctrl will apply a default layout as part of the bootstrapping process. If that works for you, there is no need to read any further.
+The layout always affects the disk of the booted root filesystem. Unless configured otherwise, Rugix Ctrl will apply a default layout as part of the bootstrapping process.
+If that works for you, there is no need to read any further.
+If you want to increase the size of the system partition of the default layout, checkout the section [Default Layout](#default-layout) below.
 :::
 
 ### Custom Layouts
@@ -75,7 +77,11 @@ partitions = [
 ]
 ```
 
-Both layouts prepare the system for an A/B update setup with two boot and two system partitions. The last partition is not required to have a size, in which case, it will take up the entire remaining space. So, in case of the examples, the data partition will take up all the remaining space. In case of an MBR partition table, the extended partition does also not require a size and will extend to the end of the disk. The `filesystem` option is optional and will cause Rugix Ctrl to create a filesystem. The `type` option is also optional defaulting to `83` and `0FC63DAF-8483-4772-8E79-3D69D8477DE4` for MBR and GPT, respectively.
+Both layouts prepare the system for an A/B update setup with two boot and two system partitions. The last partition is not required to have a size, in which case, it will take up the entire remaining space. So, in case of the examples, the data partition will take up all the remaining space. In case of an MBR partition table, the extended partition also does not require a size and will extend to the end of the disk. The `filesystem` option is optional and will cause Rugix Ctrl to create a filesystem. The `type` option is also optional defaulting to `83` and `0FC63DAF-8483-4772-8E79-3D69D8477DE4` for MBR and GPT, respectively.
+
+:::note
+Rugix Ctrl will only create new partitions that do not already exist and grow partitions that do already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
+:::
 
 ### Default Layout
 
@@ -95,10 +101,6 @@ If you do not want Rugix Ctrl to create any partitions, simply set the layout's 
 [layout]
 type = "none"
 ```
-
-:::note
-Rugix Ctrl will only create new partitions that do not already exist and grow partitions that do already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
-:::
 
 
 ## Configuration Reference
