@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot"
+BOOT_DIR="${RUGIX_LAYER_DIR}/roots/boot"
 
 # Install firmware files for Raspberry Pi 4.
 wget -O "${BOOT_DIR}/start4.elf" \

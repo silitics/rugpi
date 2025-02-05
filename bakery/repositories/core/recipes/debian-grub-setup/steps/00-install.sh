@@ -4,7 +4,7 @@ set -euo pipefail
 
 apt-get update -y
 
-BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot"
+BOOT_DIR="${RUGIX_LAYER_DIR}/roots/boot"
 
 mkdir -p "${BOOT_DIR}"
 

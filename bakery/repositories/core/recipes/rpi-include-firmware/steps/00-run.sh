@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-CONFIG_DIR="${RUGIX_BUNDLE_DIR}/roots/config"
+CONFIG_DIR="${RUGIX_LAYER_DIR}/roots/config"
 
 RPI_EEPROM_DIGEST="/usr/share/rugix/rpi-eeprom/rpi-eeprom-digest"
 

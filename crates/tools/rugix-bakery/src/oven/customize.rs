@@ -399,7 +399,6 @@ fn apply_recipes(
                     let script = format!("/run/rugix/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGIX_BUNDLE_DIR = "/run/rugix/bakery/bundle/",
                         RUGIX_LAYER_DIR = "/run/rugix/bakery/bundle/",
                         RUGIX_ROOT_DIR = "/",
                         RUGIX_PROJECT_DIR = "/run/rugix/bakery/project/",
@@ -424,7 +423,6 @@ fn apply_recipes(
                     let script = recipe.path.join("steps").join(&step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGIX_BUNDLE_DIR = &layer_ctx.build_dir,
                         RUGIX_LAYER_DIR = &layer_ctx.build_dir,
                         RUGIX_ROOT_DIR = root_dir_path,
                         RUGIX_PROJECT_DIR = &project_dir,

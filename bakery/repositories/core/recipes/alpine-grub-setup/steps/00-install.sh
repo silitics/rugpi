@@ -4,7 +4,7 @@ set -eu
 
 apk update
 
-BOOT_DIR="${RUGIX_BUNDLE_DIR}/roots/boot"
+BOOT_DIR="${RUGIX_LAYER_DIR}/roots/boot"
 
 mkdir -p "${BOOT_DIR}"
 
