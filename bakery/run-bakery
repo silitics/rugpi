@@ -43,5 +43,6 @@ exec $DOCKER run --rm --privileged \
     -v /dev:/dev \
     -e "RUGIX_HOST_PROJECT_DIR=$(pwd)" \
     -e "RUGIX_BAKERY_IMAGE=${RUGIX_BAKERY_IMAGE}" \
+    -e "RUGIX_DEV=${RUGIX_DEV}" \
     "${RUGIX_BAKERY_IMAGE}" \
     "$@"
