@@ -166,12 +166,6 @@
             "$ref": "#/$defs/rugix_bakery.repositories.SourceConfig"
           }
         },
-        "images": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/rugix_bakery.images.ImageConfig"
-          }
-        },
         "systems": {
           "type": "object",
           "additionalProperties": {

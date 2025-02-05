@@ -1,7 +1,6 @@
 //! Project configuration.
 
 import foreign::NumBytes
-import images::ImageConfig
 import repositories::SourceConfig
 import systems::SystemConfig
 
@@ -9,8 +8,6 @@ import systems::SystemConfig
 record ProjectConfig {
     /// Repositories imported into the project.
     repositories?: [string: SourceConfig],
-    /// Images declarations.
-    images?: [string: ImageConfig],
     /// System declarations.
     systems?: [string: SystemConfig],
 }
