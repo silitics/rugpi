@@ -138,7 +138,7 @@ This boot flow allows you to write your own custom logic for controlling the boo
 ```toml title="/etc/rugix/system.toml"
 [boot-flow]
 type = "custom"
-path = "<path to your script>"
+controller = "<path to your script>"
 ```
 
 Your custom boot flow will be called with the name of the operation as the first argument.

@@ -91,7 +91,7 @@ pub fn from_config(
                 inner: rugix_boot_flow(boot_entries)?,
             }),
             BootFlowConfig::Custom(custom_boot_flow_config) => Box::new(CustomBootFlow {
-                path: custom_boot_flow_config.path.clone().into(),
+                controller: custom_boot_flow_config.controller.clone().into(),
             }),
         });
     }

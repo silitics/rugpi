@@ -80,5 +80,5 @@ variant BootFlowConfig {
 /// Custom boot flow configuration.
 record CustomBootFlowConfig {
     /// Path to the script implementing the boot flow.
-    path: string,
+    controller: string,
 }

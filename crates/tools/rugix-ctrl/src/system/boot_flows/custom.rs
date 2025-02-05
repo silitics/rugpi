@@ -10,7 +10,7 @@ use super::BootFlow;
 #[derive(Debug)]
 pub struct CustomBootFlow {
     /// Path to the boot flow executable.
-    pub(super) path: PathBuf,
+    pub(super) controller: PathBuf,
 }
 
 impl BootFlow for CustomBootFlow {
@@ -24,7 +24,7 @@ impl BootFlow for CustomBootFlow {
         group: crate::system::boot_groups::BootGroupIdx,
     ) -> super::BootFlowResult<()> {
         let name = system.boot_entries()[group].name();
-        let output = read_str!([&self.path, "set_try_next", name])
+        let output = read_str!([&self.controller, "set_try_next", name])
             .whatever("error running `set_try_next` on custom boot flow")?;
         serde_json::from_str::<OutputNone>(&output)
             .whatever("invalid output produced by custom boot flow")?;
@@ -35,7 +35,7 @@ impl BootFlow for CustomBootFlow {
         &self,
         system: &crate::system::System,
     ) -> super::BootFlowResult<crate::system::boot_groups::BootGroupIdx> {
-        let output = read_str!([&self.path, "get_default"])
+        let output = read_str!([&self.controller, "get_default"])
             .whatever("error running `get_default` on custom boot flow")?;
         let output = serde_json::from_str::<OutputGroup>(&output)
             .whatever("invalid output produced by custom boot flow")?;
@@ -51,7 +51,7 @@ impl BootFlow for CustomBootFlow {
 
     fn commit(&self, system: &crate::system::System) -> super::BootFlowResult<()> {
         let name = system.boot_entries()[system.active_boot_entry().unwrap()].name();
-        let output = read_str!([&self.path, "commit", name])
+        let output = read_str!([&self.controller, "commit", name])
             .whatever("error running `commit` on custom boot flow")?;
         serde_json::from_str::<OutputNone>(&output)
             .whatever("invalid output produced by custom boot flow")?;
@@ -64,7 +64,7 @@ impl BootFlow for CustomBootFlow {
         group: crate::system::boot_groups::BootGroupIdx,
     ) -> super::BootFlowResult<()> {
         let name = system.boot_entries()[group].name();
-        let output = read_str!([&self.path, "pre_install", name])
+        let output = read_str!([&self.controller, "pre_install", name])
             .whatever("error running `pre_install` on custom boot flow")?;
         serde_json::from_str::<OutputNone>(&output)
             .whatever("invalid output produced by custom boot flow")?;
@@ -77,7 +77,7 @@ impl BootFlow for CustomBootFlow {
         group: crate::system::boot_groups::BootGroupIdx,
     ) -> super::BootFlowResult<()> {
         let name = system.boot_entries()[group].name();
-        let output = read_str!([&self.path, "post_install", name])
+        let output = read_str!([&self.controller, "post_install", name])
             .whatever("error running `post_install` on custom boot flow")?;
         serde_json::from_str::<OutputNone>(&output)
             .whatever("invalid output produced by custom boot flow")?;
