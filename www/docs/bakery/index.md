@@ -107,7 +107,7 @@ These are required to run tools inside an environment that looks like the final 
 In the future, we plan to leverage Linux user namespaces to isolate the build and the system from the host without requiring elevated privileges.[^privileges]
 
 [^privileges]: Existing tools use different approaches to set up an environment that looks like the final system without requiring privileges.
-For instance, Yocto uses a tool called [Pseudo](https://git.yoctoproject.org/pseudo/about/) (an alternative to the better-known tool [Fakeroot](https://manpages.debian.org/bookworm/pseudo/fakeroot.1.en.html)), to intercepts calls to system APIs via `LD_PRELOAD` and thereby fake a root environment.
+For instance, Yocto uses a tool called [Pseudo](https://git.yoctoproject.org/pseudo/about/) (an alternative to the better-known tool [Fakeroot](https://manpages.debian.org/bookworm/pseudo/fakeroot.1.en.html)), to intercept calls to system APIs via `LD_PRELOAD` and thereby fake a root environment.
 This approach has limitations, for instance, it does not work with statically-linked binaries and also does not allow starting services binding sockets to ports below 1024.
 Rugix Bakery strives to provide a container-like environment by using Linux namespaces and process isolation which does not suffer from the same limitations as existing approaches and thereby mimics a real system more closely.
 
