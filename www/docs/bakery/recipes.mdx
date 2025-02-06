@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 import JSONSchemaViewer from "@theme/JSONSchemaViewer";
@@ -123,10 +123,72 @@ Rugix Bakery will expose the following environment variables when running steps:
 - `RUGIX_LAYER_DIR`: Directory of the layer being built.
 - `RUGIX_ARTIFACTS_DIR`: Artifacts directory (part of the layer).
 - `RUGIX_CACHE_DIR`: Directory for global caching.
+- `RUGIX_CONTEXT_DIR`: Rugix Bakery build context directory (typically the project directory).
 - `RECIPE_DIR`: Directory of the recipe which is applied.
 - `RECIPE_STEP_PATH`: Path of the step being executed.
 
 In addition, the recipe parameters are exposed as explained above.
+
+### Artifacts
+
+You can place any build artifacts in the artifacts directory pointed to by `RUGIX_ARTIFACTS_DIR`.
+Those will later end up in the build directory of the respective system.
+For instance, to generate a simple SBOM with `dpkg` you may use the following step:
+
+```shell title="recipes/simple-sbom/steps/00-install.sh"
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SBOM_PATH="${RUGIX_ARTIFACTS_DIR}/dpkg-sbom.txt"
+SBOM_DIR=$(dirname "${SBOM_PATH}")
+
+if [ ! -d "${SBOM_DIR}" ]; then
+    mkdir -p "${SBOM_DIR}"
+fi
+
+dpkg --list >"${SBOM_PATH}"
+```
+
+This is an very flexible mechanism to generate all kinds of build artifacts and complementary documentation.
+
+
+## Custom Build Environments
+
+You may find that Rugix Bakery's build environment (where `run` steps run) lacks certain tools that you would like to use to build your system.
+If that is the case, you can create a custom Docker image based on Rugix Bakery's image to include these tools.
+
+For instance, to add Node.js to the build environment you can use the following `Dockerfile`:
+
+```docker title="Dockerfile"
+ARG RUGIX_BAKERY_IMAGE=ghcr.io/silitics/rugix-bakery:v0.8
+
+FROM ${RUGIX_BAKERY_IMAGE}
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+RUN apt-get install -y nodejs
+```
+
+You can then use your custom Docker image with `./run-bakery` by setting the `RUGIX_BAKERY_IMAGE` environment variable.
+
+This allows you to build your entire application from source to image in Rugix Bakery.
+If the Rugix Bakery project lives in a subdirectory in the repository of your application (which typically is the case with monorepos), then you can inject the root directory of your repository by setting the `RUGIX_CONTEXT_DIR` environment variable.
+
+Here is an example using both `RUGIX_CONTEXT_DIR` and `RUGIX_BAKERY_IMAGE`:
+
+```shell
+RUGIX_CONTEXT_DIR=".." RUGIX_BAKERY_IMAGE="custom-image" ./run-bakery
+```
+
+As a result, the root directory of your repository will be available as the context directory (see environment variables above).
+For caching, you can rely on Rugix Bakery's [layer cache](./advanced/caching.md), rebuilding a layer only if certain files changed (which can be in the context directory).
+In addition, you can also use the global Rugix Bakery cache exposed via the `RUGIX_CACHE_DIR` environment variable.
+
+:::note
+We would like to make it more convenient in the future to include custom build tools.
+For now, however, we recommend you simply build your own version of the Rugix Bakery Docker image, which should give you all the flexibility.
+**To avoid fragmentation of the ecosystem, you should not be requiring a custom image when providing reusable recipes and layers via a repository.**
+:::
 
 
 ## Configuration Reference

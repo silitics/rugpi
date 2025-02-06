@@ -130,7 +130,7 @@ During the initial boot process, Rugix Ctrl, running on the system, will expand 
 Note that all images are based on the shared `customized` layer.
 Layers can build on top of each other and the device-specific layers use the `customized` layer as a basis.
 This makes it straightforward to build images for multiple devices.
-A typical use case would be to define a base layer with your application and then declare multiple systems for different devices and integration testing.
+A typical use case would be to define a base layer with your application and then declare multiple systems for different devices and system testing.
 
 
 ## Running a VM

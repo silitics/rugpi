@@ -16,7 +16,7 @@ A Rugix Bakery _project_ is a directory containing the following files and direc
 - `rugix-bakery.toml`: Project configuration file.
 - `layers`: Directory containing project-specific layer configurations (optional).
 - `recipes`: Directory containing project-specific recipes (optional).
-- `tests`: Directory containing integration tests for system images (optional).
+- `tests`: Directory containing system tests (optional).
 
 We also refer to the directory containing all these files and directories as the _project directory_.
 
@@ -29,7 +29,9 @@ You can initialize a project from a variety of templates with `./run-bakery init
 
 ## Project Configuration
 
-Each project is configured in a `rugix-bakery.toml` configuration file. Such a file typically has two sections, `repositories` and `images`. We explain those sections in further detail in dedicated sections of this documentation.
+Each project is configured in a `rugix-bakery.toml` configuration file.
+Such a file typically has two sections, `repositories` and `systems`.
+We explain those sections in further detail in dedicated sections of this documentation.
 
 To give you an idea how a configuration file may look like, here is an example:
 
@@ -39,7 +41,7 @@ To give you an idea how a configuration file may look like, here is an example:
 [repositories]
 rugix-extra = { git = "https://github.com/silitics/rugix-extra.git", branch = "v0.8" }
 
-[images.customized-arm64]
+[systems.customized-arm64]
 layer = "customized"
 architecture = "arm64"
 ```

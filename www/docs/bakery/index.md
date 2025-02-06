@@ -8,7 +8,7 @@ While inherently flexible and not tied to any specific distribution, Rugix Baker
 In that case, the entire Yocto build for a given device will typically take place in a device-specific Rugix Bakery root layer.
 Currently, **this integration is primarily intended as a proof of concept** for integrating a more traditional approach into Rugix Bakery.
 If everything happens inside Yocto and you do not intend to apply any customizations or derive different variants from the same Yocto build, Rugix Bakery does not add much over a pure Yocto setup.
-At the bare minimum, Rugix Bakery gives you an isolated build environment in terms of the Rugix Bakery Docker image and you may be able to use the other features of Rugix Bakery, e.g., its [integration testing framework](integration-testing.md).
+At the bare minimum, Rugix Bakery gives you an isolated build environment in terms of the Rugix Bakery Docker image and you may be able to use the other features of Rugix Bakery, e.g., its [system testing framework](integration-testing.md).
 
 Typically, Rugix Bakery is used to build _full system images_ and Rugix Ctrl _update bundles_ for OTA system updates.
 System images generally contain a complete Linux root filesystem, a Linux kernel, and other, additional files required for booting a system.
@@ -111,7 +111,8 @@ For instance, Yocto uses a tool called [Pseudo](https://git.yoctoproject.org/pse
 This approach has limitations, for instance, it does not work with statically-linked binaries and also does not allow starting services binding sockets to ports below 1024.
 Rugix Bakery strives to provide a container-like environment by using Linux namespaces and process isolation which does not suffer from the same limitations as existing approaches and thereby mimics a real system more closely.
 
-## System Architectures
+
+## CPU Architectures
 
 Rugix Bakery supports the following CPU architectures:[^architecture-plans]
 
@@ -128,6 +129,15 @@ Feel free to [open an issue on GitHub](https://github.com/silitics/rugpi/issues/
 
 Note that different distributions have different and sometimes inconsistent names for different CPU families.
 For instance, what Debian calls `armhf` is called `armv7` for Alpine Linux and is not the same as `armhf` for Raspberry Pi OS.
+
+If you want to build distributions for foreign architectures, you need to configure [`binfmt_misc`](https://en.wikipedia.org/wiki/Binfmt_misc) for emulation.
+The easiest way to do so, and as we are already using Docker anyway, is by running the following command:
+
+```shell
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
+
+This will allow you to build Linux distributions for a huge variety of different architectures.
 
 
 ## Comparison to Other Solutions
@@ -216,6 +226,6 @@ We also believe that the experience we aim for cannot be build within the confin
 This does not mean that we don't believe in reusing existing technologies, but if we can make the ride smoother by building a specific type of wheel designed for the bumpy road ahead, we will do it.
 That being said, we think that Rugix Bakery leads to a much smoother development experience, especially when paired with Rugix Ctrl, than using Edi – but, that may very well be down to personal preference and familiarity with Ansible.
 If you prefer hard technical facts instead, here you are:
-While Rugix Bakery can spawn your system in a VM with a single command and even run automated integration tests on it, Edi can build containers, a feature which we currently lack.
+While Rugix Bakery can spawn your system in a VM with a single command and even run automated system tests on it, Edi can build containers, a feature which we currently lack.
 Edi's reference support for over-the-air updates reuses the Mender client [which lacks certain features, like adaptive delta updates, that you may want and get with Rugix Ctrl](../ctrl/index.md#comparison-to-other-solutions) and its integration in Rugix Bakery.
 Edi is also limited to Debian, while Rugix Bakery is independent of any specific distribution and also supports Alpine Linux and Raspberry Pi OS.
