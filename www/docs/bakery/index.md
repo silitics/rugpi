@@ -209,9 +209,9 @@ Rugix Bakery also builds Rugix Ctrl _update bundles_ for shipping system updates
 As such, Rugix Bakery provides much more than a simple mechanism to build single system images, it is a comprehensive development tool for embedded projects.
 
 Among the existing solutions, Edi (Embedded Development Infrastructure) clearly comes closest to what we aim for with Rugix Bakery.
-However, while sharing the aim to simplify the development of embedded Linux systems, Edi's philosophy is very different from ours.
+However, while sharing the aim to simplify the development of embedded Linux systems, Edi's approach is very different from ours.
 Edi bases its build workflow on [Ansible](https://ansible.com), a general-purpose automation tool, and uses the [Mender client](https://mender.io) for over-the-air updates, with the explicit aim to avoid “reinventing the wheel” as much as possible.
-Instead of plugging together existing general-purpose tools, **we believe that tailor-made tools specifically designed for embedded systems could significantly reduce unnecessary friction and complexity in the development process**.
+Instead of plugging together existing general-purpose tools, **we believe that a tailor-made development tool specifically designed for embedded systems could significantly reduce unnecessary friction and complexity in the development process**.
 We also believe that the experience we aim for cannot be build within the confines of existing general-purpose tooling like Ansible.
 This does not mean that we don't believe in reusing existing technologies, but if we can make the ride smoother by building a specific type of wheel designed for the bumpy road ahead, we will do it.
 That being said, we think that Rugix Bakery leads to a much smoother development experience, especially when paired with Rugix Ctrl, than using Edi – but, that may very well be down to personal preference and familiarity with Ansible.
