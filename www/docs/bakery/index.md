@@ -215,5 +215,7 @@ Instead of plugging together existing general-purpose tools, **we believe that t
 We also believe that the experience we aim for cannot be build within the confines of existing general-purpose tooling.
 This does not mean that we don't believe in reusing existing technologies, but if we can make the ride smoother by building a specific type of wheel designed for the bumpy road ahead, we will do it.
 That being said, we think that Rugix Bakery leads to a much smoother development experience, especially when paired with Rugix Ctrl, than using Edi – but, that may very well be down to personal preference and familiarity with Ansible.
-If you prefer hard technical facts instead, here you are: Edi's reference support for over-the-air updates reuses the Mender Client [which lacks certain features that you may want and get with Rugix Ctrl](../ctrl/index.md#comparison-to-other-solutions).
-
+If you prefer hard technical facts instead, here you are:
+While Rugix Bakery can spawn your system in a VM with a single command and even run automated integration tests on it, Edi can build containers, a feature which we currently lack.
+Edi's reference support for over-the-air updates reuses the Mender client [which lacks certain features, like adaptive delta updates, that you may want and get with Rugix Ctrl](../ctrl/index.md#comparison-to-other-solutions) and its integration in Rugix Bakery.
+Edi is also limited to Debian, while Rugix Bakery is more flexible, also supporting Alpine Linux and Raspberry Pi OS.
