@@ -127,7 +127,7 @@ Feel free to [open an issue on GitHub](https://github.com/silitics/rugpi/issues/
 | `arm` | 32-bit ARMv6 | – | `armel` | – |
 
 Note that different distributions have different and sometimes inconsistent names for different CPU families.
-For instance, what Debian calls `armhf` is called `armv7` for Alpine Linux and not the same as `armhf` for Raspberry Pi OS.
+For instance, what Debian calls `armhf` is called `armv7` for Alpine Linux and is not the same as `armhf` for Raspberry Pi OS.
 
 
 ## Comparison to Other Solutions
