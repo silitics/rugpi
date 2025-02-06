@@ -218,4 +218,4 @@ That being said, we think that Rugix Bakery leads to a much smoother development
 If you prefer hard technical facts instead, here you are:
 While Rugix Bakery can spawn your system in a VM with a single command and even run automated integration tests on it, Edi can build containers, a feature which we currently lack.
 Edi's reference support for over-the-air updates reuses the Mender client [which lacks certain features, like adaptive delta updates, that you may want and get with Rugix Ctrl](../ctrl/index.md#comparison-to-other-solutions) and its integration in Rugix Bakery.
-Edi is also limited to Debian, while Rugix Bakery is more flexible, also supporting Alpine Linux and Raspberry Pi OS.
+Edi is also limited to Debian, while Rugix Bakery is independent of any specific distribution and also supports Alpine Linux and Raspberry Pi OS.
