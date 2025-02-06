@@ -25,7 +25,7 @@ pub enum Command {
     /// Bake an image or a layer.
     #[clap(subcommand)]
     Bake(BakeCommand),
-    /// Run integration tests.
+    /// Run system tests.
     Test(TestCommand),
     /// Run an image in a VM.
     Run(RunCommand),
