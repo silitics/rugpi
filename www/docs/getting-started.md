@@ -6,6 +6,7 @@ sidebar_position: 1
 
 Rugix is a suite of open-source tools designed to build **reliable** embedded Linux devices with **efficient and secure** over-the-air update capabilities.
 For this guide, you will be using two of these tools: _Rugix Bakery_, a flexible and user-friendly build system for bespoke Linux distributions, and _Rugix Ctrl_, a powerful tool for over-the-air system updates and system state management.
+While designed to work seamlessly together, you can also **use the Rugix Ctrl without Rugix Bakery** and vice versa.
 
 With Rugix, our mission is clear: **Simplify the development of embedded Linux devices.**
 This quickstart guide will take you through the steps required to build a production-ready, customized variant of [Debian](https://www.debian.org) with over-the-air update support, which you can readily run on any EFI-compatible system or deploy on a Raspberry Pi.
