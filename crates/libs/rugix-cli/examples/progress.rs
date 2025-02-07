@@ -29,7 +29,7 @@ pub fn cli() {
         |_| \_\\__,_|\__, | .__/|_|     \_/ |_|     by Silitics
                     |___/|_|
 
-        For more information, visit https://oss.silitics.com/rugpi/.
+        For more information, visit https://oss.silitics.com/rugix/.
         "#,
     );
 

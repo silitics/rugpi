@@ -7,7 +7,7 @@ if [ ! -x /usr/bin/rugix-ctrl ]; then
     exit 1;
 fi
 
-mkdir -p /etc/rugpi || true
+mkdir -p /etc/rugix || true
 
 if [ "${RECIPE_PARAM_RUGIX_ADMIN}" = "true" ]; then
     install -D -m 644 "${RECIPE_DIR}/files/rugix-admin.service" -t /usr/lib/systemd/system/
@@ -24,7 +24,7 @@ prog_exists() {
 if prog_exists apt; then
     apt-get install -y fdisk
 elif prog_exists apk; then
-    mkdir -p /etc/rugpi || true
+    mkdir -p /etc/rugix || true
 
     apk add sfdisk e2fsprogs lsblk findmnt e2fsprogs-extra dosfstools
 

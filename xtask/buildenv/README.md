@@ -1,1 +1,1 @@
-# Reproducible Build Environment for Rugpi
+# Reproducible Build Environment for Rugix

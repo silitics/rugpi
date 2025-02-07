@@ -6,5 +6,5 @@ DOCKER=${DOCKER:-docker}
 
 $DOCKER run --rm \
     -v "$(pwd)":/build/outside \
-    rugpi_buildenv \
+    rugix_buildenv \
     /build/outside/mk/mk-grub.sh
