@@ -73,11 +73,6 @@ const config: Config = {
       },
       items: [
         {
-          to: "/devices",
-          label: "Supported Devices",
-          position: "left",
-        },
-        {
           href: "/rugix/docs/the-rugix-project",
           label: "Why Rugix?",
           position: "left",
