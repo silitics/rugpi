@@ -32,8 +32,8 @@ const config: Config = {
       {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          // lastVersion: "current",
-          lastVersion: "0.7.5",
+          lastVersion: "current",
+          // lastVersion: "0.7.5",
           editUrl: "https://github.com/silitics/rugix/tree/main/www/",
         },
         blog: {
@@ -78,7 +78,8 @@ const config: Config = {
           position: "left",
         },
         {
-          to: "/why",
+          type: "doc",
+          docId: "the-rugix-project",
           label: "Why Rugix?",
           position: "left",
         },
