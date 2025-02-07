@@ -60,7 +60,7 @@ With Rugix Bakery, you get a **comprehensive tool to build, test, and run your s
 ## Why Rugix?
 
 Rugix has been started out of frustration with the current state of the embedded Linux ecosystem.
-While numerous tools exist for building images, updating systems, and managing state, integrating them into a robust, coherent solution remains a significant challenge.
+While there are tools for building images, updating systems, and managing state, integrating them into a robust, coherent solution remains a significant challenge.
 With Rugix, we aim to **simplify the development of embedded Linux devices by providing a unified, modern suite of tools that seamlessly integrate** to provide an efficient workflow for building, updating, and managing embedded Linux systems at scale.
 We believe that **building embedded Linux devices should not be as complicated as it often is today**.
 
