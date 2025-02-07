@@ -134,7 +134,7 @@ export default function Home(): JSX.Element {
               ✅ <strong>Streaming updates</strong> as well as <strong>adaptive delta updates</strong> out of the box.
             </li>
             <li>
-              ✅ Builtin <strong>cryptographic verification</strong> <em>before</em> installing anything anywhere.
+              ✅ Builtin <strong>cryptographic integrity checks</strong> <em>before</em> installing anything anywhere.
             </li>
             <li>
               ✅ Supports <strong>any update scenario</strong>, including <strong>non-A/B updates and incremental updates</strong>.
