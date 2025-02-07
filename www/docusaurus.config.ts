@@ -73,11 +73,6 @@ const config: Config = {
       },
       items: [
         {
-          href: "/rugix/docs/the-rugix-project",
-          label: "Why Rugix?",
-          position: "left",
-        },
-        {
           type: "doc",
           docId: "getting-started",
           position: "left",
