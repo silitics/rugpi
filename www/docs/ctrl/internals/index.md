@@ -1,4 +1,4 @@
-# Rugpi's Internals
+# Rugix Ctrl's Internals
 
 :::warning
 This part of the documentation covers internal implementation details.
