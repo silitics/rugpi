@@ -4,7 +4,7 @@ sidebar_position: 200
 
 # Raspberry Pi
 
-In principle, Rugpi supports all Raspberry Pi models.
+In principle, Rugix Bakery supports all Raspberry Pi models.
 
 Here is an overview over all the supported Raspberry Pi models:
 
@@ -20,12 +20,13 @@ Here is an overview over all the supported Raspberry Pi models:
 
 Raspberry Pi OS releases based on Debian Bullseye and Bookworm are supported.
 
-For 32-bit models and to build 32-bit images for 64-bit boards, you need to set the `architecture` for the respective image to:
+For 32-bit models and to build 32-bit images for 64-bit boards, you need to set the `architecture` for the respective system to:
 ```toml
 architecture = "armhf"
 ```
 
 To build 32-bit images, you also need to enable emulation of `armhf` in Docker:
+
 ```shell
 docker run --privileged --rm tonistiigi/binfmt --install armhf
 ```
@@ -40,7 +41,7 @@ Updating the bootloader is not necessary for Raspberry Pi 5, as it already comes
 ### Raspberry Pi 4 and Compute Module 4
 
 The bootloader version shipped with Raspberry Pi 4 and Compute Module 4 does not support the `tryboot` feature out-of-the-box.
-To use Rugpi with these boards, the bootloader stored in the EEPROM must be updated to at least version `2023-05-11`.
+To use Rugix Bakery with these boards, the bootloader stored in the EEPROM must be updated to at least version `2023-05-11`.
 For Compute Module 4, this requires `usbboot` (see [CM4's documentation for details](https://www.raspberrypi.com/documentation/computers/compute-module.html#flashing-the-bootloader-eeprom-compute-module-4) or check out [this blog post by Jeff Geerling](https://www.jeffgeerling.com/blog/2022/how-update-raspberry-pi-compute-module-4-bootloader-eeprom)).
 For Raspberry Pi 4, you can use the `core/rpi-include-firmware` recipe to include the update in the image.
 The bootloader will then be automatically updated when first booting the image.

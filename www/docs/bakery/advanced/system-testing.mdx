@@ -1,0 +1,119 @@
+---
+sidebar_position: 2
+---
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import TestSchema from "@site/schemas/rugix-bakery-test.schema.json";
+
+
+# System Testing
+
+Embedded Linux systems are inherently complex, with numerous interconnected components working together.
+To ensure that all parts of a system work together seamlessly, Rugix Bakery includes a system testing framework designed to validate system images as a complete unit.
+This framework boots a system image in a virtual machine and then executes a _test workflow_ on the system.
+By catching integration errors early, it reduces the need for costly and time-consuming testing on physical hardware.
+
+**Limitations:** Currently, the integration testing framework is limited to the `generic-grub-efi` target.
+
+:::warning
+This feature is experimental.
+**We may introduce breaking changes to the configuration schema in minor versions.**
+:::
+
+
+## Test Workflows
+
+Test workflows are placed in the `tests` directory of your Rugix Bakery project. Each workflow consists of a TOML file describing the tests to be conducted. To this end, the workflow file starts with a declaration of _test systems_:
+
+```toml
+[[systems]]
+system = "<system-name>"
+ssh = { private-key = "<path-to-private-key>" }
+```
+
+Each test system declaration must specify a `system`, which is the system to test.
+In addition, a `disk-size` can be specified determining the size of the disk.
+By default, Rugix Bakery will create a 40 GiB disk.
+Note that Rugix Bakery allocates an image per system that grows on-demand and stores only the changes made over the original system image.
+Hence, typically much less than `disk-space` additional space is required.
+Multiple systems can be specified in the same test workflow.
+Rugix will then run the workflow for each system.
+**You must not build any images manually while running tests.**
+
+To execute commands on the system under test, Rugix Bakery connects to the system running in the VM via SSH.
+To this end, a private key needs to specified.
+This private key must be placed somewhere in the project directory.
+It is recommended to generate a pair of keys exclusively for this purpose and inject the public key with an additional layer on-top of the actual system layer.[^key-injection]
+To generate a suitable pair of SSH keys in the current working directory, run:
+
+[^key-injection]: In the future, Rugix Bakery may inject a key by itself prior to running the VM.
+
+```shell
+ssh-keygen -t rsa -b 4096 -f id_rsa
+```
+
+We recommend generating the keys locally and putting them into a directory outside of version control.
+
+If you want an example for how to set everything up, you can look at the system tests that we use to [test Rugix Ctrl](https://github.com/silitics/rugix/tree/main/tests).
+
+The declaration of test systems is followed by a specification of _test steps_.
+
+### Test Steps
+
+Each test step performs a certain `action`. Currently, the following actions are supported:
+
+- `wait`: Wait for some amount of time.
+- `run`: Run a script via SSH in the VM.
+
+#### Wait
+
+The `wait` action takes a `duration` option specifying the time to wait in seconds. Here is an example for waiting 20 seconds:
+
+```toml
+[[steps]]
+action = "wait"
+duration = 20
+```
+
+#### Run
+
+The `run` action takes a `script` option with a shell script to execute. For example:
+
+```toml
+[[steps]]
+action = "run"
+script = """
+#!/bin/bash
+echo "Hello from the VM."
+"""
+```
+
+Note that the script needs a shebang, e.g., `#!/bin/bash`, to execute.
+
+In addition, the `run` action supports the following optional options:
+
+- `may-disconnect`: Sometimes, e.g., when rebooting the system with a script, the execution may fail because the SSH connection drops, however, this is expected and the test should not fail. In this case, you can set `may-disconnect` to `true` indicating that it is okay for the SSH connection to drop. Note that a non-zero exit code of the script will still fail the test.
+- `may-fail`: Allows the script to fail with a non-zero exit code without failing the test.
+- `stdin-file`: Path to a file which is provided as stdin to the script. Can be used to stream an update into the system.
+
+
+## Running Tests
+
+Tests can be run with the `test` command:
+
+```shell
+./run-bakery test
+```
+
+
+## Configuration Reference
+
+For reference, here is the complete schema for test configuration files:
+
+<JSONSchemaViewer schema={TestSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-bakery-test.schema.json).

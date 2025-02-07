@@ -1,5 +1,5 @@
 ---
-sidebar_position: 20
+sidebar_position: 4
 ---
 
 # CI/CD Integration
@@ -23,13 +23,13 @@ jobs:
         run: docker run --privileged --rm tonistiigi/binfmt --install all
       
       - name: Bake Image
-        run: ./run-bakery bake image customized build/customized.img
+        run: ./run-bakery bake image customized
 
       - name: Upload Image
         uses: actions/upload-artifact@v4
         with:
           name: customized.img
-          path: build/customized.img
+          path: build/customized/system.img
 ```
 
 ## GitLab CI/CD
