@@ -27,7 +27,7 @@ root_authorized_keys = { default = "" }
 
 The `ssh` recipe depends on the [`pkg-update` recipe](https://github.com/silitics/rugpi/tree/main/bakery/repositories/core/recipes/pkg-update)[^pkg-update-ref] from Rugix Bakery's `core` repository. The `pkg-update` recipe will update the package lists of the distribution (Debian or Alpine), which is required to be able to install SSH. It will also later remove the package lists from the build, as they are unnecessary at runtime. The configuration further defines a parameter, `root_authorized_keys`, with an empty _default value_. The steps of the recipe use this parameter to install public keys for SSH access.
 
-[^pkg-update-ref]: The recipe is referenced as `pkg-update` and not `core/pkg-update` here because the `ssh` is itself in `core`.
+[^pkg-update-ref]: The recipe is referenced as `pkg-update` and not `core/pkg-update` here because the `ssh` recipe is itself in `core`.
 
 Recipes are always applied in the order of their priority (higher means earlier). In particular, this means that dependencies may be applied _after_ recipes that depend on them, if they have a lower priority. Note that priorities can also be negative.
 
@@ -129,7 +129,7 @@ Rugix Bakery will expose the following environment variables when running steps:
 
 In addition, the recipe parameters are exposed as explained above.
 
-### Artifacts
+### Custom Artifacts
 
 You can place any build artifacts in the artifacts directory pointed to by `RUGIX_ARTIFACTS_DIR`.
 Those will later end up in the build directory of the respective system.
