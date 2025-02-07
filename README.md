@@ -36,7 +36,7 @@ Rugix Ctrl has all features you would expect from a state-of-the-art update solu
 - Integrates well with [different fleet management solutions](https://rugix.org/docs/ctrl/advanced/fleet-management) (avoids vendor lock-in).
 - Provides powerful interfaces to built your own update workflow upon.
 
-Rugix Ctrl **supports or can be adapted to almost any requirements you may have** when it comes to robust and secure updates of **your entire system as well as its individual components**.
+Rugix Ctrl **supports or can be adapted to almost any requirements you may have** when it comes to robust and secure updates of your entire system as well as its individual components.
 
 [For details, check out Rugix Ctrl's documentation.](https://rugix.org/docs/ctrl)
 
