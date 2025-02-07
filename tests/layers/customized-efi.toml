@@ -11,6 +11,7 @@ recipes = [
     "core/ssh",
     # Setup the network.
     "setup-network",
+    "setup-ssh",
     "rugix-system-assert",
     "simple-sbom",
     "hello-world",
@@ -21,6 +22,5 @@ hostname = "rugix-template"
 
 [parameters."core/ssh"]
 root_authorized_keys = """
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDVCw5I7jYf0AcMbSlCWBtEW08OQZ0f8uRaxJzLVKFH9rks1b8OilMWFzIYCOgy8Y/1xGN6TzsEU6PXQ38JVQ3a/vNtVx/DaDSBodNHg2BwnkEBP3VhXgyeTxXYlZEg+wOxmqEmmPVys9P3sp1LuEGsL9278XzK8DZ+w9LH8LXSLIyYpmPA1j8s+zP10o8M+TgbRaHFMGGU8fPE0hhGdLgscflG5wTRzIIR0qmztMqlcQtu9tQboCslU4BbgnswOtqLndOBH8ZE5f5vnIEuO6+v23DsnG4htIKAWZVi6xkn8qd8PZfnVe0F/s+WrqiBMnFknYfE5Zgn/Yu+0epD5e5nzlt5GXu+enBnQhD88U9Rs1WPGa7BLjKE+wu+CY7FFbPDf1suaQLTyJXKlDWCvq6Qttx8aoPSEvcHiyBzr3DMb86lmPEvYa9BFa3RkjItqvkDw0kAH1fxO6z+heEYz64ddPNIkENDrphyOPTI8rbTFY7VdWQgl7TJsUiM/mjhcT5Vn3FebBohaKojo4D0cc2Tg67zq8j71DM5HPQyjPPqHA8V9JaoskX9WkI1xVlforVWG76R8uO+2vSuKAbO6H3I8YYY8jVXw4Iv0NG1evL+Lq4F5dPhmNJpBpD/KTp2Tooj6zaYfiDx6daknpDaCuAf0T+DPlXoLzjlVAFqrO5oXw== rugix-test-key
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC2tN+ZL8lGnx8rW+vm9ukX1uhKE7GREHitIVxIN3fVh406ksaZzY4FB7JqMqor4SBpR/Eigm6mSSE6KdwSYYC99hakLVvFUG6b6xvB7gOgre8M0JuL9XwBfaUfNln6Hl2Xirlml61JwOWa8Lh+T8mquw9OUK20tkXNPrigVKH+RMQA2V0AQrHnzo9GXMT5HEdAfaVVhL8S1inlKixiPbnvt+nWUSoKGLo+I08w5ZKI88C+saP6VqFiinp57uF0F3oqwcupZe0j6vxGuN5hFg8YGcICFnjXUAVjds8pfcf7aImvYZdp192jC9JAfzx3LzJZLn+kY9hIQkqip/tfTtp56eBb+j9i07PhrDsGiZVNOWf+YG3Cw5Ix6ltOL0dvF1/xFG7O+CGz62w8Y925ytuGgzBkVJ090eznnCjpw+lhNiNFmoqUjiJFjs/VSrqmC5bqdRrqF7YIs61uKl/EyAZaEoHZJazUFFauOjjPK0ksVbAAfqxG4nFmOG0URemSvNE= koehlma@Zaylee
 """
