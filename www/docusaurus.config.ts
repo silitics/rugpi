@@ -4,9 +4,9 @@ import type * as Preset from "@docusaurus/preset-classic"
 const config: Config = {
   title: "Rugix",
   tagline:
-    "An open-source platform empowering you to build innovative products based on Raspberry Pi.",
+    "A suite of open-source tools to build reliable embedded Linux devices with efficient and secure over-the-air update capabilities.",
   url: "https://oss.silitics.com/",
-  baseUrl: "/rugpi/",
+  baseUrl: "/rugix/",
 
   onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
@@ -15,7 +15,7 @@ const config: Config = {
   favicon: "/img/logo.svg",
 
   organizationName: "silitics",
-  projectName: "rugpi",
+  projectName: "rugix",
 
   i18n: {
     defaultLocale: "en",
@@ -23,7 +23,7 @@ const config: Config = {
   },
 
   markdown: {
-    mermaid: true
+    mermaid: true,
   },
 
   presets: [
@@ -34,11 +34,11 @@ const config: Config = {
           sidebarPath: require.resolve("./sidebars.js"),
           // lastVersion: "current",
           lastVersion: "0.7.5",
-          editUrl: "https://github.com/silitics/rugpi/tree/main/www/",
+          editUrl: "https://github.com/silitics/rugix/tree/main/www/",
         },
         blog: {
           showReadingTime: true,
-          editUrl: "https://github.com/silitics/rugpi/tree/main/www/",
+          editUrl: "https://github.com/silitics/rugix/tree/main/www/",
         },
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
@@ -58,7 +58,7 @@ const config: Config = {
     //   // id: "release",
     //   content: `
     //       We are excited to announce the release of Rugix version 0.7! 🎉
-    //       Read the <a href="/rugpi/blog/releases/0.7">release blog post</a>.
+    //       Read the <a href="/rugix/blog/releases/0.7">release blog post</a>.
     //     `,
     //   backgroundColor: "#bdddfb",
     //   // backgroundColor: "#bdddfb",
@@ -87,12 +87,12 @@ const config: Config = {
           docId: "getting-started",
           position: "left",
           label: "Docs",
-        },        
+        },
         { to: "/blog", label: "Blog", position: "left" },
         {
           to: "/commercial-support",
           label: "Commercial Support",
-          position: "right"
+          position: "right",
         },
         {
           type: "docsVersionDropdown",
@@ -101,7 +101,7 @@ const config: Config = {
           dropdownActiveClassDisabled: true,
         },
         {
-          href: "https://github.com/silitics/rugpi",
+          href: "https://github.com/silitics/rugix",
           position: "right",
           className: "header-github-link",
           "aria-label": "GitHub",
@@ -129,12 +129,12 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/silitics/rugpi",
+              href: "https://github.com/silitics/rugix",
             },
             {
               label: "Discord",
               href: "https://discord.gg/cZ8wP9jNsn",
-            }
+            },
           ],
         },
         {
@@ -170,23 +170,20 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  themes: [
-    '@docusaurus/theme-mermaid',
-    "docusaurus-json-schema-plugin",
-  ],
+  themes: ["@docusaurus/theme-mermaid", "docusaurus-json-schema-plugin"],
 
   plugins: [
     async function tailwind(context, options) {
       return {
         name: "docusaurus-tailwindcss",
         configurePostCss(postcssOptions) {
-          postcssOptions.plugins.push(require("tailwindcss"));
-          postcssOptions.plugins.push(require("autoprefixer"));
-          return postcssOptions;
+          postcssOptions.plugins.push(require("tailwindcss"))
+          postcssOptions.plugins.push(require("autoprefixer"))
+          return postcssOptions
         },
-      };
+      }
     },
-  ]
+  ],
 }
 
 export default config

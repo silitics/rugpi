@@ -41,4 +41,4 @@ jobs:
           mkdir -p ~/.ssh/
           echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
           ssh deploy@srv0.silitics.com "rsync --version"
-          rsync -avz --delete www/build/ deploy@srv0.silitics.com:/var/www/oss.silitics.com/rugpi/
+          rsync -avz --delete www/build/ deploy@srv0.silitics.com:/var/www/oss.silitics.com/rugix/
