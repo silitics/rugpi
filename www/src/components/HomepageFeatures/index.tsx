@@ -12,7 +12,7 @@ const FeatureList: FeatureItem[] = [
     title: "Reliability Focused",
     description: (
       <>
-        Rugpi's focus on reliability ensures uninterrupted operation and
+        Rugix's focus on reliability ensures uninterrupted operation and
         minimizes costly repairs in the field, making it the ideal platform for
         businesses developing Linux-based embedded devices.
       </>
@@ -22,7 +22,7 @@ const FeatureList: FeatureItem[] = [
     title: "Over-the-Air Updates",
     description: (
       <>
-        Streamline software updates for embedded devices with Rugpi's robust
+        Streamline software updates for embedded devices with Rugix's robust and secure
         over-the-air update capability. Seamlessly deliver the latest features
         and enhancements while minimizing disruptions.
       </>
@@ -32,7 +32,7 @@ const FeatureList: FeatureItem[] = [
     title: "Managed State",
     description: (
       <>
-        Simplify embedded device development with Rugpi's managed state feature.
+        Simplify embedded device development with Rugix's managed state feature.
         Effortlessly implement factory reset functionality and safeguard against
         accidental state corrupting the system.
       </>

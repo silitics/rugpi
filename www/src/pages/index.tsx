@@ -14,9 +14,9 @@ import styles from "./index.module.css"
 const SupportedDistributions: React.FC<{}> = () => {
   return (
     <>
-      <h2 className="text-center">Supported Distributions</h2>
+      <h3 className="text-center">Supported Distributions</h3>
       <p className="text-center">
-        Rugpi supports building images based on{" "}
+        Rugix Bakery allows you to build upon proven distributions such as{" "}
         <a href="https://www.debian.org/" target="_blank">
           Debian
         </a>
@@ -74,26 +74,6 @@ const SupportedDistributions: React.FC<{}> = () => {
   )
 }
 
-const BuildingBlock: React.FC<{
-  emoji: string
-  title: string
-  description: string
-}> = ({ emoji, title, description }) => {
-  return (
-    <div
-      className="rounded-lg w-80 py-2 px-6"
-      style={{
-        border: "1px solid white",
-        background: "var(--ifm-background-color)",
-      }}
-    >
-      <div className="text-5xl my-4">{emoji}</div>
-      <h3 className="text-2xl font-normal my-4">{title}</h3>
-      <p>{description}</p>
-    </div>
-  )
-}
-
 function HomepageHeader() {
   return (
     <header
@@ -103,23 +83,26 @@ function HomepageHeader() {
         <h1 className="hero__title">
           Robust Building Blocks for Embedded Linux Devices
         </h1>
-        <p className="hero__subtitle">
-          Rugpi is a suite of open-source tools empowering you to build innovative
-          devices around bespoke Linux distributions.
+        <p className="text-xl">
+          An open-source tool suite to build <em>reliable</em> embedded Linux
+          devices with <em>efficient and secure over-the-air</em> update
+          capabilities.
         </p>
-
         <p style={{ maxWidth: "80ch", margin: "1.5em auto" }}>
-          Rugpi enables you to{" "}
           <strong>
-            build commercial-grade, bespoke variants of popular Linux
-            distributions{" "}
+            Companies around the world use Rugix as a basis for their connected
+            products.
+          </strong>{" "}
+          Currently, the tool suite consists of two main tools:{" "}
+          <em>Rugix Ctrl</em>, a tool for installing over-the-air updates and
+          managing state, and <em>Rugix Bakery</em>, a flexible, user-friendly
+          build system for bespoke Linux distributions. Rugix simplifies the
+          development of embedded Linux devices,{" "}
+          <strong>
+            enabling you to focus on what provides value to your users instead
+            of system-level details
           </strong>
-          for your devices. It boasts three core features designed to work
-          seamlessly together: (1) A modern, flexible workflow to build
-          customized system images, (2) robust{" "}
-          <strong>over-the-air system updates with rollback support</strong> for
-          the entire system, and (3) <strong>managed state</strong> that is
-          preserved across reboots and updates.
+          . With Rugix, you get better results faster and at a lower cost.
         </p>
         <div className={styles.buttons}>
           <Link
@@ -139,80 +122,63 @@ export default function Home(): JSX.Element {
   return (
     <Layout title="Home" description={siteConfig.tagline}>
       <HomepageHeader />
-      <main>
-      <div style={{ maxWidth: "80ch", margin: "3rem auto" }}>
-          <Admonition type="info" title="Stability Guarantees">
-            <p>
-              While Rugpi is a young and evolving project, we understand that
-              device lifetimes typically span multiple years, if not decades. We
-              are committed to maintain backwards-compatibility for updates.
-              This ensures that devices using Rugpi can be updated in the
-              future. If you're developing anything with Rugpi, please be aware
-              that the building pipeline, CLI, and APIs may still change.
-            </p>
-          </Admonition>
-        </div>
-        <div className="text-center my-14 text-white">
-          {/* <h2 className="bg-gradient-to-r from-si-blue to-si-blue-light inline-block text-transparent bg-clip-text uppercase text-3xl font-bold tracking-tight">The Rugpi Tool Suite</h2> */}
-          {/* <h2>The Rugpi Tool Suite</h2> */}
-          <div className="flex justify-center gap-x-14 mt-8">
-            <BuildingBlock
-              emoji="🚚"
-              title="Rugpi Core"
-              description="Tools for robust over-the-air system updates and state management."
-            />
-            <BuildingBlock
-              emoji="🍰"
-              title="Rugpi Bakery"
-              description="Tools for building bespoke variants of popular Linux distributions."
-            />
-            {/* <div
-              className="rounded-lg w-80 py-2 px-6 flex justify-center items-center opacity-50"
-              style={{
-                border: "1px solid white",
-                background: "var(--ifm-background-color)",
-              }}
-            >
-              <div className="text-2xl">•••</div>
-            </div> */}
-          </div>
-        </div>
-        <SupportedDistributions />
-        <div className="flex flex-col items-center mt-12">
-          <h2 className="text-center">Feature Highlights</h2>
-          <ul className="list-none">
+      <main className="py-16 space-y-16">
+        <section>
+          <h2 className="text-center">Rugix Ctrl: The Update Mechanism</h2>
+          <p className="text-center">Rugix Ctrl has all features you would expect from a state-of-the-art update solution and more:</p>
+          <ul className="list-none mx-auto w-fit">
             <li>
-              ✅ Supports{" "}
-              <strong>
-                any EFI-compatible system and all models of Raspberry Pi
-              </strong>
-              .
+              ✅ <strong>Atomic A/B system updates</strong> with popular bootloaders out of the box.
             </li>
             <li>
-              ✅ Supports <strong>streaming of updates</strong> without
-              intermediate storage.
+              ✅ <strong>Streaming updates</strong> as well as <strong>adaptive delta updates</strong> out of the box.
             </li>
             <li>
-              ✅ Enables{" "}
-              <a href="docs/advanced/signed-updates">
-                cryptographically <strong>signed and verified updates</strong>
-              </a>
-              .
+              ✅ Builtin <strong>cryptographic verification</strong> <em>before</em> installing anything anywhere.
             </li>
             <li>
-              ✅ Integrates well with{" "}
-              <a href="docs/advanced/device-management">
-                existing device management solutions
-              </a>
-              .
+              ✅ Supports <strong>any update scenario</strong>, including <strong>non-A/B updates and incremental updates</strong>.
             </li>
             <li>
-              ✅ Provides interfaces to built your own update workflow upon.
+              ✅ Supports <strong>any bootloader and boot process</strong> through <a href="https://rugix.org/docs/ctrl/advanced/boot-flows">custom <em>boot flows</em></a>.
             </li>
-            <li>✅ Provides built-in state management inspired by Docker.</li>
+            <li>
+              ✅ <strong>Robust state management mechanism</strong> inspired by container-based architectures.
+            </li>
+            <li>
+              ✅ Integrates well with <a href="https://rugix.org/docs/ctrl/advanced/fleet-management">different fleet management solutions</a> (avoids vendor lock-in).
+            </li>
+            <li>✅ Provides powerful interfaces to built your own update workflow upon.</li>
           </ul>
-        </div>
-        <HomepageFeatures />
+          <p className="mx-auto max-w-[75ch] text-center">Rugix Ctrl <strong>supports or can be adapted to almost any requirements you may have</strong> when it comes to robust and secure updates of your entire system as well as its individual components.</p>
+        </section>
+        <section>
+          <h2 className="text-center">Rugix Bakery: The Development Tool</h2>
+          <p className="max-w-[80ch] text-center mx-auto">You wrote your application and now need to integrate it into a full system ready to be flashed onto your device or deployed as an update? Rugix Bakery makes this process (almost) <strong>as easy as writing a Dockerfile, enabling you to focus on what provides value to your users</strong> instead of system-level details.</p>
+          <SupportedDistributions />
+          <h3 className="text-center">Feature Highlights</h3>
+          <ul className="list-none mx-auto w-fit">
+            <li>
+              ✅ <strong>Over-the-air update capabilities</strong> powered by Rugix Ctrl out of the box.
+            </li>
+            <li>
+              ✅ Build everything <strong>from source to image in a container-based environment.</strong>
+            </li>
+            <li>
+              ✅ Define <strong>multiple system variants</strong>, including variants for testing.
+            </li>
+            <li>
+              ✅ Builtin <strong>system testing framework</strong> and <strong>support for running VMs</strong>.
+            </li>
+          </ul>
+          <p className="mx-auto max-w-[80ch] text-center">With Rugix Bakery, you get a <strong>comprehensive tool to build, test, and run your system</strong> similar to what you will find with modern software development tooling, like <a href="https://doc.rust-lang.org/cargo">Cargo</a> (Rust) or <a href="https://docs.astral.sh/uv/">Uv</a> (Python).</p>
+        </section>
+        {/* <section>
+          <h2 className="text-center">Rugix: The Tool Suite</h2>
+          <p>
+            <HomepageFeatures />
+          </p>
+        </section> */}
       </main>
     </Layout>
   )

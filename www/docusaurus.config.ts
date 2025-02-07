@@ -53,7 +53,6 @@ const config: Config = {
       disableSwitch: true,
       respectPrefersColorScheme: false,
     },
-
     // announcementBar: {
     //   // id: "release",
     //   content: `
@@ -109,8 +108,12 @@ const config: Config = {
               to: "/docs/getting-started",
             },
             {
-              label: "User Guide",
-              to: "/docs/guide",
+              label: "Rugix Ctrl",
+              to: "/docs/ctrl",
+            },
+            {
+              label: "Rugix Bakery",
+              to: "/docs/bakery",
             },
           ],
         },
