@@ -19,3 +19,8 @@ Our aim is to **make it easy to follow best practices**, like read-only system p
 
 The Rugix Project is driven by [Silitics](https://silitics.com), a for-profit company with a strong commitment to open source.
 If you want to learn more about the story and business case behind Rugix, please read our [Commitment to Open Source](/open-source-commitment).
+
+For a comparison of Rugix's tools to other solutions, check out the documentation of the respective tool:
+
+- [Rugix Ctrl: Comparison to Other Solutions](./ctrl/index.md#comparison-to-other-solutions)
+- [Rugix Bakery: Comparison to Other Solutions](./bakery/index.md#comparison-to-other-solutions)
