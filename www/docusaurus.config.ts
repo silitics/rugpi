@@ -162,7 +162,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div>Built with Docusaurus</div>`,
+      copyright: `<div>Made with ❤️ for OSS</div><div>Copyright © ${new Date().getFullYear()} <a href="https://silitics.com">Silitics GmbH</a></div><div><small>Built with Docusaurus</small></div>`,
     },
     prism: {
       theme: require("prism-react-renderer").themes.vsDark,
