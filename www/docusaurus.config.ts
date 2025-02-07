@@ -78,7 +78,7 @@ const config: Config = {
           position: "left",
         },
         {
-          to: "/why",
+          href: "/rugix/docs/the-rugix-project",
           label: "Why Rugix?",
           position: "left",
         },
