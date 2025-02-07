@@ -23,14 +23,14 @@ For other fleet management solutions, you can develop your own integration or [c
 **We just released version 0.8 and the integrations may not have been migrated.**
 :::
 
-## Thin-edge.io
+## thin-edge.io
 
-[Thin-edge.io](https://thin-edge.io/) is an open-source, cloud-agnostic IoT framework designed for resource constraint devices.
+[thin-edge.io](https://thin-edge.io/) is an open-source, cloud-agnostic IoT framework designed for resource constraint devices.
 It provides an abstraction layer to interface with different providers of IoT management solutions such as [Cumulocity IoT](https://www.cumulocity.com/guides/concepts/introduction/), [Azure IoT](https://azure.microsoft.com/en-us/solutions/iot), and [AWS IoT](https://aws.amazon.com/iot/).
-Thin-edge.io officially supports Rugix Bakery as well as Rugix Ctrl.
-That is, integrating Thin-edge.io into your system is straightforward with ready-made recipes for Rugix Bakery.
+thin-edge.io officially supports Rugix Bakery as well as Rugix Ctrl.
+That is, integrating thin-edge.io into your system is straightforward with ready-made recipes for Rugix Bakery.
 Those recipes will also include an integration layer for Rugix Ctrl so that you can deploy updates without any further configuration.
-To learn more, check out the [Thin-edge.io Rugix reference repository](https://github.com/thin-edge/tedge-rugpi-image).
+To learn more, check out the [thin-edge.io Rugix reference repository](https://github.com/thin-edge/tedge-rugpi-image).
 
 ## Memfault
 

@@ -142,7 +142,7 @@ This will allow you to build Linux distributions for a huge variety of different
 
 ## Comparison to Other Solutions
 
-We believe that Rugix Bakery is unique in that it aims to provide a development experience for embedded Linux systems similar to what you will find with modern software development tooling, like [Cargo](https://doc.rust-lang.org/cargo/) (Rust) or [Uv](https://docs.astral.sh/uv/) (Python).
+We believe that Rugix Bakery is unique in that it aims to provide a development experience for embedded Linux systems similar to what you will find with modern software development tooling, like [Cargo](https://doc.rust-lang.org/cargo/) (Rust) or [uv](https://docs.astral.sh/uv/) (Python).
 In particular, this means two things:
 
 1. Provide a **single entrypoint to manage your project as well as to build, run, and test your system** and its variations.

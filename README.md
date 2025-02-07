@@ -52,7 +52,7 @@ Rugix Bakery makes this process (almost) **as easy as writing a Dockerfile, enab
 - Define **multiple system variants**, including variants for testing.
 - Builtin **system testing framework** and **support for running VMs**.
 
-With Rugix Bakery, you get a **comprehensive tool to build, test, and run your system** similar to what you will find with modern software development tooling, like [Cargo](https://doc.rust-lang.org/cargo/) (Rust) or [Uv](https://docs.astral.sh/uv/) (Python).
+With Rugix Bakery, you get a **comprehensive tool to build, test, and run your system** similar to what you will find with modern software development tooling, like [Cargo](https://doc.rust-lang.org/cargo/) (Rust) or [uv](https://docs.astral.sh/uv/) (Python).
 
 [For details, check out Rugix Bakery's documentation.](https://rugix.org/docs/bakery)
 
@@ -64,7 +64,7 @@ While there are already tools for building images, updating systems, and managin
 With Rugix, we aim to **simplify the development of embedded Linux devices by providing a unified, modern suite of tools that seamlessly integrate** to provide an efficient workflow for building, updating, and managing embedded Linux systems at scale.
 We believe that **building embedded Linux devices should not be as complicated as it often is today**.
 
-While simplicity our first key tenet, our second is to **provide solutions that are absolutely robust**.
+While simplicity is our first key tenet, our second is to **provide solutions that are absolutely robust**.
 Embedded devices must stay operational no matter what, always, anywhere.
 With Rugix, we **make it easy to follow best practices** for building reliable devices, like read-only system partitions, fully atomic updates with on-device validation, and declarative, ideally fully reproducible builds.
 

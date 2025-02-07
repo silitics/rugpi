@@ -171,7 +171,7 @@ export default function Home(): JSX.Element {
               ✅ Builtin <strong>system testing framework</strong> and <strong>support for running VMs</strong>.
             </li>
           </ul>
-          <p className="mx-auto max-w-[80ch] text-center">With Rugix Bakery, you get a <strong>comprehensive tool to build, test, and run your system</strong> similar to what you will find with modern software development tooling, like <a href="https://doc.rust-lang.org/cargo">Cargo</a> (Rust) or <a href="https://docs.astral.sh/uv/">Uv</a> (Python).</p>
+          <p className="mx-auto max-w-[80ch] text-center">With Rugix Bakery, you get a <strong>comprehensive tool to build, test, and run your system</strong> similar to what you will find with modern software development tooling, like <a href="https://doc.rust-lang.org/cargo">Cargo</a> (Rust) or <a href="https://docs.astral.sh/uv/">uv</a> (Python).</p>
         </section>
         {/* <section>
           <h2 className="text-center">Rugix: The Tool Suite</h2>
