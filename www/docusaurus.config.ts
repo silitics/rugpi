@@ -78,8 +78,7 @@ const config: Config = {
           position: "left",
         },
         {
-          type: "doc",
-          docId: "the-rugix-project",
+          to: "/why",
           label: "Why Rugix?",
           position: "left",
         },
