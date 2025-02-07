@@ -6,7 +6,7 @@ Prism.languages.shell = {
     pattern: /(\sxz\s|\bwget\b|\bchmod\b|\bcurl\b|docker|ssh|scp|rugix-ctrl|jq|rugix-ctrl|rugix-bundler|^\.\/run-bakery|\bgit\b|\bdocker\b|\becho\b)/
   },  
   constant: {
-    pattern: /(true|false|<[^>]*>|\bif\b|\bthen\b|\bfi\b|\belse\b)/,
+    pattern: /(true|false|\b<[^>]*>\b|\bif\b|\bthen\b|\bfi\b|\belse\b)/,
     alias: "keyword",
   },
   parameter: {

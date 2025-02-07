@@ -22,14 +22,14 @@ pub struct Args {
 /// Commands of the CLI.
 #[derive(Debug, Parser)]
 pub enum Command {
-    /// Bake an image or a layer.
+    /// Build an image, layer, or update bundle.
     #[clap(subcommand)]
     Bake(BakeCommand),
     /// Run system tests.
     Test(TestCommand),
-    /// Run an image in a VM.
+    /// Run a system in a VM.
     Run(RunCommand),
-    /// List images, recipes, and layers.
+    /// List systems, recipes, and layers.
     #[clap(subcommand)]
     List(ListCommand),
     /// Pull in external repositories.
@@ -38,6 +38,9 @@ pub enum Command {
     Init(InitCommand),
     /// Spawn a shell in the Rugix Bakery Docker container.
     Shell,
+    /// Control the cache of Rugix Bakery.
+    #[clap(subcommand)]
+    Cache(CacheCommand),
     /// Run Rugix Bundler.
     Bundler(BundlerCommand),
 }
@@ -81,6 +84,13 @@ pub enum BakeCommand {
 #[derive(Debug, Parser)]
 pub struct TestCommand {
     pub workflows: Vec<String>,
+}
+
+/// The `cache` command.
+#[derive(Debug, Parser)]
+pub enum CacheCommand {
+    /// Clean the cache.
+    Clean,
 }
 
 /// The `run` command.

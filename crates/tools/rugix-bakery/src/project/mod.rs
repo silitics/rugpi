@@ -26,6 +26,11 @@ pub struct ProjectRef {
 }
 
 impl ProjectRef {
+    /// Local project id.
+    pub fn local_id(&self) -> &LocalProjectId {
+        &self.shared.id
+    }
+
     /// Project directory.
     pub fn dir(&self) -> &Path {
         &self.shared.dir
@@ -68,6 +73,8 @@ impl ProjectRef {
 struct ProjectShared {
     /// Project directory.
     dir: PathBuf,
+    /// Local project id.
+    id: LocalProjectId,
     /// Project configuration.
     config: Arc<ProjectConfig>,
     /// Lazily-loaded project data.
@@ -83,6 +90,13 @@ struct ProjectLazy {
 /// Locally unique id of the project.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalProjectId(Arc<str>);
+
+impl LocalProjectId {
+    /// String representation of the project id.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 
 /// Project loader.
 #[derive(Debug)]
@@ -139,6 +153,7 @@ impl ProjectLoader {
             shared: Arc::new(ProjectShared {
                 dir: self.project_dir,
                 config,
+                id: self.local_id,
                 lazy: ProjectLazy::default(),
             }),
         })
