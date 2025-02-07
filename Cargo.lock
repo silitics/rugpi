@@ -2240,6 +2240,7 @@ dependencies = [
  "rugix-cli",
  "rugix-common",
  "rugix-fs",
+ "rugix-hashes",
  "rugix-tasks",
  "russh",
  "russh-sftp",

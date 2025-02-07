@@ -223,13 +223,18 @@ impl HashDigest {
     pub fn raw(&self) -> &[u8] {
         &self.raw
     }
+
+    /// Convert the raw digest to a hex string.
+    pub fn raw_hex_string(&self) -> String {
+        hex::encode(&self.raw)
+    }
 }
 
 impl std::fmt::Display for HashDigest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.algorithm.name())?;
         f.write_char(':')?;
-        f.write_str(&hex::encode(&self.raw))?;
+        f.write_str(&self.raw_hex_string())?;
         Ok(())
     }
 }

@@ -6,8 +6,6 @@ use xscript::{run, Run};
 
 use reportify::ResultExt;
 
-use rugix_fs::Copier;
-
 use crate::project::ProjectRef;
 use crate::utils::caching::{mtime, ModificationTime};
 use crate::BakeryResult;

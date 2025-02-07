@@ -390,19 +390,25 @@ fn apply_recipes(
                         .whatever("unable to create recipe directory")?;
                     let _mounted_recipe = Mounted::bind(&recipe.path, &bakery_recipe_path)
                         .whatever("unable to bind mount recipe")?;
-                    let chroot_layer_dir = root_dir_path.join("run/rugix/bakery/bundle/");
+                    let chroot_layer_dir = root_dir_path.join("run/rugix/bakery/layer");
                     fs::create_dir_all(&chroot_layer_dir)
                         .whatever("unable to create layer bundle directory")?;
                     let _mounted_layer_dir = Mounted::bind(&layer_ctx.build_dir, &chroot_layer_dir)
-                        .whatever("unable to bind mount layer bundle")?;
+                        .whatever("unable to bind mount layer")?;
+                    let build_env_path = root_dir_path.join("run/rugix/bakery/build-env");
+                    fs::create_dir_all(&build_env_path)
+                        .whatever("unable to create recipe directory")?;
+                    let _mounted_build_env = Mounted::bind("/run/rugix/bakery", &build_env_path)
+                        .whatever("unable to bind mount recipe")?;
                     let script = format!("/run/rugix/bakery/recipe/steps/{}", step.filename);
                     let mut vars = vars! {
                         DEBIAN_FRONTEND = "noninteractive",
-                        RUGIX_LAYER_DIR = "/run/rugix/bakery/bundle/",
-                        RUGIX_ARTIFACTS_DIR = "/run/rugix/bakery/bundle/artifacts",
-                        RUGIX_CONTEXT_DIR = "/run/rugix/bakery/project/.rugix/context/",
+                        RUGIX_LAYER_DIR = "/run/rugix/bakery/layer",
+                        RUGIX_ARTIFACTS_DIR = "/run/rugix/bakery/layer/artifacts",
+                        RUGIX_CONTEXT_DIR = "/run/rugix/bakery/build-env/context",
+                        RUGIX_CACHE_DIR = "/run/rugix/bakery/build-env/cache",
                         RUGIX_ROOT_DIR = "/",
-                        RUGIX_PROJECT_DIR = "/run/rugix/bakery/project/",
+                        RUGIX_PROJECT_DIR = "/run/rugix/bakery/project",
                         RUGIX_ARCH = arch.as_str(),
                         LAYER_REBUILD_IF_CHANGED = Path::new("/run/rugix/bakery/project").join(&layer_ctx.output_dir).join("rebuild-if-changed.txt"),
                         RECIPE_DIR = "/run/rugix/bakery/recipe/",
@@ -427,7 +433,8 @@ fn apply_recipes(
                         RUGIX_LAYER_DIR = &layer_ctx.build_dir,
                         RUGIX_ARTIFACTS_DIR = layer_ctx.build_dir.join("artifacts"),
                         RUGIX_ROOT_DIR = root_dir_path,
-                        RUGIX_CONTEXT_DIR = project_dir.join(".rugix/context"),
+                        RUGIX_CONTEXT_DIR = "/run/rugix/bakery/context",
+                        RUGIX_CACHE_DIR = "/run/rugix/bakery/cache",
                         RUGIX_PROJECT_DIR = &project_dir,
                         RUGIX_ARCH = arch.as_str(),
                         LAYER_REBUILD_IF_CHANGED = project_dir.join(&layer_ctx.output_dir).join("rebuild-if-changed.txt"),

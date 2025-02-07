@@ -1,11 +1,13 @@
 //! In-memory project representation.
 
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use library::Library;
 use reportify::ResultExt;
 use repositories::ProjectRepositories;
+use rugix_hashes::HashAlgorithm;
 
 use crate::config::load_config;
 use crate::config::projects::ProjectConfig;
@@ -78,6 +80,10 @@ struct ProjectLazy {
     library: Mutex<Option<Arc<Library>>>,
 }
 
+/// Locally unique id of the project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalProjectId(Arc<str>);
+
 /// Project loader.
 #[derive(Debug)]
 pub struct ProjectLoader {
@@ -85,6 +91,8 @@ pub struct ProjectLoader {
     project_dir: PathBuf,
     /// Path to the configuration file.
     config_file: Option<PathBuf>,
+    /// Local project id.
+    local_id: LocalProjectId,
 }
 
 impl ProjectLoader {
@@ -93,6 +101,7 @@ impl ProjectLoader {
         Self {
             project_dir: project_dir.to_path_buf(),
             config_file: None,
+            local_id: local_id_from_bytes(project_dir.as_os_str().as_bytes()),
         }
     }
 
@@ -106,6 +115,11 @@ impl ProjectLoader {
     /// Set the configuration file path relative to the project directory.
     pub fn with_config_file(mut self, config_file: Option<&Path>) -> Self {
         self.config_file = config_file.map(Path::to_path_buf);
+        self
+    }
+
+    pub fn with_local_id(mut self, identity: &[u8]) -> Self {
+        self.local_id = local_id_from_bytes(identity);
         self
     }
 
@@ -129,4 +143,8 @@ impl ProjectLoader {
             }),
         })
     }
+}
+
+fn local_id_from_bytes(bytes: &[u8]) -> LocalProjectId {
+    LocalProjectId(HashAlgorithm::Sha256.hash(bytes).raw_hex_string()[..10].into())
 }
