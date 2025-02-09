@@ -319,6 +319,9 @@ pub fn skip_until_start(source: &mut dyn BundleSource, tag: Tag) -> BundleResult
         if head.is_start() && head.tag() == tag {
             break Ok(head);
         }
+        if tags::is_required(head.tag()) {
+            bail!("found unexpected required tag {}", head.tag());
+        }
         skip(source, head)?;
     }
 }
@@ -330,6 +333,9 @@ pub fn skip_until_end(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<(
         let head = expect_atom_head(source)?;
         if head.is_end() && head.tag() == tag {
             break Ok(());
+        }
+        if tags::is_required(head.tag()) {
+            bail!("found unexpected required tag {}", head.tag());
         }
         skip(source, head)?;
     }
@@ -348,6 +354,9 @@ pub fn skip_until_value(source: &mut dyn BundleSource, tag: Tag) -> BundleResult
             if value_tag == tag {
                 break Ok(length);
             }
+        }
+        if tags::is_required(head.tag()) {
+            bail!("found unexpected required tag {}", head.tag());
         }
         skip(source, head)?;
     }
