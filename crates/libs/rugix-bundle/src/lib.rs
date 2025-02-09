@@ -34,9 +34,9 @@ reportify::new_whatever_type! {
 /// Result with [`BundleError`] as error type.
 pub type BundleResult<T> = Result<T, Report<BundleError>>;
 
-const BUNDLE_HEADER_SIZE_LIMIT: NumBytes = NumBytes::kibibytes(64);
+const BUNDLE_HEADER_SIZE_LIMIT: NumBytes = NumBytes::kibibytes(128);
 // We need a large limit here as the payload header may contain a block index.
-const PAYLOAD_HEADER_SIZE_LIMIT: NumBytes = NumBytes::mebibytes(16);
+const PAYLOAD_HEADER_SIZE_LIMIT: NumBytes = NumBytes::mebibytes(32);
 
 /// Compute and return the hash for the given bundle.
 pub fn bundle_hash(bundle: &Path) -> BundleResult<HashDigest> {

@@ -10,7 +10,7 @@ use rugix_hashes::HashDigest;
 use crate::block_encoding::block_index::{BlockId, RawBlockIndex};
 use crate::block_encoding::block_table::BlockTable;
 use crate::format::decode::decode_slice;
-use crate::format::stlv::{read_atom_head, write_atom_head, AtomHead, Tag};
+use crate::format::stlv::{read_atom_head, skip, write_atom_head, AtomHead, Tag};
 use crate::format::{self, tags};
 use crate::source::BundleSource;
 use crate::{BundleResult, BUNDLE_HEADER_SIZE_LIMIT, PAYLOAD_HEADER_SIZE_LIMIT};
@@ -27,7 +27,7 @@ impl<S: BundleSource> BundleReader<S> {
     pub fn start(mut source: S, header_hash: Option<HashDigest>) -> BundleResult<Self> {
         let _ = expect_start(&mut source, tags::BUNDLE);
         let mut bundle_header = Vec::new();
-        let header_head = expect_start(&mut source, tags::BUNDLE_HEADER)?;
+        let header_head = skip_until_start(&mut source, tags::BUNDLE_HEADER)?;
         read_into_vec(
             &mut source,
             &mut bundle_header,
@@ -40,7 +40,7 @@ impl<S: BundleSource> BundleReader<S> {
             }
         }
         let header = decode_slice::<format::BundleHeader>(&bundle_header)?;
-        let _ = expect_start(&mut source, tags::PAYLOADS)?;
+        let _ = skip_until_start(&mut source, tags::PAYLOADS)?;
         Ok(Self {
             source,
             header,
@@ -60,7 +60,7 @@ impl<S: BundleSource> BundleReader<S> {
         self.next_payload += 1;
         let entry = &self.header.payload_index[this_payload];
         let _ = expect_start(&mut self.source, tags::PAYLOAD);
-        let header_atom = expect_start(&mut self.source, tags::PAYLOAD_HEADER)?;
+        let header_atom = skip_until_start(&mut self.source, tags::PAYLOAD_HEADER)?;
         let mut header_bytes = Vec::new();
         read_into_vec(
             &mut self.source,
@@ -71,7 +71,7 @@ impl<S: BundleSource> BundleReader<S> {
         if self.header.hash_algorithm.hash(&header_bytes).raw() != entry.header_hash.raw {
             bail!("invalid payload header hash");
         }
-        let remaining_data = expect_value(&mut self.source, tags::PAYLOAD_DATA)?;
+        let remaining_data = skip_until_value(&mut self.source, tags::PAYLOAD_DATA)?;
         Ok(Some(PayloadReader {
             idx: this_payload,
             reader: self,
@@ -103,7 +103,7 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
 
     pub fn skip(self) -> BundleResult<()> {
         self.reader.source.skip(self.remaining_data)?;
-        let _ = expect_end(&mut self.reader.source, tags::PAYLOAD)?;
+        skip_until_end(&mut self.reader.source, tags::PAYLOAD)?;
         Ok(())
     }
 
@@ -225,7 +225,7 @@ impl<'r, S: BundleSource> PayloadReader<'r, S> {
             bail!("payload hash mismatch");
         }
         target.finalize()?;
-        let _ = expect_end(&mut self.reader.source, tags::PAYLOAD)?;
+        skip_until_end(&mut self.reader.source, tags::PAYLOAD)?;
         Ok(())
     }
 }
@@ -311,20 +311,53 @@ pub fn read_into_vec(
     Ok(())
 }
 
+/// Skip atoms until reaching a segment start with the given tag.
+#[track_caller]
+pub fn skip_until_start(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<AtomHead> {
+    loop {
+        let head = expect_atom_head(source)?;
+        if head.is_start() && head.tag() == tag {
+            break Ok(head);
+        }
+        skip(source, head)?;
+    }
+}
+
+/// Skip atoms until reaching a segment end with the given tag.
+#[track_caller]
+pub fn skip_until_end(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<()> {
+    loop {
+        let head = expect_atom_head(source)?;
+        if head.is_end() && head.tag() == tag {
+            break Ok(());
+        }
+        skip(source, head)?;
+    }
+}
+
+/// Skip atoms until reaching a value with the given tag.
+#[track_caller]
+pub fn skip_until_value(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<NumBytes> {
+    loop {
+        let head = expect_atom_head(source)?;
+        if let AtomHead::Value {
+            tag: value_tag,
+            length,
+        } = head
+        {
+            if value_tag == tag {
+                break Ok(length);
+            }
+        }
+        skip(source, head)?;
+    }
+}
+
 /// Expect a segment start.
 #[track_caller]
 pub fn expect_start(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<AtomHead> {
     match expect_atom_head(source)? {
         atom @ AtomHead::Start { tag: start_tag, .. } if start_tag == tag => Ok(atom),
-        atom => bail!("expected start of {tag}, found {atom:?}"),
-    }
-}
-
-/// Expect a segment end
-#[track_caller]
-pub fn expect_end(source: &mut dyn BundleSource, tag: Tag) -> BundleResult<AtomHead> {
-    match expect_atom_head(source)? {
-        atom @ AtomHead::End { tag: end_tag, .. } if end_tag == tag => Ok(atom),
         atom => bail!("expected start of {tag}, found {atom:?}"),
     }
 }
