@@ -95,7 +95,7 @@ impl System {
             }
         }
         if active_boot_entry.is_none() {
-            warn!("unable to determine active boot entry");
+            warn!("unable to determine active boot group");
         }
         let boot_flow = boot_flows::from_config(
             system_config.boot_flow.as_ref(),

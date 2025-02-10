@@ -89,12 +89,12 @@ pub fn main() -> SystemResult<()> {
         Command::Update(update_cmd) => {
             match update_cmd {
                 UpdateCommand::Install {
-                    image,
+                    bundle: image,
                     reboot: reboot_type,
                     keep_overlay,
                     check_hash,
                     verify_bundle,
-                    boot_entry,
+                    boot_group,
                 } => {
                     let check_hash = check_hash.as_deref()
                         .map(|encoded_hash| -> SystemResult<ImageHash> {
@@ -115,7 +115,7 @@ pub fn main() -> SystemResult<()> {
                     }
 
                     // Find the entry where we are going to install the update to.
-                    let boot_group = match boot_entry {
+                    let boot_group = match boot_group {
                         Some(entry_name) => {
                             let Some(entry) = system.boot_entries().find_by_name(entry_name) else {
                                 bail!("unable to find entry {entry_name}")
@@ -183,7 +183,7 @@ pub fn main() -> SystemResult<()> {
                             system
                                 .boot_flow()
                                 .set_try_next(&system, entry_idx)
-                                .whatever("unable to set next boot entry")?;
+                                .whatever("unable to set next boot group")?;
                             reboot()?;
                         }
                         UpdateRebootType::No => { /* nothing to do */ }
@@ -768,22 +768,23 @@ pub enum OverlayCommand {
 pub enum UpdateCommand {
     /// Install an update.
     Install {
-        /// Path to the image.
-        image: String,
+        /// Path to the update bundle.
+        bundle: String,
         /// Check whether the (streamed) image matches the given hash.
         #[clap(long)]
         check_hash: Option<String>,
-        /// Verify a bundle.
+        /// Verify a bundle based on the provided hash.
         #[clap(long)]
         verify_bundle: Option<HashDigest>,
         /// Do not delete an existing overlay.
         #[clap(long)]
         keep_overlay: bool,
+        /// Control how to reboot the system.
         #[clap(long)]
         reboot: Option<UpdateRebootType>,
-        /// Boot entry to install the update to.
+        /// Boot group to install the update to.
         #[clap(long)]
-        boot_entry: Option<String>,
+        boot_group: Option<String>,
     },
 }
 

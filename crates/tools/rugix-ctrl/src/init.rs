@@ -578,7 +578,7 @@ fn check_deferred_spare_reboot(system: &System) -> SystemResult<()> {
                 system
                     .boot_flow()
                     .set_try_next(system, spare)
-                    .whatever("unable to set next boot entry")?;
+                    .whatever("unable to set next boot group")?;
                 reboot()?;
             }
         }
