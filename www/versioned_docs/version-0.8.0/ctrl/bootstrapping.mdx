@@ -1,0 +1,114 @@
+---
+sidebar_position: 3
+---
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import ConfigSchema from "@site/schemas/rugix-ctrl-bootstrapping.schema.json";
+
+
+# Bootstrapping
+
+During the production and provisioning of devices, a standard image is usually flashed onto each device. This image is identical across all devices to maintain consistency and simplify the provisioning process. After flashing the image, each device is then typically booted for the first time as part of an end-of-line configuration and quality assurance testing procedure. This initial boot process can also be used for setting up and initializing device-specific configurations, a process to which we refer as _bootstrapping_.
+
+The bootstrapping process can include a variety of steps such as:
+
+- Growing the partition table to utilize the full storage capacity of the device.
+- Creating necessary partitions and filesystems that are not part of the image.
+- Initializing on-device chips and one-time-programmable storage.
+- Generating unique device identifiers and security certificates.
+- Customizing configurations to suit device-specific requirements.
+
+When [configured to run before the init system](./state-management.mdx), Rugix Ctrl can also carry out bootstrapping steps. For instance, unless configured otherwise, it will grow the partition table and initialize the data partition where the persistent state lives. Rugix Ctrl's bootstrapping process is flexible and you can adapt it to your specific needs by adding [bootstrapping hooks](./hooks.md#bootstrapping-hooks).
+Note that the bootstrapping process runs very early during the boot process before the init system because properly booting the system, in particular, with state management, requires the existence of a data partition, which may first need to be created.
+
+:::info
+The bootstrapping process is configured in the `/etc/rugix/bootstrapping.toml` configuration file. It requires a config partition to be configured and present. The config partition must contain a file `/.rugix/bootstrap` to trigger the bootstrapping process. This file is deleted after the bootstrapping process to ensure that it does not run again.[^bootstrap-in-production]
+:::
+
+[^bootstrap-in-production]: Note that a malicious actor may be able to create this file on a production device and then trigger the bootstrapping process, even if secure boot and other security measures are in place. This may pose a security risk. In those cases, it is recommended to use a user-defined `prepare` bootstrapping hook that will check whether the device should be bootstrapped using some other source, such as one-time-programmable memory, and abort the process based on the outcome of that check.
+
+
+## System Layout
+
+While one may choose to already prepare the provisioning image and its partition table for the exact storage capacity of a device, this may not always be feasible. Maybe you have different variants of a device with different storage capacities and want to use the same image for all of them, or you may want your users to be able to flash an image onto their own storage media. In these cases, the partition table of the image will not match the storage capacity and typically does not even contain all the required partitions, such as redundant system partitions and the data partition. In that case, you can configure Rugix Ctrl to adapt the partition table and create the necessary partitions and filesystems. The desired _system layout_ is defined in the `layout` configuration section.
+
+:::info
+The layout always affects the disk of the booted root filesystem. Unless configured otherwise, Rugix Ctrl will apply a default layout as part of the bootstrapping process.
+If that works for you, there is no need to read any further.
+If you want to increase the size of the system partition of the default layout, checkout the section [Default Layout](#default-layout) below.
+:::
+
+### Custom Layouts
+
+:::warning
+Custom system layouts are experimental.
+**We may introduce breaking changes to the configuration format in minor versions.**
+If you just want to change the size of the system partition, use the [default layout](#default-layout).
+:::
+
+Rugix Ctrl supports MBR (DOS) partition tables and GPT partition tables. Here are two example layouts:
+
+```toml title="/etc/rugix/bootstrapping.toml"
+[layout]
+type = "mbr"
+partitions = [
+    { name = "config", size = "256MiB", type = "0c" },
+    { name = "boot-a", size = "128MiB", type = "0c" },
+    { name = "boot-b", size = "128MiB", type = "0c" },
+    { name = "extended", type = "05" },
+    { name = "system-a", size = "6GiB" },
+    { name = "system-b", size = "6GiB" },
+    { name = "data", filesystem = "ext4" },
+]
+```
+
+```toml title="/etc/rugix/bootstrapping.toml"
+[layout]
+type = "gpt"
+partitions = [
+    { name = "EFI", size = "256MiB", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" },
+    { name = "boot-a", size = "256MiB" },
+    { name = "boot-b", size = "256MiB" },
+    { name = "system-a", size = "6GiB" },
+    { name = "system-b", size = "6GiB" },
+    { name = "data", filesystem = "ext4" },
+]
+```
+
+Both layouts prepare the system for an A/B update setup with two boot and two system partitions. The last partition is not required to have a size, in which case, it will take up the entire remaining space. So, in case of the examples, the data partition will take up all the remaining space. In case of an MBR partition table, the extended partition also does not require a size and will extend to the end of the disk. The `filesystem` option is optional and will cause Rugix Ctrl to create a filesystem. The `type` option is also optional defaulting to `83` and `0FC63DAF-8483-4772-8E79-3D69D8477DE4` for MBR and GPT, respectively.
+
+:::note
+Rugix Ctrl will only create new partitions that do not already exist and grow partitions that do already exist. Furthermore, it will only create filesystems on partitions that it created itself to prevent accidental data loss.
+:::
+
+### Default Layout
+
+For a typical system, you would use one of the layouts above. As a shortcut, the `type` of the layout can be set to `default`. In that case, only a `system-size` needs to be configured. Rugix Ctrl will then automatically create a matching partition table based on the type of table it finds on the root disk and the configured system size. Here is an example:
+
+```toml title="bootstrapping.toml"
+[layout]
+type = "default"
+system-size = "4GiB"
+```
+
+### Disable Partition Creation
+
+If you do not want Rugix Ctrl to create any partitions, simply set the layout's `type` to `none`:
+
+```toml title="bootstrapping.toml"
+[layout]
+type = "none"
+```
+
+
+## Configuration Reference
+
+For reference, here is the complete schema for the bootstrapping configuration file:
+
+<JSONSchemaViewer schema={ConfigSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-bootstrapping.schema.json).

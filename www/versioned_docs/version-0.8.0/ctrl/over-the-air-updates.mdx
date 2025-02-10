@@ -1,0 +1,265 @@
+---
+sidebar_position: 1
+---
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import OutputSchema from "@site/schemas/rugix-ctrl-output-info.schema.json";
+
+
+# Over-the-Air Updates
+
+Rugix Ctrl's core functionality is the safe installation of _over-the-air_ (OTA) system updates.
+
+**A/B Update Scheme.** A typical Rugix Ctrl setup uses an _A/B update scheme_ with redundant system partitions (A and B).
+When an update is available, it is installed on the inactive partition (e.g., if the device is currently using partition A, the update is installed on partition B).
+This allows the device to temporarily switch to the updated partition upon reboot, ensuring a seamless and fail-safe update process as the previous partition remains untouched and can be reverted to in case of any issues.
+After on-device validation of the update, the update is then committed by permanently switching to the now active partition as the default boot partition.
+This approach drastically reduces the likelihood of bricking devices in the field due to corrupted or incompatible software and failed or incomplete updates, thereby avoiding any related repair and maintenance costs.
+In addition, it has the following advantages:
+
+- OTA updates can almost completely run in the background, without adversely affecting any users of a device.
+The only service interruption is caused, when the device reboots into the new version.
+Rebooting to finalize an update can happen at the discretion of users and, if all goes well, does not take longer than any normal reboot, minimizing any inconveniences.
+- As the previous version is kept, a rollback to the old version is always possible if there are any problems with the new version.[^rollback]
+
+[^rollback]: This requires support by your application.
+
+**Other Update Schemes.** We generally recommend using an A/B update scheme due to the advantages stated above.
+For cases where an A/B update scheme is not the right choice, Rugix Ctrl can flexibly be configured for other update schemes, for instance, an asymmetric setup with a recovery partition or a setup with more than two redundant system partitions.
+To configure Rugix Ctrl for such custom use cases, please have a look at the [System Configuration](./advanced/system-configuration.mdx) section of this documentation.
+
+**Bootloader Integration.** To commit and switch between systems, Rugix Ctrl needs to integrate with the bootloader of the system.
+Rugix Ctrl offers ready-made integrations with popular bootloaders.
+Currently, it provides integrations for:
+
+- [U-Boot](https://docs.u-boot.org/en/latest/) (popular on single board computers, GPL-2.0)
+- [Grub](https://www.gnu.org/software/grub/) (well-established standard option, GPL-3.0)
+- [Raspberry Pi's `tryboot` Mechanism](https://www.raspberrypi.com/documentation/computers/config_txt.html#example-update-flow-for-ab-booting)
+
+:::tip
+When building a system with Rugix Bakery for a generic or specific target, you will get a system with a bootloader integration for A/B OTA updates out-of-the-box. In that case, no further configuration is necessary and you do not have to worry about how the bootloader integration works.
+If you want your own integration, check out the [documentation on boot flows](./advanced/boot-flows.md).
+:::
+
+**Typical Partition Layout.** A typical partition layout of a Rugix system following the A/B update scheme comprises six partitions:
+
+- Partition 1: Contains the bootloader configuration for switching between the A and B system.
+- Partition 2: Contains boot data, such as the Linux kernel, for the A system.
+- Partition 3: Contains boot data, such as the Linux kernel, for the B system.
+- Partition 4: Contains the root filesystem of the A system.
+- Partition 5: Contains the root filesystem of the B system.
+- Partition 6: Contains any persistent data and state (see [State Management](./state-management)).
+
+We also refer to Partition 1 as the _config partition_ and to Partition 6 as the _data partition_.
+
+
+## Querying the System State
+
+To query the state of the system, e.g., to find out which partitions are in use, you can use `rugix-ctrl system info`.
+Note that this command will produce JSON output when piped into another program (or invoked with `--json`).
+**The human readable output is not considered stable and you should not rely on it when integrating with Rugix Ctrl.**
+You can use tools like [`jq`](https://jqlang.org/) to process the JSON output produced by Rugix Ctrl.
+As a reference, here is the full schema of the output of `rugix-ctrl system info`:
+
+<JSONSchemaViewer schema={OutputSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-ctrl-output-info.schema.json).
+
+
+## Installing an Update
+
+Updates are delivered to devices in the form of _update bundles_.
+Update bundles are installed with the following command:[^non-a-b]
+
+[^non-a-b]: The following commands assume that you use a traditional A/B update scheme. If you use a non-A/B update scheme, the commands will require you to explicitly specify the [boot group](./advanced/system-configuration.mdx).
+
+```shell
+rugix-ctrl update install <update bundle>
+```
+
+In addition to reading update bundles from local files, which must be stored on the device or provided on external storage, Rugix Ctrl also supports _streaming updates_.
+The parts of a streaming update will be directly written to their final location on the device while they arrive, e.g., while they are downloaded from the network.
+You can use `-` to install a bundle streamed via stdin to Rugix Ctrl.
+
+For instance, to download and install a bundle on-the-fly run:
+
+```shell
+curl <url to the bundle> | rugix-ctrl update install -
+```
+
+Rugix Ctrl also supports installing streaming updates directly from HTTP with:
+
+```shell
+rugix-ctrl update install <url to the bundle>
+```
+
+:::info
+All three mechanisms are useful for different use cases:
+An update might be installed from a thumb drive (local file), uploaded via a web UI (streaming via stdin), or downloaded from an update server (HTTP).
+By supporting all three methods natively, Rugix gives you the flexibility to install updates from anywhere in the most efficient way possible.
+:::
+
+Unless the bundle is provided on an external storage medium, like a thumb drive, we recommend that you stream updates to devices.
+Streaming updates are not only faster, since the updates has to be written to storage only once, but also have the advantage that they do not waste write cycles and do not take up precious space on the data partition during the installation.
+If your device is running low on storage space, non-streaming updates may become impossible, leading to the inability to update without streaming.
+
+Rugix Ctrl does currently not support resuming HTTP updates when the internet connection is unstable and drops intermittently.
+We will add support for that later.
+For now, you can use an external tool, like `wget`, and stream the update into Rugix Ctrl:
+
+```shell
+wget -q -t 0 -O - <url to the bundle> | rugix-ctrl update install -
+```
+
+This will retry downloading indefinitely. For further details, we refer to the manpage of `wget`.
+
+### Adaptive Delta Updates
+
+Rugix Ctrl supports _adaptive delta updates_ via HTTP range queries.
+If you are installing an update via HTTP, the server supports range queries, and the bundle and system contain the necessary _block indices_, then Rugix Ctrl will adaptively download only parts of the update that it does not already have, e.g., within the currently booted system partition.[^delta-read-only]
+While we will improve the workflow in the future, for the moment, adaptive delta updates require the manual creation of system block indices, for instance, with:[^future-delta]
+
+[^delta-read-only]: Currently, this requires the system partition to be read-only. We will lift that restriction in the future. However, note that a read-only system partition is recommended in any case and made easy with Rugix Ctrl's state management functionality. For now, if a partition has been modified after creating the index used by an update, the update will simply fail without rebooting.
+
+[^future-delta]: In the future, Rugix Ctrl will create indices automatically based on the indices it finds in the bundle.
+
+```shell
+rugix-ctrl slots create-index boot-a casync-64 sha512-256
+rugix-ctrl slots create-index system-a casync-64 sha512-256
+```
+
+You can read more about block indices in the [advanced section on Update Bundles](./advanced/update-bundles.mdx).
+The update bundles built with Rugix Bakery use the parameters `casync-64` and `sha512-256` by default.
+If you want to use adaptive delta updates right now, just create the indices before installing the update bundle via HTTP.
+If the currently active system is A, then create an index for `system-a` and `boot-a`.
+If the currently active system is B, then create an index for `system-b` and `boot-b`.
+You can use `rugix-ctrl system info` to query whether the currently booted system is A or B.
+Here is an example script for installing an update:
+
+```shell title="install-update.sh"
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+URL=$1
+
+ACTIVE_SYSTEM=$(rugix-ctrl system info | jq -r ".boot.activeGroup")
+
+if [ "$ACTIVE_SYSTEM" == "a" ]; then
+    rugix-ctrl slots create-index boot-a casync-64 sha512-256
+    rugix-ctrl slots create-index system-a casync-64 sha512-256
+else
+    rugix-ctrl slots create-index boot-b casync-64 sha512-256
+    rugix-ctrl slots create-index system-b casync-64 sha512-256
+fi
+
+rugix-ctrl update install "$URL"
+```
+
+### Automatic Reboots
+
+Typically, Rugix Ctrl will reboot the device automatically when installing an update.
+In some cases, this may not be desired.
+For instance, you may want to install the update in the background and afterwards indicate to a user that an update is now ready.
+Only if the user then confirms the update, you want to quickly reboot into the new version.
+Such an update flow minimizes disruptions and makes sure that an update happens at the discretion of users.
+To prevent automatic reboots, use the `--reboot no` command line flag:
+
+```shell
+rugix-ctrl update install --reboot no <update bundle>
+```
+
+When using the `--reboot no` flag, a reboot to the inactive, _spare_ system[^spare-system] can later be triggered with:
+
+[^spare-system]: This is the inactive system (A or B) to which we install updates.
+
+```shell
+rugix-ctrl system reboot --spare
+```
+
+You can also _defer_ the reboot with `--reboot deferred` (only for A/B setups, requires [State Management](./state-management.mdx)).
+If you use that flag, Rugix Ctrl will set a flag and automatically boot into the new version the next time the system is booted.
+This allows users to shut down the system normally while remembering the update and automatically booting into it the next time the system boots.
+
+### Cryptographic Bundle Verification
+
+To verify the integrity of an update bundle, use the `--verify-bundle <hash>` option.
+This option takes a hash of the bundle header, which is then used to ensure the integrity of the bundle, preventing any manipulated data from ever been written.
+
+Rugix Ctrl does not yet support embedding signatures into a bundle.
+However, you can still implement signed updates in multiple ways on top of Rugix Ctrl's functionality.
+For instance, you could ship a signed update manifest to your device that contains the URL of the bundle and the hash for verification.
+You could also combine such an manifest with the bundle in a Tar archive which users can upload through your web UI.
+The respective endpoint would then read the manifest out of the Tar archive, verify its signature, and afterwards stream the bundle itself into Rugix Ctrl, providing it with the hash for verification.
+
+### Installing Images
+
+Rugix Ctrl can in some cases install updates directly from system images.
+Currently, this is the case for all images built with Rugix Bakery for generic and specific targets.
+Images can only be streamed via stdin or provided as a local file.
+If you want to install an image via HTTP, use `curl` or `wget` to stream it into Rugix Ctrl.
+Rugix Ctrl will transparently decompress `xz` compressed images provided to it.
+For other decompression formats, you can pipe the image through the respective decompression tool before feeding it into Rugix Ctrl.
+To verify the integrity of an image, you can use the `--check-hash` option providing it with a SHA256 hash, e.g.:
+
+```plain
+--check-hash sha256:a9627e22da964b5b6ad7c1465a79bae4d11b71a064966b37596c057de106c1a9
+```
+
+:::warning
+This feature is deprecated.
+**You should use update bundles not system images to install updates.**
+We may remove this functionality in the future.
+Installing images is less secure as Rugix Ctrl can only verify the provided hash after reading the entire image, at which point potentially manipulated data has already been written to the device's storage.
+:::
+
+## Committing an Update
+
+Recall that Rugix Ctrl implements a two-stage update process where updates need to be committed to be permanent.
+After rebooting into the new version and validating that everything is in working order, the update is made permanent with:
+
+```shell
+rugix-ctrl system commit
+```
+
+Note that this command always makes the currently booted system the default system.
+Hence, it must be run from within the updated version.
+To prevent breaking the system, it is impossible to make the inactive system the default.[^inactive-default]
+
+[^inactive-default]: At least with the `rugix-ctrl` command line tool.
+
+When to commit an update is up to the concrete update workflow of your application.
+If you want to automatically commit the currently booted system during the boot process and are using Rugix Bakery, you can enable the recipe `core/rugix-auto-commit`.
+This recipe will install a system service that commits the currently booted system whenever it runs.
+Note that this also means that it will commit an old version if booted into, for instance, when performing a rollback (see below).
+
+:::tip
+Use a [_pre-commit hook_](./hooks.md#system-update-hooks) to ensure that a commit is only possible when the system is in proper working order.
+:::
+
+## Performing a Rollback
+
+Like updating, performing a rollback is a two-stage process.
+A full rollback consists of first rebooting into the spare system (containing the previous version) and then committing the rollback after verifying that it is in proper working order.
+
+To boot into the spare system, run:
+
+```shell
+rugix-ctrl system reboot --spare
+```
+
+Then, after rebooting, commit the rollback with:
+
+```shell
+rugix-ctrl system commit
+```
+
+:::info
+What we call a rollback here should not be confused with a failed update.
+A rollback always reverts a _previously committed_ update.
+This allows you to revert to the previous version even though you already committed to the update, for instance, if you notice some issues during regular operation and when you already committed to the update.
+:::

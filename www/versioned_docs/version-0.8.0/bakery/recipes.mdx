@@ -1,0 +1,202 @@
+---
+sidebar_position: 4
+---
+
+import JSONSchemaViewer from "@theme/JSONSchemaViewer";
+import ReactMarkdown from "react-markdown";
+
+import RecipeSchema from "@site/schemas/rugix-bakery-recipe.schema.json";
+
+
+# Recipes
+
+As part of the build process, recipes perform the actual work, creating and modifying build outputs. Each recipe consists of a sequence of _steps_ to be executed. Recipes are defined by directories in the `recipes` directory. Each recipe gets its own directory with a _recipe configuration_ file `recipe.toml` and a `steps` subdirectory defining the individual steps to be executed. The configuration file may specify a *description*, a *priority*, *dependencies* of the recipe, and *parameters*.
+
+Here is the configuration of the [`core/ssh`](https://github.com/silitics/rugpi/blob/main/bakery/repositories/core/recipes/ssh) recipe as an example:
+
+```toml title="recipes/hello-world/recipe.toml"
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-layer.schema.json
+
+description = "enabling SSH"
+priority = 80_000
+dependencies = ["pkg-update"]
+
+[parameters]
+root_authorized_keys = { default = "" }
+```
+
+The `ssh` recipe depends on the [`pkg-update` recipe](https://github.com/silitics/rugpi/tree/main/bakery/repositories/core/recipes/pkg-update)[^pkg-update-ref] from Rugix Bakery's `core` repository. The `pkg-update` recipe will update the package lists of the distribution (Debian or Alpine), which is required to be able to install SSH. It will also later remove the package lists from the build, as they are unnecessary at runtime. The configuration further defines a parameter, `root_authorized_keys`, with an empty _default value_. The steps of the recipe use this parameter to install public keys for SSH access.
+
+[^pkg-update-ref]: The recipe is referenced as `pkg-update` and not `core/pkg-update` here because the `ssh` recipe is itself in `core`.
+
+Recipes are always applied in the order of their priority (higher means earlier). In particular, this means that dependencies may be applied _after_ recipes that depend on them, if they have a lower priority. Note that priorities can also be negative.
+
+Check out the set of [core recipes](https://github.com/silitics/rugpi/tree/main/bakery/repositories/core/recipes) for examples.
+
+
+## Parameters
+
+The parameters of a recipe are defined in the `parameters` section of its configuration. Every parameter has a name and an optional default value. Here is an example for how to define parameters with and without default values:
+
+```toml
+[parameters]
+parameter_name = { default = "a default value" }
+other_parameter = {}  # Required parameter without a default value.
+```
+
+Parameter values are provided by layer configurations in the `parameters` section. For the details, we refer back to the [layers section](./layers.mdx) of this documentation. Layer configurations must provide values for all parameters that do not have a default.
+
+Parameter values are exposed to a recipe's steps (see below) via environment variables of the form `RECIPE_PARAM_<PARAM_NAME>`. So, in case of our example, `RECIPE_PARAM_PARAMETER_NAME` and `RECIPE_PARAM_OTHER_PARAMETER`.
+
+:::tip
+Avoid hard-coding configuration values in your recipes and use parameters instead.
+:::
+
+
+## Steps
+
+Each recipe consists of a sequence of steps to be executed. Each step is defined by a file in the `steps` directory of a recipe. The names of the files in that directory must start with an integer followed by a `-` and a _step kind_. The integer indicates the position of the step in the recipe, e.g., `00` to `99`. Currently, Rugix Bakery supports three kinds of steps.
+
+#### `packages`
+
+Steps of the kind `packages` can be used to provide lists of packages to install:
+
+```plain title="XX-packages"
+a
+list
+of
+packages
+```
+
+Rugix Bakery supports APT (Debian) and APK (Alpine) and will automatically select the correct package manager for a given system. The step filenames can also be suffixed with `.apt` and `.apk` to provide different package lists for APT and APK.
+
+#### `run`
+
+Steps of the kind `run` can be used to run scripts on the host/within the build environment:
+
+```bash title="XX-run.*"
+#!/usr/bin/env bash
+
+echo "This runs on the host system."
+```
+
+These scripts are not limited to bash and can have an arbitrary file extension, e.g., `.py` for Python scripts. They must have a shebang (first line starting with `#!`) and must have the executable bit set (`chmod +x`).
+
+Rugix Bakery exposes multiple environment variables that can be used in such scripts. You will find more details below.
+
+:::note
+When using `run` steps, you have to be a bit careful to not modify the build environment itself. For instance, when you install files or packages into the build environment, then they may persist and affect later steps.[^run-isolation]
+:::
+
+[^run-isolation]: We plan to provide better isolation for `run` steps in the future.
+
+You can use `run` steps to perform all kinds of tasks. For instance, the [`yocto-build` recipe of the Yocto template](https://github.com/silitics/rugpi/tree/main/bakery/templates/yocto-grub-efi/recipes/yocto-build) sets up a temporary Python virtual environment to install [KAS](https://github.com/siemens/kas) and will then run an entire Yocto build via KAS.
+
+#### `install`
+
+Steps of the kind `install` can be used to run scripts inside the system being built:
+
+
+```bash title="XXX-install.*"
+#!/usr/bin/env bash
+
+echo "This runs via chroot in the system being built."
+```
+
+Rugix Bakery will set up a semi-isolated environment (similar to a container) that mimics the system being built. It will then run the script inside that environment as the `root` user. The same considerations as for `run` steps apply analogously.
+
+:::tip
+You can use `install` steps to customize a system in the same way you normally would when you set up a system and perform customizations manually via a local shell. For instance, you can install packages or enable certain system services. Note that services will not run when executing a `run` step, you can, however, [start them as part of the step](./advanced/services.md).
+:::
+
+Note that the architecture reported by `uname -m` during an `install` step may not match the actual CPU and architecture of the device the system is intended for.
+For instance, when building an `armhf` system based on Rasbperry Pi OS, the architecture reported by `uname -m` during the build process is `armv7l`, however, when running the system later on a non-ARMv7 board (e.g., Pi Zero or Pi 1), then the architecture will be `armv6l`.
+We recommend always using the Rugix architecture instead of `uname -m`.
+
+### Environment Variables
+
+Rugix Bakery will expose the following environment variables when running steps:
+
+- `RUGIX_ARCH`: Architecture of the build (`arm64` or `armhf`).
+- `RUGIX_ROOT_DIR`: Directory of the root filesystem.
+- `RUGIX_PROJECT_DIR`: Directory of the Rugix Bakery project.
+- `RUGIX_LAYER_DIR`: Directory of the layer being built.
+- `RUGIX_ARTIFACTS_DIR`: Artifacts directory (part of the layer).
+- `RUGIX_CACHE_DIR`: Directory for global caching.
+- `RUGIX_CONTEXT_DIR`: Build context directory (typically the project directory).
+- `RECIPE_DIR`: Directory of the recipe which is applied.
+- `RECIPE_STEP_PATH`: Path of the step being executed.
+
+In addition, the recipe parameters are exposed as explained above.
+
+### Custom Artifacts
+
+You can place any build artifacts in the artifacts directory pointed to by `RUGIX_ARTIFACTS_DIR`.
+Those will later end up in the build directory of the respective system.
+For instance, to generate a simple SBOM with `dpkg` you may use the following step:
+
+```shell title="recipes/simple-sbom/steps/00-install.sh"
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SBOM_PATH="${RUGIX_ARTIFACTS_DIR}/dpkg-sbom.txt"
+SBOM_DIR=$(dirname "${SBOM_PATH}")
+
+if [ ! -d "${SBOM_DIR}" ]; then
+    mkdir -p "${SBOM_DIR}"
+fi
+
+dpkg --list >"${SBOM_PATH}"
+```
+
+This provides a very flexible mechanism to generate all kinds of build artifacts and complementary documentation.
+
+
+## Custom Build Environments
+
+You may find that Rugix Bakery's build environment (where `run` steps run) lacks certain tools that you would like to use to build your system.
+If that is the case, you can create a custom Docker image based on Rugix Bakery's image to include these tools.
+
+For instance, to add Node.js to the build environment you can use the following `Dockerfile`:
+
+```docker title="Dockerfile"
+ARG RUGIX_BAKERY_IMAGE=ghcr.io/silitics/rugix-bakery:v0.8
+
+FROM ${RUGIX_BAKERY_IMAGE}
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+RUN apt-get install -y nodejs
+```
+
+You can then use your custom Docker image with `./run-bakery` by setting the `RUGIX_BAKERY_IMAGE` environment variable.
+
+This allows you to build your entire application from source to image in Rugix Bakery.
+If the Rugix Bakery project lives in a subdirectory in the repository of your application (which typically is the case with monorepos), then you can inject the root directory of your repository by setting the `RUGIX_CONTEXT_DIR` environment variable.
+
+Here is an example using both `RUGIX_CONTEXT_DIR` and `RUGIX_BAKERY_IMAGE`:
+
+```shell
+RUGIX_CONTEXT_DIR=".." RUGIX_BAKERY_IMAGE="custom-image" ./run-bakery
+```
+
+As a result, the root directory of your repository will be available as the context directory (see environment variables above).
+For caching, you can rely on Rugix Bakery's [layer cache](./advanced/caching.md), rebuilding a layer only if certain files changed (which can be in the context directory).
+In addition, you can also use the global Rugix Bakery cache exposed via the `RUGIX_CACHE_DIR` environment variable.
+
+:::note
+We would like to make it more convenient in the future to include custom build tools.
+For now, however, we recommend you simply build your own version of the Rugix Bakery Docker image, which should give you all the flexibility.
+**To avoid fragmentation of the ecosystem, you should not be requiring a custom image when providing reusable recipes and layers via a repository.**
+:::
+
+
+## Configuration Reference
+
+For reference, here is the complete schema for recipe configuration files:
+
+<JSONSchemaViewer schema={RecipeSchema} viewerOptions={{
+    DescriptionComponent: ({description}) => <ReactMarkdown children={description} />
+}}/>
+
+You will find the most recent version of this schema [on GitHub](https://github.com/silitics/rugix/blob/main/schemas/rugix-bakery-recipe.schema.json).

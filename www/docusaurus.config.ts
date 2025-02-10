@@ -32,8 +32,8 @@ const config: Config = {
       {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          lastVersion: "current",
-          // lastVersion: "0.7.5",
+          // lastVersion: "current",
+          lastVersion: "0.8.0",
           editUrl: "https://github.com/silitics/rugix/tree/main/www/",
         },
         blog: {
@@ -53,17 +53,17 @@ const config: Config = {
       disableSwitch: true,
       respectPrefersColorScheme: false,
     },
-    // announcementBar: {
-    //   // id: "release",
-    //   content: `
-    //       We are excited to announce the release of Rugix version 0.7! 🎉
-    //       Read the <a href="/rugix/blog/releases/0.7">release blog post</a>.
-    //     `,
-    //   backgroundColor: "#bdddfb",
-    //   // backgroundColor: "#bdddfb",
-    //   // textColor: "#000000",
-    //   isCloseable: false,
-    // },
+    announcementBar: {
+      // id: "release",
+      content: `
+          We are excited to announce the release of Rugix version 0.8! 🎉
+          Read the <a href="/rugix/blog/releases/0.8">release blog post</a>.
+        `,
+      backgroundColor: "#bdddfb",
+      // backgroundColor: "#bdddfb",
+      // textColor: "#000000",
+      isCloseable: false,
+    },
     navbar: {
       title: "Rugix",
       logo: {
