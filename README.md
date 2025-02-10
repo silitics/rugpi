@@ -1,3 +1,6 @@
+<p align="center">
+    <img src="./www/static/img/logo.svg" width="12%" alt="Rugix Logo">
+</p>
 <h1 align="center">
     Rugix
 </h1>
