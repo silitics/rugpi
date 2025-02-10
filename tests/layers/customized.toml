@@ -5,6 +5,7 @@ recipes = [
     "core/set-hostname",
     "core/persist-root-home",
     "core/ssh",
+    "core/rpi-uboot-setup"
 ]
 
 [parameters."core/set-hostname"]
