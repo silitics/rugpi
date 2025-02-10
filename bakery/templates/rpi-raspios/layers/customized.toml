@@ -8,6 +8,8 @@ parent = "core/raspios-bookworm"
 recipes = [
     # Prepares the Raspberry Pi base image for usage with Rugix.
     "core/rpi-raspios-setup",
+    # Include U-Boot second stage boot script.
+    "core/rpi-uboot-setup",
     # Sets a static hostname (see parameters below).
     "core/set-hostname",
     # Persists the home directory of the root user.

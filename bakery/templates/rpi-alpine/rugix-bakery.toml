@@ -19,25 +19,3 @@ target = "rpi-tryboot"
 layer = "customized-pi4"
 architecture = "arm64"
 target = "rpi-tryboot"
-
-# This image uses the U-Boot boot flow for older Raspberry Pi models.
-#
-# Compatible with:
-# - Raspberry Pi 3
-# - Raspberry Pi CM3
-# - Raspberry Pi Zero 2 W
-[systems.rpi-uboot-arm64]
-layer = "customized"
-architecture = "arm64"
-target = "rpi-uboot"
-
-# This image uses the U-Boot boot flow for older Raspberry Pi models.
-#
-# Compatible with:
-# - Raspberry Pi 2
-# - Raspberry Pi 1
-# - Raspberry Pi Zero
-[systems.rpi-uboot-armhf]
-layer = "customized"
-architecture = "armhf"
-target = "rpi-uboot"
