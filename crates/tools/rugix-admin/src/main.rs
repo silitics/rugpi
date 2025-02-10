@@ -5,10 +5,10 @@ use axum::response::Html;
 use axum::routing::{get, post};
 use axum::{Router, Server};
 use clap::Parser;
+use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
-#[cfg(not(debug_assertions))]
-use xscript::{run, Run};
+use xscript::{read_str, run, Run};
 
 #[derive(Debug, Clone, Parser)]
 pub struct Args {
@@ -33,34 +33,24 @@ async fn main() {
         .unwrap()
 }
 
-#[cfg(not(debug_assertions))]
 async fn render_index_html() -> Html<String> {
-    // use crate::system::System;
-
-    // tokio::task::spawn_blocking(|| {
-    //     let system = System::initialize().unwrap();
-    //     let default_entry = system.boot_flow().get_default(&system).unwrap();
-    //     let active_entry = system.active_boot_entry().unwrap();
-    //     Html(
-    //         include_str!("../assets/index.html")
-    //             .replace(
-    //                 "HOT_PARTITIONS",
-    //                 &system.boot_entries()[active_entry].name().to_uppercase(),
-    //             )
-    //             .replace(
-    //                 "DEFAULT_PARTITIONS",
-    //                 &system.boot_entries()[default_entry].name().to_uppercase(),
-    //             ),
-    //     )
-    // })
-    // .await
-    // .unwrap()
-    todo!()
-}
-
-#[cfg(debug_assertions)]
-async fn render_index_html() -> Html<String> {
-    Html(include_str!("../assets/index.html").to_owned())
+    tokio::task::spawn_blocking(|| {
+        let info_json = read_str!(["rugix-ctrl", "system", "info"]).unwrap();
+        let info = serde_json::from_str::<SystemInfo>(&info_json).unwrap();
+        Html(
+            include_str!("../assets/index.html")
+                .replace(
+                    "ACTIVE_BOOT_GROUP",
+                    info.boot.active_group.as_deref().unwrap_or("<unknown>"),
+                )
+                .replace(
+                    "DEFAULT_BOOT_GROUP",
+                    info.boot.default_group.as_deref().unwrap_or("<unknown>"),
+                ),
+        )
+    })
+    .await
+    .unwrap()
 }
 
 async fn get_index() -> Html<String> {
@@ -107,7 +97,7 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
             }
             "image" => {
                 let mut command = Command::new("rugix-ctrl")
-                    .args(["update", "install", "--stream", "-"])
+                    .args(["update", "install", "-"])
                     .stdin(Stdio::piped())
                     .spawn()
                     .unwrap();
@@ -123,9 +113,6 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
         }
     }
     let action = action.expect("no action provided");
-    #[cfg(debug_assertions)]
-    let _ = action;
-    #[cfg(not(debug_assertions))]
     match action {
         Action::Reset => {
             tokio::task::spawn_blocking(|| run!(["rugix-ctrl", "state", "reset"]).unwrap())
@@ -153,3 +140,18 @@ async fn post_index(mut multipart: Multipart) -> Html<String> {
     }
     render_index_html().await
 }
+
+#[derive(Debug, Deserialize)]
+struct SystemInfo {
+    boot: SystemBootInfo,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SystemBootInfo {
+    active_group: Option<String>,
+    default_group: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BootGroupInfo {}

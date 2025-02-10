@@ -17,6 +17,9 @@ recipes = [
     "hello-world",
 ]
 
+[parameters."core/rugix-ctrl"]
+rugix_admin = "true"
+
 [parameters."core/set-hostname"]
 hostname = "rugix-template"
 
