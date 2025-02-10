@@ -430,7 +430,7 @@ fn apply_recipes(
                         RUGIX_PROJECT_DIR = "/run/rugix/bakery/project",
                         RUGIX_ARCH = arch.as_str(),
                         LAYER_REBUILD_IF_CHANGED = Path::new("/run/rugix/bakery/project").join(&layer_ctx.output_dir).join("rebuild-if-changed.txt"),
-                        RECIPE_DIR = "/run/rugix/bakery/recipe/",
+                        RECIPE_DIR = "/run/rugix/bakery/recipe",
                         RECIPE_STEP_PATH = &script,
                     };
                     for (name, value) in &job.parameters {
