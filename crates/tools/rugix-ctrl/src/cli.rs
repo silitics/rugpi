@@ -240,7 +240,7 @@ pub fn main() -> SystemResult<()> {
                         .run_hooks("post-commit", Vars::new())
                         .whatever("unable to run `post-commit` hooks")?;
                 } else {
-                    println!("Hot partition is already the default!");
+                    println!("Active boot group is already the default!");
                 }
             }
             SystemCommand::Reboot { spare } => {
@@ -801,7 +801,7 @@ pub enum SystemCommand {
         #[clap(long)]
         json: bool,
     },
-    /// Make the hot system the default.
+    /// Make the active system the default.
     Commit,
     /// Reboot the system.
     Reboot {
