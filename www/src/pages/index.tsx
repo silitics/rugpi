@@ -124,6 +124,20 @@ export default function Home(): JSX.Element {
       <HomepageHeader />
       <main className="py-16 space-y-16">
         <section>
+          <h2 className="text-center mb-8">They Trust Us</h2>
+          <div className="flex items-center justify-center gap-x-10 opacity-85">
+            <a href="https://goaqa.com/" target="_blank" className="flex">
+              <img className="max-h-8" src="https://oss.silitics.com/third-party-logos/aqa.png" alt="Aqa Technologies, Inc." />
+            </a>
+            <a href="https://umbrel.com/" target="_blank" className="flex items-center">
+              <img className="max-h-7" src="https://oss.silitics.com/third-party-logos/umbrel.svg" alt="Umbrel, Inc." />
+            </a>
+            <a href="https://www.ebike-checker.de/en/" target="_blank" className="flex">
+              <img className="max-h-7" src="https://oss.silitics.com/third-party-logos/echecker.svg" alt="eChecker" />
+            </a>
+          </div>
+        </section>
+        <section>
           <h2 className="text-center">Rugix Ctrl: The Update Mechanism</h2>
           <p className="text-center">Rugix Ctrl has all features you would expect from a state-of-the-art update solution and more:</p>
           <ul className="list-none mx-auto w-fit">
