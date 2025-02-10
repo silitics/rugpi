@@ -10,7 +10,7 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
 use reportify::{bail, ResultExt};
-use rugix_cli::StatusSegmentRef;
+use rugix_cli::{cli_msg, StatusSegmentRef};
 use rugix_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
 use tracing::{error, info};
@@ -51,18 +51,28 @@ impl Logger {
         })
     }
 
+    pub fn current_lines(&self) -> String {
+        let mut state = self.state.lock().unwrap();
+        self.flush_line(&mut state);
+        self.cli_log.current_lines()
+    }
+
     pub fn write(&self, bytes: &[u8]) {
         let mut state = self.state.lock().unwrap();
         let _ = state.log_file.write_all(&bytes);
         for b in bytes {
             if *b == b'\n' {
-                self.cli_log
-                    .push_line(String::from_utf8_lossy(&state.line_buffer).into_owned());
-                state.line_buffer.clear();
+                self.flush_line(&mut state);
             } else {
                 state.line_buffer.push(*b);
             }
         }
+    }
+
+    fn flush_line(&self, state: &mut LoggerState) {
+        self.cli_log
+            .push_line(String::from_utf8_lossy(&state.line_buffer).into_owned());
+        state.line_buffer.clear();
     }
 }
 
@@ -130,7 +140,16 @@ pub fn customize(
     let root_dir = bundle_dir.join("roots/system");
     std::fs::create_dir_all(&root_dir).ok();
     let logger = Logger::new(&layer.name, layer_path)?;
-    apply_recipes(&layer_ctx, &logger, project, arch, &jobs, &root_dir)?;
+    if let Err(error) = apply_recipes(&layer_ctx, &logger, project, arch, &jobs, &root_dir) {
+        let last_lines = logger.current_lines();
+
+        cli_msg!("Log: {:?}", layer_path.join("build.log"));
+        for line in last_lines.lines() {
+            cli_msg!("> {line}")
+        }
+
+        return Err(error);
+    }
     info!("packing system files");
     run!(["tar", "-c", "-f", &target, "-C", bundle_dir, "."])
         .whatever("unable to package system files")?;

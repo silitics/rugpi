@@ -20,6 +20,18 @@ impl CliLog {
         }
     }
 
+    pub fn current_lines(&self) -> String {
+        let state = self.state.lock().unwrap();
+        let mut lines = String::new();
+        for (idx, line) in state.lines.iter().enumerate() {
+            if idx > 0 {
+                lines.push('\n');
+            }
+            lines.push_str(line);
+        }
+        lines
+    }
+
     pub fn push_line(&self, line: String) {
         let mut state = self.state.lock().unwrap();
         state.lines.push_back(line);
