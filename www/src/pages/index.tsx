@@ -84,7 +84,7 @@ function HomepageHeader() {
           Robust Building Blocks for Embedded Linux Devices
         </h1>
         <p className="text-xl">
-          An open-source tool suite to build <em>reliable</em> embedded Linux
+          Rugix is an open-source tool suite to build <em>reliable</em> embedded Linux
           devices with <em>efficient and secure over-the-air</em> update
           capabilities.
         </p>
