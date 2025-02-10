@@ -17,7 +17,8 @@ Here are some examples of concrete services that we offer:
 - We can **develop an integration with other Linux distributions** not supported by Rugix Bakery out of the box.
 
 In addition to tailored services, we also offer an _enterprise subscription_ for companies using Rugix in their products.
-The enterprise subscription includes **long-term support** for selected Rugix versions, **tailored advice and consulting** for your product, **priority email support** in case you run into any issues, **direct influence on Rugix's roadmap**, and access to an **enterprise library** with ready-made integrations[^library-wip] for a variety of different use cases and common challenges.
+The enterprise subscription includes **long-term support** for selected Rugix versions, **tailored advice and consulting** for your product (at a reduced rate compared to non-subscription clients), **priority email support** in case you run into any issues, **direct influence on Rugix's roadmap**, and access to an **enterprise library** with ready-made integrations[^library-wip] for a variety of different use cases and common challenges.
+The enterprise subscription ensures the consistent maintenance of Rugix while also providing you with tangible benefits in return.
 
 [^library-wip]: This library is currently work in progress. We will add and expand it as Rugix's adoption grows.
 
