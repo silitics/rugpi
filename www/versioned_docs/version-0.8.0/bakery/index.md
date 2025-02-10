@@ -8,7 +8,7 @@ While inherently flexible and not tied to any specific distribution, Rugix Baker
 In that case, the entire Yocto build for a given device will typically take place in a device-specific Rugix Bakery root layer.
 Currently, **this integration is primarily intended as a proof of concept** for integrating a more traditional approach into Rugix Bakery.
 If everything happens inside Yocto and you do not intend to apply any customizations or derive different variants from the same Yocto build, Rugix Bakery does not add much over a pure Yocto setup.
-At the bare minimum, Rugix Bakery gives you an isolated build environment in terms of the Rugix Bakery Docker image and you may be able to use the other features of Rugix Bakery, e.g., its [system testing framework](integration-testing.md).
+At the bare minimum, Rugix Bakery gives you an isolated build environment in terms of the Rugix Bakery Docker image and you may be able to use the other features of Rugix Bakery, e.g., its [system testing framework](./advanced/system-testing.mdx).
 
 Typically, Rugix Bakery is used to build _full system images_ and Rugix Ctrl _update bundles_ for OTA system updates.
 System images generally contain a complete Linux root filesystem, a Linux kernel, and other, additional files required for booting a system.

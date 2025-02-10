@@ -106,7 +106,7 @@ echo "This runs via chroot in the system being built."
 Rugix Bakery will set up a semi-isolated environment (similar to a container) that mimics the system being built. It will then run the script inside that environment as the `root` user. The same considerations as for `run` steps apply analogously.
 
 :::tip
-You can use `install` steps to customize a system in the same way you normally would when you set up a system and perform customizations manually via a local shell. For instance, you can install packages or enable certain system services. Note that services will not run when executing a `run` step, you can, however, [start them as part of the step](./advanced/services.md).
+You can use `install` steps to customize a system in the same way you normally would when you set up a system and perform customizations manually via a local shell. For instance, you can install packages or enable certain system services. Note that services will not run when executing a `run` step, you can, however, start them as part of the step.
 :::
 
 Note that the architecture reported by `uname -m` during an `install` step may not match the actual CPU and architecture of the device the system is intended for.
