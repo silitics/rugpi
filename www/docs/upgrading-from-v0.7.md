@@ -6,7 +6,7 @@ sidebar_position: 45
 
 Rugpi has been renamed to Rugix and gained a lot of new functionality.
 As part of the transition, we also cleanly separated Rugix Ctrl from Rugix Bakery, so that they can be used independently.
-Here is what you need to do to upgrade to Rugix.
+Here is what you need to do to upgrade to Rugix v0.8.
 
 Generally, you need to replace “Rugpi” with “Rugix” everywhere (including in any environment variables and paths).
 
@@ -18,6 +18,12 @@ Generally, you need to replace “Rugpi” with “Rugix” everywhere (includin
 - Updates should now be delivered as Rugix update bundles instead of system images.
 - The deprecated option `--stream` of `rugpi-ctrl update install` has been removed.
 - The option `--no-reboot` has been removed in favor of `--reboot no`.
+
+To upgrade an existing system using Rugpi v0.7:
+
+1. Upgrade your Rugpi Bakery project to Rugix Bakery.
+2. Build an image.
+3. Deploy the image as an update as usual.
 
 #### Rugix Bakery
 
